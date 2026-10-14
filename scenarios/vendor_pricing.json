@@ -1,0 +1,49 @@
+
+{
+    "id": "vendor_pricing",
+    "title": "Vendor Pricing Negotiation",
+    "description": "A buyer negotiates the price of a bulk product order with a vendor to reach a mutually acceptable agreement.",
+    "max_rounds": 10,
+    "agents": [
+        {
+            "id": "buyer",
+            "name": "Buyer",
+            "role": "Procurement Manager",
+            "role_description": "Negotiates the purchase price of products while ensuring the order stays within the company's budget.",
+            "goal": "Purchase the products at a price of no more than 37000 INR while meeting the required order quantity.",
+            "constraints": [
+                "Maximum acceptable purchase price is 40000 INR.",
+                "Prefers a lower price while ensuring the required quantity is supplied."
+            ],
+            "limits": [
+                {
+                    "item": "price",
+                    "type": "max",
+                    "value": 40000,
+                    "unit": "INR"
+                }
+            ],
+            "default_personality": "Collaborative"
+        },
+        {
+            "id": "vendor",
+            "name": "Vendor",
+            "role": "Sales Representative",
+            "role_description": "Negotiates the selling price of products while ensuring the transaction remains commercially profitable.",
+            "goal": "Sell the products at a price of at least 38000 INR while retaining the buyer's interest.",
+            "constraints": [
+                "Minimum acceptable selling price is 35000 INR.",
+                "Prefers a higher selling price while maintaining a successful business agreement."
+            ],
+            "limits": [
+                {
+                    "item": "price",
+                    "type": "min",
+                    "value": 35000,
+                    "unit": "INR"
+                }
+            ],
+            "default_personality": "Risk-Averse"
+        }
+    ]
+}
