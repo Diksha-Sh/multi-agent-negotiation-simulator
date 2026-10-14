@@ -1,0 +1,60 @@
+{
+    "id": "job_offer",
+    "title": "Job Offer Negotiation",
+    "description": "A candidate negotiates salary and work arrangements with a hiring manager.",
+    "max_rounds": 10,
+    "agents": [
+        {
+            "id": "candidate",
+            "name": "Job Candidate",
+            "role": "Software Developer Candidate",
+            "role_description": "Negotiates compensation and work arrangements before accepting a job offer.",
+            "goal": "Secure a salary of at least 12 LPA and two remote workdays per week.",
+            "constraints": [
+                "Minimum acceptable salary is 12 LPA.",
+                "Prefers at least two remote workdays per week."
+            ],
+            "limits": [
+                {
+                    "item": "salary",
+                    "type": "min",
+                    "value": 12,
+                    "unit": "lakh INR per year"
+                },
+                {
+                    "item": "remote_days",
+                    "type": "min",
+                    "value": 2,
+                    "unit": "days per week"
+                }
+            ],
+            "default_personality": "Collaborative"
+        },
+        {
+            "id": "employer",
+            "name": "Hiring Manager",
+            "role": "Engineering Hiring Manager",
+            "role_description": "Hires a qualified developer while staying within the company's compensation and work policy limits.",
+            "goal": "Hire the candidate at a salary no higher than 15 LPA with at most three remote workdays per week.",
+            "constraints": [
+                "Maximum salary budget is 15 LPA.",
+                "Allows no more than three remote workdays per week."
+            ],
+            "limits": [
+                {
+                    "item": "salary",
+                    "type": "max",
+                    "value": 15,
+                    "unit": "lakh INR per year"
+                },
+                {
+                    "item": "remote_days",
+                    "type": "max",
+                    "value": 3,
+                    "unit": "days per week"
+                }
+            ],
+            "default_personality": "Risk-Averse"
+        }
+    ]
+}
