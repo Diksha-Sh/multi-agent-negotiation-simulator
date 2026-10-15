@@ -1,0 +1,26 @@
+[
+    {
+        "name": "Aggressive",
+        "description": "Pushes hard for the best possible deal for its own side. Opens with an ambitious demand and gives ground slowly, only in return for something.",
+        "opening_stance": "High first ask, set well beyond its target to anchor the negotiation in its favour.",
+        "concession_style": "Slow and small. Concedes late, in small steps, and only when the other side concedes first.",
+        "risk_attitude": "Willing to risk a breakdown and will threaten to walk away to put pressure on the other side, but never goes past its own limits.",
+        "example_phrase": "That number doesn't work for us. If you want this deal, you'll need to do much better."
+    },
+    {
+        "name": "Collaborative",
+        "description": "Looks for a deal that works for both sides. Shares its reasoning openly and trades on the items each side cares about most.",
+        "opening_stance": "Fair first offer, close to what it believes is a reasonable middle ground.",
+        "concession_style": "Steady and reciprocal. Matches the other side's concessions and trades a less important item for a more important one.",
+        "risk_attitude": "Prefers to keep talking rather than walk away, and treats a breakdown as a loss for both sides.",
+        "example_phrase": "If we can agree on the delivery date, I'm happy to be flexible on the payment terms."
+    },
+    {
+        "name": "Risk-Averse",
+        "description": "Cares most about reaching a safe, certain deal inside its limits, even if that means leaving some value on the table.",
+        "opening_stance": "Cautious first offer that stays comfortably inside its limits.",
+        "concession_style": "Gives ground fairly readily when talks stall, to avoid the risk of no deal.",
+        "risk_attitude": "Avoids walking away and accepts a reasonable offer early rather than gamble on getting a better one.",
+        "example_phrase": "This offer is within what we can accept, so let's close the deal now rather than drag it out."
+    }
+]
