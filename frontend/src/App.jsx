@@ -4,15 +4,25 @@ import jobOffer from './data/job_offer.json';
 import projectBudgetAllocation from './data/project_budget_allocation.json';
 import ScenarioSelectionScreen from './components/ScenarioSelectionScreen';
 import AgentConfigScreen from './components/AgentConfigScreen';
+import LandingPage from './components/LandingPage';
 
 const scenarios = [vendorPricing, jobOffer, projectBudgetAllocation];
 
 function App() {
+  const [currentUser, setCurrentUser] = useState(null);
   const [selectedScenario, setSelectedScenario] = useState(null);
-  const [currentStep, setCurrentStep] = useState('select');
+  const [currentStep, setCurrentStep] = useState('home');
   const [negotiationConfig, setNegotiationConfig] = useState(null);
 
   const activeSetup = negotiationConfig || selectedScenario;
+
+  const handleLogin = (userData) => {
+    setCurrentUser(userData);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+  };
 
   return (
     <div
@@ -299,6 +309,215 @@ function App() {
           height: 16px;
         }
       `}</style>
+
+      {currentStep !== 'home' && (
+        <nav
+          style={{
+            backgroundColor: '#ffffff',
+            borderBottom: '1px solid #e2e8f0',
+            padding: '12px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            position: 'sticky',
+            top: 0,
+            zIndex: 30,
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '20px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setCurrentStep('home')}
+              style={{
+                background: 'none',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              <img
+                src="/favicon.svg"
+                alt="NegotiationAI Logo"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  flexShrink: 0,
+                  display: 'block',
+                }}
+              />
+              <span
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 800,
+                  letterSpacing: '-0.02em',
+                  color: '#0f172a',
+                }}
+              >
+                Negotiation<span style={{ color: '#2563eb' }}>AI</span>
+              </span>
+            </button>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '13px',
+                color: '#64748b',
+                flexWrap: 'wrap',
+              }}
+            >
+              <span>/</span>
+              <button
+                type="button"
+                onClick={() => setCurrentStep('home')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#475569',
+                  cursor: 'pointer',
+                  padding: 0,
+                  fontWeight: 500,
+                }}
+              >
+                Home
+              </button>
+              <span>/</span>
+              <button
+                type="button"
+                onClick={() => setCurrentStep('select')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: currentStep === 'select' ? '#2563eb' : '#475569',
+                  cursor: 'pointer',
+                  padding: 0,
+                  fontWeight: currentStep === 'select' ? 700 : 500,
+                }}
+              >
+                1. Select Scenario
+              </button>
+              <span>/</span>
+              <button
+                type="button"
+                disabled={!selectedScenario}
+                onClick={() => selectedScenario && setCurrentStep('config')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: currentStep === 'config' ? '#2563eb' : selectedScenario ? '#475569' : '#94a3b8',
+                  cursor: selectedScenario ? 'pointer' : 'not-allowed',
+                  padding: 0,
+                  fontWeight: currentStep === 'config' ? 700 : 500,
+                }}
+              >
+                2. Configure Agents
+              </button>
+              <span>/</span>
+              <span
+                style={{
+                  color: currentStep === 'negotiate' ? '#2563eb' : '#94a3b8',
+                  fontWeight: currentStep === 'negotiate' ? 700 : 500,
+                }}
+              >
+                3. Simulation
+              </span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {currentUser && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  padding: '3px 8px 3px 6px',
+                  borderRadius: '9999px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    backgroundColor: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    color: '#1d4ed8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700,
+                    fontSize: '11px',
+                  }}
+                >
+                  {(currentUser.name || currentUser.username || 'U').charAt(0).toUpperCase()}
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>
+                  {currentUser.name || currentUser.username}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    padding: '0 4px',
+                    fontWeight: 500,
+                  }}
+                >
+                  Log Out
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setCurrentStep('home')}
+              style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                padding: '6px 14px',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: '#475569',
+                cursor: 'pointer',
+              }}
+            >
+              Exit to Home
+            </button>
+          </div>
+        </nav>
+      )}
+
+      {currentStep === 'home' && (
+        <LandingPage
+          currentUser={currentUser}
+          onLogin={handleLogin}
+          onLogout={handleLogout}
+          onTrySimulator={() => setCurrentStep('select')}
+          onStart={() => setCurrentStep('select')}
+        />
+      )}
 
       {currentStep === 'select' && (
         <ScenarioSelectionScreen
