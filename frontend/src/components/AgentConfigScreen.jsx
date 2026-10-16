@@ -8,39 +8,157 @@ export default function AgentConfigScreen({
   onStartNegotiation,
 }) {
   const scenario = selectedScenario || vendorPricing;
-  const [selectedPersonalities, setSelectedPersonalities] = useState({});
 
-  const handlePersonalityChange = (agentId, value) => {
-    setSelectedPersonalities((prev) => ({
-      ...prev,
-      [agentId]: value,
-    }));
-  };
+  const [maxRounds, setMaxRounds] = useState(() => scenario?.max_rounds ?? 10);
+  const [prevScenarioId, setPrevScenarioId] = useState(() => scenario?.id);
 
-  const handleStartNegotiation = () => {
-    const finalConfig = {
-      scenario_id: scenario.id || scenario.scenario_id,
-      title: scenario.title,
-      description: scenario.description,
-      max_rounds: scenario.max_rounds ?? 10,
-      agents: (scenario.agents || []).map((agent) => ({
-        id: agent.id,
-        name: agent.name,
-        role: agent.role,
-        role_description: agent.role_description || '',
-        goal: agent.goal,
-        constraints: agent.constraints || [],
-        limits: agent.limits || [],
+  const [agentConfigs, setAgentConfigs] = useState(() => {
+    const initial = {};
+    const agents = (selectedScenario || vendorPricing)?.agents || [];
+    for (let i = 0; i < agents.length; i += 1) {
+      const agent = agents[i];
+      initial[agent.id] = {
+        objective: agent.goal || agent.objective || '',
+        constraints: Array.isArray(agent.constraints) ? [...agent.constraints] : [],
+        limits: Array.isArray(agent.limits)
+          ? agent.limits.map((limit) => ({
+              item: limit.item || '',
+              type: limit.type || 'min',
+              value: limit.value ?? '',
+              unit: limit.unit || '',
+            }))
+          : [],
         personality:
-          selectedPersonalities[agent.id] ||
           agent.default_personality ||
           (personalityList[0] && personalityList[0].name) ||
           'Collaborative',
-      })),
+      };
+    }
+    return initial;
+  });
+
+  if (prevScenarioId !== scenario?.id) {
+    setPrevScenarioId(scenario?.id);
+    setMaxRounds(scenario?.max_rounds ?? 10);
+    const updated = {};
+    const currentAgents = scenario?.agents || [];
+    for (let i = 0; i < currentAgents.length; i += 1) {
+      const agent = currentAgents[i];
+      updated[agent.id] = {
+        objective: agent.goal || agent.objective || '',
+        constraints: Array.isArray(agent.constraints) ? [...agent.constraints] : [],
+        limits: Array.isArray(agent.limits)
+          ? agent.limits.map((limit) => ({
+              item: limit.item || '',
+              type: limit.type || 'min',
+              value: limit.value ?? '',
+              unit: limit.unit || '',
+            }))
+          : [],
+        personality:
+          agent.default_personality ||
+          (personalityList[0] && personalityList[0].name) ||
+          'Collaborative',
+      };
+    }
+    setAgentConfigs(updated);
+  }
+
+  const handleObjectiveChange = (agentId, value) => {
+    setAgentConfigs((prev) => {
+      const current = prev[agentId] || {};
+      return {
+        ...prev,
+        [agentId]: {
+          ...current,
+          objective: value,
+        },
+      };
+    });
+  };
+
+  const handleConstraintChange = (agentId, index, value) => {
+    setAgentConfigs((prev) => {
+      const current = prev[agentId] || {};
+      const updatedConstraints = Array.isArray(current.constraints)
+        ? [...current.constraints]
+        : [];
+      updatedConstraints[index] = value;
+      return {
+        ...prev,
+        [agentId]: {
+          ...current,
+          constraints: updatedConstraints,
+        },
+      };
+    });
+  };
+
+  const handleLimitValueChange = (agentId, index, value) => {
+    setAgentConfigs((prev) => {
+      const current = prev[agentId] || {};
+      const updatedLimits = Array.isArray(current.limits)
+        ? current.limits.map((l, idx) => (idx === index ? { ...l, value } : l))
+        : [];
+      return {
+        ...prev,
+        [agentId]: {
+          ...current,
+          limits: updatedLimits,
+        },
+      };
+    });
+  };
+
+  const handlePersonalityChange = (agentId, value) => {
+    setAgentConfigs((prev) => {
+      const current = prev[agentId] || {};
+      return {
+        ...prev,
+        [agentId]: {
+          ...current,
+          personality: value,
+        },
+      };
+    });
+  };
+
+  const handleStartNegotiation = () => {
+    const customScenarioConfig = {
+      scenario_id: scenario.id || scenario.scenario_id,
+      id: scenario.id || scenario.scenario_id,
+      title: scenario.title,
+      description: scenario.description,
+      max_rounds: Number(maxRounds) || 10,
+      agents: (scenario.agents || []).map((agent) => {
+        const cfg = agentConfigs[agent.id] || {};
+        const goalValue =
+          cfg.objective !== undefined ? cfg.objective : agent.goal || agent.objective || '';
+        return {
+          id: agent.id,
+          name: agent.name,
+          role: agent.role,
+          role_description: agent.role_description || '',
+          goal: goalValue,
+          objective: goalValue,
+          constraints: cfg.constraints || agent.constraints || [],
+          limits: (cfg.limits || agent.limits || []).map((limit) => ({
+            item: limit.item,
+            type: limit.type,
+            value: Number(limit.value) || 0,
+            unit: limit.unit || '',
+          })),
+          personality:
+            cfg.personality ||
+            agent.default_personality ||
+            (personalityList[0] && personalityList[0].name) ||
+            'Collaborative',
+        };
+      }),
     };
 
     if (typeof onStartNegotiation === 'function') {
-      onStartNegotiation(finalConfig);
+      onStartNegotiation(customScenarioConfig);
     }
   };
 
@@ -74,6 +192,12 @@ export default function AgentConfigScreen({
             grid-template-columns: 1fr;
           }
         }
+        .config-input:focus,
+        .config-textarea:focus,
+        .personality-select:focus {
+          border-color: #2563eb !important;
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+        }
         .personality-select {
           width: 100%;
           background-color: #ffffff;
@@ -85,10 +209,6 @@ export default function AgentConfigScreen({
           color: #0f172a;
           cursor: pointer;
           outline: none;
-        }
-        .personality-select:focus {
-          border-color: #2563eb;
-          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
         }
         .btn-start-negotiation {
           background-color: #2563eb;
@@ -195,26 +315,48 @@ export default function AgentConfigScreen({
           <div
             style={{
               display: 'flex',
-              gap: '10px',
+              gap: '12px',
               flexWrap: 'wrap',
               alignItems: 'center',
             }}
           >
-            <span
+            <label
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
+                gap: '8px',
                 backgroundColor: '#eff6ff',
                 border: '1px solid #bfdbfe',
                 color: '#1d4ed8',
                 fontSize: '12px',
                 fontWeight: 600,
-                padding: '4px 12px',
+                padding: '4px 10px 4px 12px',
                 borderRadius: '9999px',
+                cursor: 'pointer',
               }}
             >
-              Max Rounds: {scenario.max_rounds ?? 10}
-            </span>
+              <span>Max Rounds:</span>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={maxRounds}
+                onChange={(e) => setMaxRounds(e.target.value)}
+                className="config-input"
+                style={{
+                  width: '54px',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #93c5fd',
+                  borderRadius: '6px',
+                  padding: '2px 6px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  color: '#1d4ed8',
+                  textAlign: 'center',
+                  outline: 'none',
+                }}
+              />
+            </label>
 
             <span
               style={{
@@ -225,7 +367,7 @@ export default function AgentConfigScreen({
                 color: '#334155',
                 fontSize: '12px',
                 fontWeight: 600,
-                padding: '4px 12px',
+                padding: '6px 12px',
                 borderRadius: '9999px',
               }}
             >
@@ -236,8 +378,18 @@ export default function AgentConfigScreen({
 
         <main className="agent-grid">
           {agents.map((agent) => {
+            const agentState = agentConfigs[agent.id] || {
+              objective: agent.goal || agent.objective || '',
+              constraints: Array.isArray(agent.constraints) ? agent.constraints : [],
+              limits: Array.isArray(agent.limits) ? agent.limits : [],
+              personality:
+                agent.default_personality ||
+                (personalityList[0] && personalityList[0].name) ||
+                'Collaborative',
+            };
+
             const currentPersonalityName =
-              selectedPersonalities[agent.id] ||
+              agentState.personality ||
               agent.default_personality ||
               (personalityList[0] && personalityList[0].name) ||
               'Collaborative';
@@ -320,31 +472,45 @@ export default function AgentConfigScreen({
                     padding: '12px 14px',
                   }}
                 >
-                  <div
+                  <label
+                    htmlFor={`agent-objective-${agent.id}`}
                     style={{
+                      display: 'block',
                       fontSize: '11px',
                       fontWeight: 700,
                       color: '#475569',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      marginBottom: '4px',
+                      marginBottom: '6px',
                     }}
                   >
                     Objective
-                  </div>
-                  <div
+                  </label>
+                  <textarea
+                    id={`agent-objective-${agent.id}`}
+                    rows={2}
+                    value={agentState.objective}
+                    onChange={(e) => handleObjectiveChange(agent.id, e.target.value)}
+                    className="config-textarea"
                     style={{
+                      width: '100%',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      padding: '8px 10px',
                       fontSize: '13px',
+                      fontWeight: 500,
                       color: '#0f172a',
                       lineHeight: 1.5,
-                      fontWeight: 500,
+                      resize: 'vertical',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      fontFamily: 'inherit',
                     }}
-                  >
-                    {agent.goal}
-                  </div>
+                  />
                 </div>
 
-                {Array.isArray(agent.constraints) && agent.constraints.length > 0 && (
+                {Array.isArray(agentState.constraints) && agentState.constraints.length > 0 && (
                   <div>
                     <div
                       style={{
@@ -358,32 +524,39 @@ export default function AgentConfigScreen({
                     >
                       Constraints
                     </div>
-                    <ul
+                    <div
                       style={{
-                        margin: 0,
-                        paddingLeft: '18px',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '6px',
+                        gap: '8px',
                       }}
                     >
-                      {agent.constraints.map((constraint, idx) => (
-                        <li
+                      {agentState.constraints.map((constraint, idx) => (
+                        <input
                           key={idx}
+                          type="text"
+                          value={constraint}
+                          onChange={(e) => handleConstraintChange(agent.id, idx, e.target.value)}
+                          className="config-input"
                           style={{
+                            width: '100%',
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            padding: '8px 12px',
                             fontSize: '13px',
                             color: '#334155',
-                            lineHeight: 1.5,
+                            lineHeight: 1.4,
+                            boxSizing: 'border-box',
+                            outline: 'none',
                           }}
-                        >
-                          {constraint}
-                        </li>
+                        />
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 )}
 
-                {Array.isArray(agent.limits) && agent.limits.length > 0 && (
+                {Array.isArray(agentState.limits) && agentState.limits.length > 0 && (
                   <div>
                     <div
                       style={{
@@ -404,7 +577,7 @@ export default function AgentConfigScreen({
                         gap: '8px',
                       }}
                     >
-                      {agent.limits.map((limit, idx) => {
+                      {agentState.limits.map((limit, idx) => {
                         const isMin = String(limit.type).toLowerCase() === 'min';
                         return (
                           <div
@@ -417,6 +590,8 @@ export default function AgentConfigScreen({
                               border: '1px solid #f1f5f9',
                               borderRadius: '8px',
                               padding: '8px 12px',
+                              flexWrap: 'wrap',
+                              gap: '8px',
                             }}
                           >
                             <span
@@ -427,7 +602,7 @@ export default function AgentConfigScreen({
                                 textTransform: 'capitalize',
                               }}
                             >
-                              {limit.item}
+                              {limit.item ? limit.item.replace(/_/g, ' ') : 'Limit'}
                             </span>
                             <div
                               style={{
@@ -451,18 +626,37 @@ export default function AgentConfigScreen({
                               >
                                 {isMin ? 'MIN' : 'MAX'}
                               </span>
-                              <span
+                              <input
+                                type="number"
+                                value={limit.value}
+                                onChange={(e) =>
+                                  handleLimitValueChange(agent.id, idx, e.target.value)
+                                }
+                                className="config-input"
                                 style={{
+                                  width: '90px',
+                                  backgroundColor: '#ffffff',
+                                  border: '1px solid #cbd5e1',
+                                  borderRadius: '6px',
+                                  padding: '4px 8px',
                                   fontSize: '13px',
                                   fontWeight: 600,
                                   color: '#0f172a',
+                                  textAlign: 'right',
+                                  outline: 'none',
                                 }}
-                              >
-                                {typeof limit.value === 'number'
-                                  ? limit.value.toLocaleString()
-                                  : limit.value}{' '}
-                                {limit.unit || ''}
-                              </span>
+                              />
+                              {limit.unit && (
+                                <span
+                                  style={{
+                                    fontSize: '12px',
+                                    color: '#64748b',
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  {limit.unit}
+                                </span>
+                              )}
                             </div>
                           </div>
                         );
