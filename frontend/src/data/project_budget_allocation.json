@@ -1,0 +1,60 @@
+{
+  "id": "project_budget_allocation",
+  "title": "Project Budget Allocation",
+  "description": "A project manager and a finance manager negotiate the allocation of a limited project budget while balancing project requirements and financial constraints.",
+  "max_rounds": 10,
+  "agents": [
+    {
+      "id": "project_manager",
+      "name": "Project Manager",
+      "role": "Project Manager",
+      "role_description": "Responsible for planning project activities and securing sufficient funding to complete essential deliverables successfully.",
+      "goal": "Secure at least 60 lakh INR for project activities while ensuring the total budget does not exceed 100 lakh INR.",
+      "constraints": [
+        "At least 60 lakh INR must be allocated to project activities.",
+        "The total project budget must not exceed 100 lakh INR."
+      ],
+      "limits": [
+        {
+          "item": "project_allocation",
+          "type": "min",
+          "value": 60,
+          "unit": "lakh INR"
+        },
+        {
+          "item": "total_budget",
+          "type": "max",
+          "value": 100,
+          "unit": "lakh INR"
+        }
+      ],
+      "default_personality": "Collaborative"
+    },
+    {
+      "id": "finance_manager",
+      "name": "Finance Manager",
+      "role": "Finance Manager",
+      "role_description": "Responsible for managing project expenditure, controlling financial risks, and ensuring that the proposed allocation remains within the approved budget.",
+      "goal": "Limit the allocation for project activities to a maximum of 80 lakh INR and keep total project spending within 100 lakh INR.",
+      "constraints": [
+        "The allocation for project activities must not exceed 80 lakh INR.",
+        "Total project spending must not exceed 100 lakh INR."
+      ],
+      "limits": [
+        {
+          "item": "project_allocation",
+          "type": "max",
+          "value": 80,
+          "unit": "lakh INR"
+        },
+        {
+          "item": "total_budget",
+          "type": "max",
+          "value": 100,
+          "unit": "lakh INR"
+        }
+      ],
+      "default_personality": "Risk-Averse"
+    }
+  ]
+}
