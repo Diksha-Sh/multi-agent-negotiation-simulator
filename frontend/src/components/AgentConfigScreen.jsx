@@ -165,669 +165,293 @@ export default function AgentConfigScreen({
   const agents = scenario.agents || [];
 
   return (
-    <div
-      className="agent-config-screen-container"
-      style={{
-        backgroundColor: '#f8fafc',
-        minHeight: '100vh',
-        width: '100%',
-        color: '#334155',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        padding: '36px 24px',
-        boxSizing: 'border-box',
-        textAlign: 'left',
-      }}
-    >
-      <style>{`
-        .agent-config-screen-container * {
-          box-sizing: border-box;
-        }
-        .agent-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 24px;
-        }
-        @media (max-width: 860px) {
-          .agent-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-        .config-input:focus,
-        .config-textarea:focus,
-        .personality-select:focus {
-          border-color: #2563eb !important;
-          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
-        }
-        .personality-select {
-          width: 100%;
-          background-color: #ffffff;
-          border: 1px solid #cbd5e1;
-          border-radius: 8px;
-          padding: 10px 14px;
-          font-size: 14px;
-          font-weight: 500;
-          color: #0f172a;
-          cursor: pointer;
-          outline: none;
-        }
-        .btn-start-negotiation {
-          background-color: #2563eb;
-          border: none;
-          color: #ffffff;
-          padding: 11px 24px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          box-shadow: 0 1px 2px 0 rgba(37, 99, 235, 0.2);
-          transition: background-color 0.15s ease-in-out;
-        }
-        .btn-start-negotiation:hover {
-          background-color: #1d4ed8;
-        }
-        .btn-back-action {
-          background-color: #ffffff;
-          border: 1px solid #cbd5e1;
-          color: #475569;
-          padding: 10px 20px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
-        }
-        .btn-back-action:hover {
-          background-color: #f1f5f9;
-          border-color: #94a3b8;
-        }
-      `}</style>
-
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <header
-          style={{
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '24px 28px',
-            marginBottom: '28px',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '10px',
-            }}
-          >
-            <span
-              style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                color: '#2563eb',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-              }}
-            >
-              Negotiation Scenario
-            </span>
-            {typeof onBack === 'function' && (
-              <button
-                type="button"
-                onClick={onBack}
-                className="btn-back-action"
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                }}
-              >
-                Back
-              </button>
-            )}
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-left">
+      <header className="bg-slate-900/80 backdrop-blur-md border border-slate-800/90 rounded-2xl p-6 sm:p-8 mb-8 shadow-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 text-xs font-semibold uppercase tracking-wider w-fit">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+            Step 2 of 3: Agent Configuration
           </div>
 
-          <h1
-            style={{
-              fontSize: '24px',
-              fontWeight: 700,
-              color: '#0f172a',
-              margin: '0 0 8px 0',
-              lineHeight: 1.3,
-            }}
-          >
-            {scenario.title}
-          </h1>
-
-          <p
-            style={{
-              fontSize: '14px',
-              color: '#334155',
-              lineHeight: 1.6,
-              margin: '0 0 16px 0',
-              maxWidth: '850px',
-            }}
-          >
-            {scenario.description}
-          </p>
-
-          <div
-            style={{
-              display: 'flex',
-              gap: '12px',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-            }}
-          >
-            <label
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                backgroundColor: '#eff6ff',
-                border: '1px solid #bfdbfe',
-                color: '#1d4ed8',
-                fontSize: '12px',
-                fontWeight: 600,
-                padding: '4px 10px 4px 12px',
-                borderRadius: '9999px',
-                cursor: 'pointer',
-              }}
+          {typeof onBack === 'function' && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800/80 border border-slate-700/80 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer w-fit"
             >
-              <span>Max Rounds:</span>
-              <input
-                type="number"
-                min="1"
-                max="100"
-                value={maxRounds}
-                onChange={(e) => setMaxRounds(e.target.value)}
-                className="config-input"
-                style={{
-                  width: '54px',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #93c5fd',
-                  borderRadius: '6px',
-                  padding: '2px 6px',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: '#1d4ed8',
-                  textAlign: 'center',
-                  outline: 'none',
-                }}
-              />
-            </label>
+              <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M17 10a.75.75 0 0 1-.75.75H5.56l4.22 4.22a.75.75 0 1 1-1.06 1.06l-5.5-5.5a.75.75 0 0 1 0-1.06l5.5-5.5a.75.75 0 0 1 1.06 1.06L5.56 9.25h10.69A.75.75 0 0 1 17 10Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>Back to Scenarios</span>
+            </button>
+          )}
+        </div>
 
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                backgroundColor: '#f1f5f9',
-                border: '1px solid #cbd5e1',
-                color: '#334155',
-                fontSize: '12px',
-                fontWeight: 600,
-                padding: '6px 12px',
-                borderRadius: '9999px',
-              }}
-            >
-              Active Agents: {agents.length}
-            </span>
-          </div>
-        </header>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight mb-2">
+          {scenario.title}
+        </h1>
 
-        <main className="agent-grid">
-          {agents.map((agent) => {
-            const agentState = agentConfigs[agent.id] || {
-              objective: agent.goal || agent.objective || '',
-              constraints: Array.isArray(agent.constraints) ? agent.constraints : [],
-              limits: Array.isArray(agent.limits) ? agent.limits : [],
-              personality:
-                agent.default_personality ||
-                (personalityList[0] && personalityList[0].name) ||
-                'Collaborative',
-            };
+        <p className="text-sm sm:text-base text-slate-400 max-w-3xl leading-relaxed mb-6">
+          {scenario.description}
+        </p>
 
-            const currentPersonalityName =
-              agentState.personality ||
+        <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-800/80">
+          <label className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-lg bg-slate-950/70 border border-indigo-500/30 text-indigo-300 text-xs font-semibold">
+            <span>Simulation Rounds:</span>
+            <input
+              type="number"
+              min="1"
+              max="100"
+              value={maxRounds}
+              onChange={(e) => setMaxRounds(e.target.value)}
+              className="w-16 bg-slate-900 border border-indigo-500/40 rounded px-2 py-0.5 text-center text-xs font-bold text-indigo-200 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+            />
+          </label>
+
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950/70 border border-slate-700/80 text-slate-300 text-xs font-medium">
+            <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+            Active Stakeholders: {agents.length}
+          </span>
+
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950/70 border border-slate-700/80 text-slate-300 text-xs font-medium font-mono">
+            ID: {scenario.id}
+          </span>
+        </div>
+      </header>
+
+      <main className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {agents.map((agent) => {
+          const agentState = agentConfigs[agent.id] || {
+            objective: agent.goal || agent.objective || '',
+            constraints: Array.isArray(agent.constraints) ? agent.constraints : [],
+            limits: Array.isArray(agent.limits) ? agent.limits : [],
+            personality:
               agent.default_personality ||
               (personalityList[0] && personalityList[0].name) ||
-              'Collaborative';
+              'Collaborative',
+          };
 
-            const activePersonality =
-              personalityList.find((p) => p.name === currentPersonalityName) ||
-              personalityList[0];
+          const currentPersonalityName =
+            agentState.personality ||
+            agent.default_personality ||
+            (personalityList[0] && personalityList[0].name) ||
+            'Collaborative';
 
-            return (
-              <section
-                key={agent.id}
-                style={{
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '24px',
-                  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '20px',
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '8px',
-                      marginBottom: '6px',
-                    }}
-                  >
-                    <h2
-                      style={{
-                        fontSize: '20px',
-                        fontWeight: 700,
-                        color: '#0f172a',
-                        margin: 0,
-                      }}
-                    >
+          const activePersonality =
+            personalityList.find((p) => p.name === currentPersonalityName) ||
+            personalityList[0];
+
+          return (
+            <section
+              key={agent.id}
+              className="flex flex-col gap-5 rounded-2xl p-6 sm:p-7 bg-slate-900/70 backdrop-blur-md border border-slate-800/80 hover:border-indigo-500/40 transition-all duration-300 shadow-xl"
+            >
+              <div className="flex items-start justify-between gap-4 border-b border-slate-800/80 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-950 border border-indigo-500/40 text-indigo-300 font-extrabold text-base flex items-center justify-center shrink-0">
+                    {agent.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-100">
                       {agent.name}
                     </h2>
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        backgroundColor: '#f8fafc',
-                        border: '1px solid #cbd5e1',
-                        color: '#475569',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        padding: '3px 10px',
-                        borderRadius: '9999px',
-                      }}
-                    >
+                    <span className="text-xs font-medium text-slate-400">
                       {agent.role}
                     </span>
                   </div>
+                </div>
 
-                  {agent.role_description && (
-                    <p
-                      style={{
-                        fontSize: '13px',
-                        color: '#64748b',
-                        lineHeight: 1.5,
-                        margin: 0,
-                      }}
-                    >
-                      {agent.role_description}
-                    </p>
+                <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-md border border-slate-700/80 bg-slate-950/60 text-slate-300 shrink-0">
+                  {currentPersonalityName}
+                </span>
+              </div>
+
+              {agent.role_description && (
+                <p className="text-xs text-slate-400 leading-relaxed -mt-1">
+                  {agent.role_description}
+                </p>
+              )}
+
+              <div className="space-y-2">
+                <label
+                  htmlFor={`agent-objective-${agent.id}`}
+                  className="block text-xs font-bold uppercase tracking-wider text-slate-300"
+                >
+                  Primary Objective
+                </label>
+                <textarea
+                  id={`agent-objective-${agent.id}`}
+                  rows={3}
+                  value={agentState.objective}
+                  onChange={(e) => handleObjectiveChange(agent.id, e.target.value)}
+                  className="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all resize-y leading-relaxed"
+                />
+              </div>
+
+              {Array.isArray(agentState.constraints) && agentState.constraints.length > 0 && (
+                <div className="space-y-2.5">
+                  <span className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                    Behavioral Constraints
+                  </span>
+                  <div className="space-y-2">
+                    {agentState.constraints.map((constraint, idx) => (
+                      <input
+                        key={idx}
+                        type="text"
+                        value={constraint}
+                        onChange={(e) => handleConstraintChange(agent.id, idx, e.target.value)}
+                        className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3.5 py-2 text-xs text-slate-200 placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {Array.isArray(agentState.limits) && agentState.limits.length > 0 && (
+                <div className="space-y-2.5">
+                  <span className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                    Negotiation Limits & Bounds
+                  </span>
+                  <div className="space-y-2">
+                    {agentState.limits.map((limit, idx) => {
+                      const isMin = String(limit.type).toLowerCase() === 'min';
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className={`text-[11px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider shrink-0 ${
+                                isMin
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                  : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                              }`}
+                            >
+                              {isMin ? 'MIN' : 'MAX'}
+                            </span>
+                            <span className="text-xs font-medium text-slate-300 truncate capitalize">
+                              {limit.item ? limit.item.replace(/_/g, ' ') : 'Parameter'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <input
+                              type="number"
+                              value={limit.value}
+                              onChange={(e) =>
+                                handleLimitValueChange(agent.id, idx, e.target.value)
+                              }
+                              className="w-24 bg-slate-950/80 border border-slate-700/80 rounded-lg px-2.5 py-1 text-right text-xs font-bold text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                            />
+                            {limit.unit && (
+                              <span className="text-xs font-medium text-slate-400 w-10 text-left">
+                                {limit.unit}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2.5">
+                <label
+                  htmlFor={`personality-select-${agent.id}`}
+                  className="block text-xs font-bold uppercase tracking-wider text-slate-300"
+                >
+                  Personality Profile
+                </label>
+                <select
+                  id={`personality-select-${agent.id}`}
+                  value={currentPersonalityName}
+                  onChange={(e) => handlePersonalityChange(agent.id, e.target.value)}
+                  className="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none cursor-pointer"
+                >
+                  {personalityList.map((p) => (
+                    <option key={p.name} value={p.name} className="bg-slate-900 text-slate-100">
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {activePersonality && (
+                <div className="rounded-xl border border-indigo-500/30 bg-indigo-950/20 p-4 space-y-3">
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    {activePersonality.description}
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] pt-2 border-t border-indigo-500/20 text-slate-400">
+                    <div>
+                      <span className="block font-semibold text-slate-300">Stance:</span>
+                      <span>{activePersonality.opening_stance}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-slate-300">Concession:</span>
+                      <span>{activePersonality.concession_style}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-slate-300">Risk:</span>
+                      <span>{activePersonality.risk_attitude}</span>
+                    </div>
+                  </div>
+
+                  {activePersonality.example_phrase && (
+                    <div className="rounded-lg bg-slate-950/60 border border-slate-800 p-2.5 text-xs italic text-cyan-300">
+                      "{activePersonality.example_phrase}"
+                    </div>
                   )}
                 </div>
+              )}
+            </section>
+          );
+        })}
+      </main>
 
-                <div
-                  style={{
-                    backgroundColor: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    padding: '12px 14px',
-                  }}
-                >
-                  <label
-                    htmlFor={`agent-objective-${agent.id}`}
-                    style={{
-                      display: 'block',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      color: '#475569',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      marginBottom: '6px',
-                    }}
-                  >
-                    Objective
-                  </label>
-                  <textarea
-                    id={`agent-objective-${agent.id}`}
-                    rows={2}
-                    value={agentState.objective}
-                    onChange={(e) => handleObjectiveChange(agent.id, e.target.value)}
-                    className="config-textarea"
-                    style={{
-                      width: '100%',
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '6px',
-                      padding: '8px 10px',
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      color: '#0f172a',
-                      lineHeight: 1.5,
-                      resize: 'vertical',
-                      boxSizing: 'border-box',
-                      outline: 'none',
-                      fontFamily: 'inherit',
-                    }}
-                  />
-                </div>
-
-                {Array.isArray(agentState.constraints) && agentState.constraints.length > 0 && (
-                  <div>
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        color: '#475569',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        marginBottom: '8px',
-                      }}
-                    >
-                      Constraints
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '8px',
-                      }}
-                    >
-                      {agentState.constraints.map((constraint, idx) => (
-                        <input
-                          key={idx}
-                          type="text"
-                          value={constraint}
-                          onChange={(e) => handleConstraintChange(agent.id, idx, e.target.value)}
-                          className="config-input"
-                          style={{
-                            width: '100%',
-                            backgroundColor: '#ffffff',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '6px',
-                            padding: '8px 12px',
-                            fontSize: '13px',
-                            color: '#334155',
-                            lineHeight: 1.4,
-                            boxSizing: 'border-box',
-                            outline: 'none',
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {Array.isArray(agentState.limits) && agentState.limits.length > 0 && (
-                  <div>
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        color: '#475569',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        marginBottom: '8px',
-                      }}
-                    >
-                      Negotiation Limits
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '8px',
-                      }}
-                    >
-                      {agentState.limits.map((limit, idx) => {
-                        const isMin = String(limit.type).toLowerCase() === 'min';
-                        return (
-                          <div
-                            key={idx}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              backgroundColor: '#f8fafc',
-                              border: '1px solid #f1f5f9',
-                              borderRadius: '8px',
-                              padding: '8px 12px',
-                              flexWrap: 'wrap',
-                              gap: '8px',
-                            }}
-                          >
-                            <span
-                              style={{
-                                fontSize: '13px',
-                                color: '#334155',
-                                fontWeight: 500,
-                                textTransform: 'capitalize',
-                              }}
-                            >
-                              {limit.item ? limit.item.replace(/_/g, ' ') : 'Limit'}
-                            </span>
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                              }}
-                            >
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  backgroundColor: isMin ? '#dcfce7' : '#fee2e2',
-                                  border: isMin ? '1px solid #bbf7d0' : '1px solid #fecaca',
-                                  color: isMin ? '#15803d' : '#b91c1c',
-                                  fontSize: '11px',
-                                  fontWeight: 700,
-                                  padding: '2px 8px',
-                                  borderRadius: '9999px',
-                                }}
-                              >
-                                {isMin ? 'MIN' : 'MAX'}
-                              </span>
-                              <input
-                                type="number"
-                                value={limit.value}
-                                onChange={(e) =>
-                                  handleLimitValueChange(agent.id, idx, e.target.value)
-                                }
-                                className="config-input"
-                                style={{
-                                  width: '90px',
-                                  backgroundColor: '#ffffff',
-                                  border: '1px solid #cbd5e1',
-                                  borderRadius: '6px',
-                                  padding: '4px 8px',
-                                  fontSize: '13px',
-                                  fontWeight: 600,
-                                  color: '#0f172a',
-                                  textAlign: 'right',
-                                  outline: 'none',
-                                }}
-                              />
-                              {limit.unit && (
-                                <span
-                                  style={{
-                                    fontSize: '12px',
-                                    color: '#64748b',
-                                    fontWeight: 500,
-                                  }}
-                                >
-                                  {limit.unit}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <label
-                    htmlFor={`personality-select-${agent.id}`}
-                    style={{
-                      display: 'block',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      color: '#475569',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      marginBottom: '6px',
-                    }}
-                  >
-                    Personality Profile
-                  </label>
-                  <select
-                    id={`personality-select-${agent.id}`}
-                    value={currentPersonalityName}
-                    onChange={(e) => handlePersonalityChange(agent.id, e.target.value)}
-                    className="personality-select"
-                  >
-                    {personalityList.map((p) => (
-                      <option key={p.name} value={p.name}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {activePersonality && (
-                  <div
-                    style={{
-                      borderLeft: '3px solid #2563eb',
-                      borderTop: '1px solid #e2e8f0',
-                      borderRight: '1px solid #e2e8f0',
-                      borderBottom: '1px solid #e2e8f0',
-                      borderRadius: '0 8px 8px 0',
-                      backgroundColor: '#f8faff',
-                      padding: '14px 16px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px',
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: '13px',
-                        color: '#334155',
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {activePersonality.description}
-                    </div>
-
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '4px',
-                        fontSize: '12px',
-                        color: '#475569',
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      <div>
-                        <strong style={{ color: '#0f172a' }}>Opening stance: </strong>
-                        {activePersonality.opening_stance}
-                      </div>
-                      <div>
-                        <strong style={{ color: '#0f172a' }}>Concession style: </strong>
-                        {activePersonality.concession_style}
-                      </div>
-                      <div>
-                        <strong style={{ color: '#0f172a' }}>Risk attitude: </strong>
-                        {activePersonality.risk_attitude}
-                      </div>
-                    </div>
-
-                    {activePersonality.example_phrase && (
-                      <div
-                        style={{
-                          backgroundColor: '#ffffff',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '6px',
-                          padding: '8px 12px',
-                          fontSize: '12px',
-                          fontStyle: 'italic',
-                          color: '#1d4ed8',
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        "{activePersonality.example_phrase}"
-                      </div>
-                    )}
-                  </div>
-                )}
-              </section>
-            );
-          })}
-        </main>
-
-        <footer
-          style={{
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '20px 28px',
-            marginTop: '28px',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '16px',
-          }}
-        >
-          <div>
-            <div
-              style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: '#0f172a',
-              }}
-            >
-              Ready to begin simulation
-            </div>
-            <div
-              style={{
-                fontSize: '12px',
-                color: '#64748b',
-              }}
-            >
-              Agents will negotiate according to configured limits and personality traits.
-            </div>
+      <footer className="bg-slate-900/80 backdrop-blur-md border border-slate-800/90 rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <div className="text-sm font-bold text-slate-100">
+            Ready to Initialize Multi-Agent Simulation
           </div>
+          <div className="text-xs text-slate-400 mt-0.5">
+            Agents will communicate turn-by-turn adhering strictly to reservation boundaries.
+          </div>
+        </div>
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-            }}
-          >
-            {typeof onBack === 'function' && (
-              <button
-                type="button"
-                onClick={onBack}
-                className="btn-back-action"
-              >
-                Back
-              </button>
-            )}
-
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {typeof onBack === 'function' && (
             <button
               type="button"
-              onClick={handleStartNegotiation}
-              className="btn-start-negotiation"
+              onClick={onBack}
+              className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800/80 border border-slate-700/80 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer text-center"
             >
-              Start Negotiation
+              Back
             </button>
-          </div>
-        </footer>
-      </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleStartNegotiation}
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 text-center"
+          >
+            <span>Launch Simulation</span>
+            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
+      </footer>
     </div>
   );
 }

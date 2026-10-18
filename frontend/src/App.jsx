@@ -24,794 +24,332 @@ function App() {
     setCurrentUser(null);
   };
 
+  const steps = [
+    { key: 'select', number: 1, label: 'Select Scenario' },
+    { key: 'config', number: 2, label: 'Configure Agents' },
+    { key: 'negotiate', number: 3, label: 'Simulation Arena' },
+  ];
+
+  const getStepStatus = (stepKey) => {
+    if (currentStep === stepKey) return 'active';
+    if (currentStep === 'config' && stepKey === 'select') return 'completed';
+    if (currentStep === 'negotiate' && (stepKey === 'select' || stepKey === 'config')) return 'completed';
+    return 'pending';
+  };
+
   return (
-    <div
-      className="app-container"
-      style={{
-        backgroundColor: '#f8fafc',
-        minHeight: '100vh',
-        width: '100%',
-        color: '#334155',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      }}
-    >
-      <style>{`
-        .app-container * {
-          box-sizing: border-box;
-        }
-        .selection-screen {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 36px 24px;
-          text-align: left;
-        }
-        .selection-screen__header {
-          margin-bottom: 28px;
-        }
-        .selection-screen__step-badge {
-          display: inline-block;
-          font-size: 12px;
-          font-weight: 700;
-          color: #2563eb;
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-          margin-bottom: 8px;
-        }
-        .selection-screen__title {
-          font-size: 26px;
-          font-weight: 700;
-          color: #0f172a;
-          margin: 0 0 8px 0;
-          line-height: 1.3;
-        }
-        .selection-screen__subtitle {
-          font-size: 14px;
-          color: #475569;
-          line-height: 1.6;
-          margin: 0;
-          max-width: 800px;
-        }
-        .selection-screen__grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-          gap: 24px;
-          margin-bottom: 28px;
-        }
-        .scenario-card {
-          background-color: #ffffff;
-          border: 1.5px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 24px;
-          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-          cursor: pointer;
-          transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          text-align: left;
-          outline: none;
-        }
-        .scenario-card:hover {
-          border-color: #93c5fd;
-          transform: translateY(-2px);
-          box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.08);
-        }
-        .scenario-card--selected {
-          border-color: #2563eb !important;
-          box-shadow: 0 0 0 2px #2563eb, 0 8px 20px -4px rgba(37, 99, 235, 0.15) !important;
-          background-color: #fbfdff;
-        }
-        .scenario-card__header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-        }
-        .scenario-card__badges {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-        .badge {
-          display: inline-flex;
-          align-items: center;
-          font-size: 11px;
-          font-weight: 600;
-          padding: 3px 8px;
-          border-radius: 9999px;
-        }
-        .badge--neutral {
-          background-color: #f1f5f9;
-          border: 1px solid #cbd5e1;
-          color: #475569;
-        }
-        .badge--outline {
-          background-color: #ffffff;
-          border: 1px solid #bfdbfe;
-          color: #1d4ed8;
-        }
-        .scenario-card__radio {
-          width: 20px;
-          height: 20px;
-          border-radius: 50%;
-          border: 2px solid #cbd5e1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.15s ease;
-          flex-shrink: 0;
-        }
-        .scenario-card__radio--checked {
-          border-color: #2563eb;
-          background-color: #2563eb;
-          color: #ffffff;
-        }
-        .scenario-card__check-icon {
-          width: 12px;
-          height: 12px;
-        }
-        .scenario-card__title {
-          font-size: 18px;
-          font-weight: 700;
-          color: #0f172a;
-          margin: 0;
-          line-height: 1.3;
-        }
-        .scenario-card__description {
-          font-size: 13px;
-          color: #475569;
-          line-height: 1.5;
-          margin: 0;
-          flex-grow: 1;
-        }
-        .scenario-card__stakeholders {
-          border-top: 1px solid #f1f5f9;
-          padding-top: 12px;
-        }
-        .scenario-card__section-label {
-          font-size: 11px;
-          font-weight: 700;
-          color: #64748b;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          margin: 0 0 8px 0;
-          display: block;
-        }
-        .scenario-card__agent-list {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .scenario-card__agent-item {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          background-color: #f8fafc;
-          padding: 6px 10px;
-          border-radius: 6px;
-        }
-        .scenario-card__agent-icon {
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background-color: #e2e8f0;
-          color: #334155;
-          font-size: 12px;
-          font-weight: 700;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .scenario-card__agent-details {
-          display: flex;
-          flex-direction: column;
-        }
-        .scenario-card__agent-name {
-          font-size: 13px;
-          font-weight: 600;
-          color: #0f172a;
-        }
-        .scenario-card__agent-role {
-          font-size: 11px;
-          color: #64748b;
-        }
-        .scenario-card__items-section {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-        .scenario-card__item-tags {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-        }
-        .tag {
-          background-color: #eff6ff;
-          color: #1e40af;
-          border: 1px solid #dbeafe;
-          font-size: 11px;
-          font-weight: 600;
-          padding: 2px 8px;
-          border-radius: 4px;
-          text-transform: capitalize;
-        }
-        .scenario-card__footer {
-          border-top: 1px solid #f1f5f9;
-          padding-top: 10px;
-          font-size: 12px;
-          font-weight: 600;
-          color: #64748b;
-        }
-        .scenario-card--selected .scenario-card__footer-status {
-          color: #2563eb;
-        }
-        .selection-screen__action-bar {
-          background-color: #ffffff;
-          border: 1px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 16px 24px;
-          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: 16px;
-        }
-        .selection-screen__status {
-          font-size: 14px;
-          color: #475569;
-        }
-        .selection-screen__selected-info,
-        .selection-screen__unselected-info {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .status-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          display: inline-block;
-        }
-        .status-dot--active {
-          background-color: #16a34a;
-        }
-        .status-dot--idle {
-          background-color: #94a3b8;
-        }
-        .btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          padding: 10px 22px;
-          border-radius: 8px;
-          border: none;
-          cursor: pointer;
-          transition: background-color 0.15s ease;
-        }
-        .btn--primary {
-          background-color: #2563eb;
-          color: #ffffff;
-        }
-        .btn--primary:hover:not(:disabled) {
-          background-color: #1d4ed8;
-        }
-        .btn--primary:disabled {
-          background-color: #cbd5e1;
-          color: #94a3b8;
-          cursor: not-allowed;
-        }
-        .btn__icon {
-          width: 16px;
-          height: 16px;
-        }
-      `}</style>
+    <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white relative">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-b from-indigo-900/15 via-cyan-900/5 to-transparent blur-3xl" />
+        <div className="absolute top-1/3 left-10 w-96 h-96 bg-indigo-600/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-cyan-600/5 rounded-full blur-3xl" />
+      </div>
 
       {currentStep !== 'home' && (
-        <nav
-          style={{
-            backgroundColor: '#ffffff',
-            borderBottom: '1px solid #e2e8f0',
-            padding: '12px 24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            position: 'sticky',
-            top: 0,
-            zIndex: 30,
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '20px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setCurrentStep('home')}
-              style={{
-                background: 'none',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                cursor: 'pointer',
-                padding: 0,
-              }}
-            >
-              <img
-                src="/favicon.svg"
-                alt="NegotiationAI Logo"
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  flexShrink: 0,
-                  display: 'block',
-                }}
-              />
-              <span
-                style={{
-                  fontSize: '18px',
-                  fontWeight: 800,
-                  letterSpacing: '-0.02em',
-                  color: '#0f172a',
-                }}
-              >
-                Negotiation<span style={{ color: '#2563eb' }}>AI</span>
-              </span>
-            </button>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '13px',
-                color: '#64748b',
-                flexWrap: 'wrap',
-              }}
-            >
-              <span>/</span>
+        <nav className="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-md border-b border-slate-800/80">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col lg:flex-row items-center justify-between gap-4">
+            <div className="flex items-center justify-between w-full lg:w-auto gap-4">
               <button
                 type="button"
                 onClick={() => setCurrentStep('home')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#475569',
-                  cursor: 'pointer',
-                  padding: 0,
-                  fontWeight: 500,
-                }}
+                className="flex items-center gap-3 cursor-pointer group bg-transparent border-0 p-0"
               >
-                Home
-              </button>
-              <span>/</span>
-              <button
-                type="button"
-                onClick={() => setCurrentStep('select')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: currentStep === 'select' ? '#2563eb' : '#475569',
-                  cursor: 'pointer',
-                  padding: 0,
-                  fontWeight: currentStep === 'select' ? 700 : 500,
-                }}
-              >
-                1. Select Scenario
-              </button>
-              <span>/</span>
-              <button
-                type="button"
-                disabled={!selectedScenario}
-                onClick={() => selectedScenario && setCurrentStep('config')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: currentStep === 'config' ? '#2563eb' : selectedScenario ? '#475569' : '#94a3b8',
-                  cursor: selectedScenario ? 'pointer' : 'not-allowed',
-                  padding: 0,
-                  fontWeight: currentStep === 'config' ? 700 : 500,
-                }}
-              >
-                2. Configure Agents
-              </button>
-              <span>/</span>
-              <span
-                style={{
-                  color: currentStep === 'negotiate' ? '#2563eb' : '#94a3b8',
-                  fontWeight: currentStep === 'negotiate' ? 700 : 500,
-                }}
-              >
-                3. Simulation
-              </span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {currentUser && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  padding: '3px 8px 3px 6px',
-                  borderRadius: '9999px',
-                }}
-              >
-                <div
-                  style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    backgroundColor: '#eff6ff',
-                    border: '1px solid #bfdbfe',
-                    color: '#1d4ed8',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
-                    fontSize: '11px',
-                  }}
-                >
-                  {(currentUser.name || currentUser.username || 'U').charAt(0).toUpperCase()}
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-cyan-500 p-0.5 shadow-lg shadow-indigo-500/20 flex items-center justify-center shrink-0">
+                  <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                    <img
+                      src="/favicon.svg"
+                      alt="NegotiationAI Logo"
+                      className="w-4.5 h-4.5 block"
+                    />
+                  </div>
                 </div>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>
-                  {currentUser.name || currentUser.username}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#64748b',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                    padding: '0 4px',
-                    fontWeight: 500,
-                  }}
-                >
-                  Log Out
-                </button>
-              </div>
-            )}
+                <div className="flex flex-col text-left">
+                  <span className="text-base font-extrabold tracking-tight text-white group-hover:text-indigo-300 transition-colors">
+                    Negotiation<span className="text-indigo-400">AI</span>
+                  </span>
+                  <span className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">
+                    Simulation Console
+                  </span>
+                </div>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setCurrentStep('home')}
-              style={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                padding: '6px 14px',
-                fontSize: '13px',
-                fontWeight: 600,
-                color: '#475569',
-                cursor: 'pointer',
-              }}
-            >
-              Exit to Home
-            </button>
+              <button
+                type="button"
+                onClick={() => setCurrentStep('home')}
+                className="lg:hidden text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700/80 bg-slate-900 text-slate-300 hover:text-white"
+              >
+                Exit
+              </button>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+              {steps.map((step, index) => {
+                const status = getStepStatus(step.key);
+                const isClickable =
+                  step.key === 'select' ||
+                  (step.key === 'config' && selectedScenario) ||
+                  (step.key === 'negotiate' && negotiationConfig);
+
+                return (
+                  <div key={step.key} className="flex items-center gap-2 sm:gap-3">
+                    <button
+                      type="button"
+                      disabled={!isClickable}
+                      onClick={() => isClickable && setCurrentStep(step.key)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                        status === 'active'
+                          ? 'bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 shadow-sm'
+                          : status === 'completed'
+                          ? 'bg-slate-900/90 border border-slate-800 text-slate-300 hover:border-slate-700 hover:text-white cursor-pointer'
+                          : 'bg-slate-950/60 border border-slate-800/60 text-slate-400 cursor-not-allowed opacity-60'
+                      }`}
+                    >
+                      <span
+                        className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
+                          status === 'active'
+                            ? 'bg-indigo-600 text-white'
+                            : status === 'completed'
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {status === 'completed' ? (
+                          <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
+                            <path
+                              fillRule="evenodd"
+                              d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        ) : (
+                          step.number
+                        )}
+                      </span>
+                      <span className="hidden sm:inline">{step.label}</span>
+                    </button>
+
+                    {index < steps.length - 1 && (
+                      <div
+                        className={`w-4 sm:w-6 h-0.5 ${
+                          status === 'completed' ? 'bg-indigo-500/50' : 'bg-slate-800'
+                        }`}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="hidden lg:flex items-center gap-3">
+              {currentUser && (
+                <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-800 rounded-full py-1 pl-2 pr-3">
+                  <div className="w-6 h-6 rounded-full bg-indigo-950 border border-indigo-500/40 text-indigo-300 font-bold text-[11px] flex items-center justify-center">
+                    {(currentUser.name || currentUser.username || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-xs font-semibold text-slate-200">
+                    {currentUser.name || currentUser.username}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="text-[11px] text-slate-400 hover:text-rose-400 ml-1 transition-colors cursor-pointer"
+                  >
+                    Log Out
+                  </button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setCurrentStep('home')}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-900/80 border border-slate-800 hover:border-slate-700 hover:text-white transition-colors cursor-pointer"
+              >
+                Exit to Home
+              </button>
+            </div>
           </div>
         </nav>
       )}
 
-      {currentStep === 'home' && (
-        <LandingPage
-          currentUser={currentUser}
-          onLogin={handleLogin}
-          onLogout={handleLogout}
-          onTrySimulator={() => setCurrentStep('select')}
-          onStart={() => setCurrentStep('select')}
-        />
-      )}
+      <main className="flex-1 relative z-10 w-full">
+        {currentStep === 'home' && (
+          <LandingPage
+            currentUser={currentUser}
+            onLogin={handleLogin}
+            onLogout={handleLogout}
+            onTrySimulator={() => setCurrentStep('select')}
+            onStart={() => setCurrentStep('select')}
+          />
+        )}
 
-      {currentStep === 'select' && (
-        <ScenarioSelectionScreen
-          scenarios={scenarios}
-          selectedScenario={selectedScenario}
-          onSelectScenario={(s) => setSelectedScenario(s)}
-          onContinue={() => setCurrentStep('config')}
-        />
-      )}
+        {currentStep === 'select' && (
+          <ScenarioSelectionScreen
+            scenarios={scenarios}
+            selectedScenario={selectedScenario}
+            onSelectScenario={(s) => setSelectedScenario(s)}
+            onContinue={() => setCurrentStep('config')}
+          />
+        )}
 
-      {currentStep === 'config' && (
-        <AgentConfigScreen
-          selectedScenario={selectedScenario}
-          onBack={() => setCurrentStep('select')}
-          onStartNegotiation={(config) => {
-            setNegotiationConfig(config);
-            setCurrentStep('negotiate');
-          }}
-        />
-      )}
-
-      {currentStep === 'negotiate' && (
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '36px 24px', textAlign: 'left' }}>
-          <header
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '24px 28px',
-              marginBottom: '28px',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)',
+        {currentStep === 'config' && (
+          <AgentConfigScreen
+            selectedScenario={selectedScenario}
+            onBack={() => setCurrentStep('select')}
+            onStartNegotiation={(config) => {
+              setNegotiationConfig(config);
+              setCurrentStep('negotiate');
             }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '10px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    color: '#2563eb',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                  }}
-                >
-                  Step 3 of 3: Simulation Active
-                </span>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    backgroundColor: '#dcfce7',
-                    border: '1px solid #bbf7d0',
-                    color: '#15803d',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: '9999px',
-                  }}
-                >
-                  Running
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCurrentStep('select')}
-                style={{
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  padding: '6px 14px',
-                  color: '#475569',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Reset to Scenario Selection
-              </button>
-            </div>
+          />
+        )}
 
-            <h1
-              style={{
-                fontSize: '24px',
-                fontWeight: 700,
-                color: '#0f172a',
-                margin: '0 0 8px 0',
-                lineHeight: 1.3,
-              }}
-            >
-              {activeSetup?.title || 'Negotiation Simulation'}
-            </h1>
-
-            <p
-              style={{
-                fontSize: '14px',
-                color: '#334155',
-                lineHeight: 1.6,
-                margin: '0 0 16px 0',
-                maxWidth: '850px',
-              }}
-            >
-              {activeSetup?.description || 'Active multi-agent negotiation in progress.'}
-            </p>
-
-            <div
-              style={{
-                display: 'flex',
-                gap: '10px',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-              }}
-            >
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  backgroundColor: '#eff6ff',
-                  border: '1px solid #bfdbfe',
-                  color: '#1d4ed8',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  padding: '4px 12px',
-                  borderRadius: '9999px',
-                }}
-              >
-                Max Rounds: {activeSetup?.max_rounds ?? 10}
-              </span>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  backgroundColor: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
-                  color: '#334155',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  padding: '4px 12px',
-                  borderRadius: '9999px',
-                }}
-              >
-                Active Agents: {(activeSetup?.agents || []).length}
-              </span>
-            </div>
-          </header>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-              gap: '24px',
-              marginBottom: '28px',
-            }}
-          >
-            {(activeSetup?.agents || []).map((agent) => (
-              <div
-                key={agent.id}
-                style={{
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '24px',
-                  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '8px',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <h2
-                    style={{
-                      fontSize: '18px',
-                      fontWeight: 700,
-                      color: '#0f172a',
-                      margin: 0,
-                    }}
-                  >
-                    {agent.name}
-                  </h2>
-                  <span
-                    style={{
-                      backgroundColor: '#eff6ff',
-                      border: '1px solid #bfdbfe',
-                      color: '#1d4ed8',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      padding: '3px 10px',
-                      borderRadius: '9999px',
-                    }}
-                  >
-                    {agent.personality || agent.default_personality || 'Collaborative'}
+        {currentStep === 'negotiate' && (
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-left">
+            <header className="bg-slate-900/80 backdrop-blur-md border border-slate-800/90 rounded-2xl p-6 sm:p-8 mb-8 shadow-2xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                    Step 3 of 3: Simulation Active
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Simulation Running
                   </span>
                 </div>
 
-                <div
-                  style={{
-                    fontSize: '13px',
-                    color: '#475569',
-                    fontWeight: 500,
-                  }}
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep('select')}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800/80 border border-slate-700/80 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer w-fit"
                 >
-                  Role: {agent.role}
-                </div>
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path
+                      fillRule="evenodd"
+                      d="M17 10a.75.75 0 0 1-.75.75H5.56l4.22 4.22a.75.75 0 1 1-1.06 1.06l-5.5-5.5a.75.75 0 0 1 0-1.06l5.5-5.5a.75.75 0 0 1 1.06 1.06L5.56 9.25h10.69A.75.75 0 0 1 17 10Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span>Reset to Scenarios</span>
+                </button>
+              </div>
 
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight mb-2">
+                {activeSetup?.title || 'Negotiation Simulation'}
+              </h1>
+
+              <p className="text-sm sm:text-base text-slate-400 max-w-3xl leading-relaxed mb-6">
+                {activeSetup?.description || 'Active multi-agent negotiation arena in progress.'}
+              </p>
+
+              <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-800/80">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950/70 border border-indigo-500/30 text-indigo-300 text-xs font-semibold">
+                  Max Allowed Rounds: {activeSetup?.max_rounds ?? 10}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950/70 border border-slate-700/80 text-slate-300 text-xs font-medium">
+                  Active Stakeholders: {(activeSetup?.agents || []).length}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950/70 border border-slate-700/80 text-slate-300 text-xs font-mono font-medium">
+                  Scenario: {activeSetup?.id || activeSetup?.scenario_id}
+                </span>
+              </div>
+            </header>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              {(activeSetup?.agents || []).map((agent) => (
                 <div
-                  style={{
-                    backgroundColor: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    padding: '12px',
-                  }}
+                  key={agent.id}
+                  className="flex flex-col gap-5 rounded-2xl p-6 sm:p-7 bg-slate-900/70 backdrop-blur-md border border-slate-800/80 shadow-xl"
                 >
-                  <div
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      color: '#64748b',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      marginBottom: '4px',
-                    }}
-                  >
-                    Objective
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '13px',
-                      color: '#1e293b',
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {agent.goal}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                  <div className="flex items-start justify-between gap-4 border-b border-slate-800/80 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-950 border border-indigo-500/40 text-indigo-300 font-extrabold text-base flex items-center justify-center shrink-0">
+                        {agent.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-100">
+                          {agent.name}
+                        </h2>
+                        <span className="text-xs font-medium text-slate-400">
+                          {agent.role}
+                        </span>
+                      </div>
+                    </div>
 
-          <footer
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '18px 24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '16px',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)',
-            }}
-          >
-            <div>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>
-                Negotiation session initialized
-              </div>
-              <div style={{ fontSize: '12px', color: '#64748b' }}>
-                You can return to scenario selection to test a different setup at any time.
-              </div>
+                    <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-md border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 shrink-0">
+                      {agent.personality || agent.default_personality || 'Collaborative'}
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-950/60 border border-slate-800 p-4 space-y-1.5">
+                    <span className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Configured Objective
+                    </span>
+                    <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                      {agent.goal || agent.objective}
+                    </p>
+                  </div>
+
+                  {Array.isArray(agent.limits) && agent.limits.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Active Bounds
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {agent.limits.map((limit, idx) => {
+                          const isMin = String(limit.type).toLowerCase() === 'min';
+                          return (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/50 border border-slate-800/70 text-xs"
+                            >
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span
+                                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase ${
+                                    isMin
+                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                      : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                                  }`}
+                                >
+                                  {isMin ? 'MIN' : 'MAX'}
+                                </span>
+                                <span className="text-slate-300 truncate capitalize">
+                                  {limit.item ? limit.item.replace(/_/g, ' ') : 'Item'}
+                                </span>
+                              </div>
+                              <span className="font-bold text-slate-100 shrink-0">
+                                {limit.value} {limit.unit || ''}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
 
-            <button
-              type="button"
-              onClick={() => setCurrentStep('select')}
-              style={{
-                backgroundColor: '#2563eb',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '10px 22px',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Select New Scenario
-            </button>
-          </footer>
-        </div>
-      )}
+            <footer className="bg-slate-900/80 backdrop-blur-md border border-slate-800/90 rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-bold text-slate-100">
+                  Negotiation Session Initialized
+                </div>
+                <div className="text-xs text-slate-400 mt-0.5">
+                  You can return to scenario selection to test a different domain or persona profile.
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentStep('select')}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-semibold text-xs bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25 transition-all cursor-pointer text-center"
+              >
+                Select New Scenario
+              </button>
+            </footer>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

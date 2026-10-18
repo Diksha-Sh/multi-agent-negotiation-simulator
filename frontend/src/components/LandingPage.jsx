@@ -65,1434 +65,545 @@ export default function LandingPage({
     .toUpperCase();
 
   return (
-    <div
-      style={{
-        backgroundColor: '#f8fafc',
-        minHeight: '100vh',
-        width: '100%',
-        color: '#334155',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        textAlign: 'left',
-      }}
-    >
-      <style>{`
-        .landing-container * {
-          box-sizing: border-box;
-        }
-        .landing-nav-link {
-          background: none;
-          border: none;
-          color: #475569;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          padding: 8px 12px;
-          border-radius: 6px;
-          transition: color 0.15s ease, background-color 0.15s ease;
-        }
-        .landing-nav-link:hover {
-          color: #0f172a;
-          background-color: #f1f5f9;
-        }
-        .landing-btn-primary {
-          background-color: #2563eb;
-          color: #ffffff;
-          border: none;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background-color 0.15s ease, box-shadow 0.15s ease;
-        }
-        .landing-btn-primary:hover {
-          background-color: #1d4ed8;
-          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-        }
-        .landing-btn-secondary {
-          background-color: #ffffff;
-          color: #334155;
-          border: 1px solid #cbd5e1;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background-color 0.15s ease, border-color 0.15s ease;
-        }
-        .landing-btn-secondary:hover {
-          background-color: #f8fafc;
-          border-color: #94a3b8;
-          color: #0f172a;
-        }
-        .landing-card {
-          background-color: #ffffff;
-          border: 1px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 24px;
-          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-          transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-        }
-        .landing-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.08);
-          border-color: #cbd5e1;
-        }
-        .feature-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 24px;
-        }
-        .steps-grid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 24px;
-        }
-        .scenarios-grid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 24px;
-        }
-        @media (max-width: 900px) {
-          .feature-grid,
-          .steps-grid,
-          .scenarios-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
+    <div className="min-h-screen w-full bg-slate-950 text-slate-100 text-left relative overflow-hidden">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-indigo-900/20 via-cyan-900/10 to-transparent pointer-events-none blur-3xl" />
+      <div className="absolute top-48 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-96 right-1/4 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="landing-container">
-        <header
-          style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 40,
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(8px)',
-            borderBottom: '1px solid #e2e8f0',
-          }}
-        >
+      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
           <div
-            style={{
-              maxWidth: '1200px',
-              margin: '0 auto',
-              padding: '16px 24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
+            className="flex items-center gap-3 cursor-pointer group"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                cursor: 'pointer',
-              }}
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            >
-              <img
-                src="/favicon.svg"
-                alt="NegotiationAI Logo"
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  flexShrink: 0,
-                  display: 'block',
-                }}
-              />
-              <span
-                style={{
-                  fontSize: '20px',
-                  fontWeight: 800,
-                  letterSpacing: '-0.02em',
-                  color: '#0f172a',
-                }}
-              >
-                Negotiation<span style={{ color: '#2563eb' }}>AI</span>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-cyan-500 p-0.5 shadow-lg shadow-indigo-500/30 flex items-center justify-center shrink-0">
+              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                <img
+                  src="/favicon.svg"
+                  alt="NegotiationAI Logo"
+                  className="w-5 h-5 block"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-lg font-black tracking-tight text-white group-hover:text-indigo-300 transition-colors">
+                Negotiation<span className="text-indigo-400">AI</span>
+              </span>
+              <span className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">
+                Autonomous Simulator
               </span>
             </div>
-
-            <nav
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <button
-                type="button"
-                className="landing-nav-link"
-                onClick={() => scrollToSection('features')}
-              >
-                Features
-              </button>
-              <button
-                type="button"
-                className="landing-nav-link"
-                onClick={() => scrollToSection('scenarios')}
-              >
-                Scenarios
-              </button>
-              <button
-                type="button"
-                className="landing-nav-link"
-                onClick={() => scrollToSection('how-it-works')}
-              >
-                How It Works
-              </button>
-            </nav>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-              }}
-            >
-              {currentUser ? (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    backgroundColor: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    padding: '4px 6px 4px 10px',
-                    borderRadius: '9999px',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '30px',
-                      height: '30px',
-                      borderRadius: '50%',
-                      backgroundColor: '#eff6ff',
-                      border: '1.5px solid #bfdbfe',
-                      color: '#1d4ed8',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 700,
-                      fontSize: '13px',
-                    }}
-                  >
-                    {userInitial}
-                  </div>
-                  <span
-                    style={{
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      color: '#0f172a',
-                    }}
-                  >
-                    {currentUser.name || currentUser.username}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={onLogout}
-                    className="landing-btn-secondary"
-                    style={{
-                      padding: '5px 12px',
-                      fontSize: '12px',
-                      borderRadius: '9999px',
-                    }}
-                  >
-                    Log Out
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setAuthModal('login')}
-                    className="landing-btn-secondary"
-                    style={{
-                      padding: '8px 16px',
-                      fontSize: '13px',
-                    }}
-                  >
-                    Log In
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAuthModal('signup')}
-                    className="landing-btn-primary"
-                    style={{
-                      padding: '8px 16px',
-                      fontSize: '13px',
-                    }}
-                  >
-                    Sign Up
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </header>
-
-        <section
-          style={{
-            maxWidth: '1200px',
-            margin: '0 auto',
-            padding: '80px 24px 60px',
-            textAlign: 'center',
-          }}
-        >
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: '#eff6ff',
-              border: '1px solid #bfdbfe',
-              padding: '6px 14px',
-              borderRadius: '9999px',
-              marginBottom: '24px',
-            }}
-          >
-            <span
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: '#2563eb',
-              }}
-            />
-            <span
-              style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                color: '#1d4ed8',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-              }}
-            >
-              Autonomous Agent Negotiation Platform
-            </span>
           </div>
 
-          <h1
-            style={{
-              fontSize: '48px',
-              fontWeight: 800,
-              color: '#0f172a',
-              lineHeight: 1.15,
-              letterSpacing: '-0.03em',
-              margin: '0 auto 20px',
-              maxWidth: '900px',
-            }}
-          >
-            Simulate & Optimize Complex Multi-Agent Negotiations
-          </h1>
-
-          <p
-            style={{
-              fontSize: '18px',
-              color: '#475569',
-              lineHeight: 1.6,
-              maxWidth: '780px',
-              margin: '0 auto 36px',
-            }}
-          >
-            An intelligent simulation environment for evaluating automated multi-party
-            bargaining, strategic concession curves, and stakeholder alignment under
-            strict boundary constraints.
-          </p>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '14px',
-              flexWrap: 'wrap',
-              marginBottom: '64px',
-            }}
-          >
+          <nav className="hidden md:flex items-center gap-1">
             <button
               type="button"
-              onClick={handleStart}
-              className="landing-btn-primary"
-              style={{
-                padding: '14px 32px',
-                fontSize: '16px',
-              }}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-900/80 transition-colors cursor-pointer"
+              onClick={() => scrollToSection('features')}
             >
-              Try Simulator
+              Features
             </button>
             <button
               type="button"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-900/80 transition-colors cursor-pointer"
+              onClick={() => scrollToSection('scenarios')}
+            >
+              Scenarios
+            </button>
+            <button
+              type="button"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-900/80 transition-colors cursor-pointer"
+              onClick={() => scrollToSection('how-it-works')}
+            >
+              How It Works
+            </button>
+            <button
+              type="button"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-900/80 transition-colors cursor-pointer"
               onClick={() => setShowDocsModal(true)}
-              className="landing-btn-secondary"
-              style={{
-                padding: '14px 28px',
-                fontSize: '16px',
-              }}
             >
-              View Documentation
+              Docs
             </button>
-          </div>
+          </nav>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-              gap: '20px',
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '16px',
-              padding: '24px 32px',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.04)',
-              textAlign: 'center',
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  fontSize: '28px',
-                  fontWeight: 800,
-                  color: '#0f172a',
-                }}
-              >
-                3 Scenarios
-              </div>
-              <div
-                style={{
-                  fontSize: '13px',
-                  color: '#64748b',
-                  fontWeight: 500,
-                  marginTop: '4px',
-                }}
-              >
-                Vendor Pricing, Job Offer & Budget Allocation
-              </div>
-            </div>
-            <div
-              style={{
-                borderLeft: '1px solid #e2e8f0',
-                borderRight: '1px solid #e2e8f0',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '28px',
-                  fontWeight: 800,
-                  color: '#2563eb',
-                }}
-              >
-                3 Personas
-              </div>
-              <div
-                style={{
-                  fontSize: '13px',
-                  color: '#64748b',
-                  fontWeight: 500,
-                  marginTop: '4px',
-                }}
-              >
-                Aggressive, Collaborative & Risk-Averse
-              </div>
-            </div>
-            <div>
-              <div
-                style={{
-                  fontSize: '28px',
-                  fontWeight: 800,
-                  color: '#0f172a',
-                }}
-              >
-                100% Verified
-              </div>
-              <div
-                style={{
-                  fontSize: '13px',
-                  color: '#64748b',
-                  fontWeight: 500,
-                  marginTop: '4px',
-                }}
-              >
-                Strict Reservation Bounds & Validation Engine
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section
-          id="features"
-          style={{
-            maxWidth: '1200px',
-            margin: '0 auto',
-            padding: '40px 24px 80px',
-          }}
-        >
-          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-            <span
-              style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                color: '#2563eb',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-              }}
-            >
-              Core Capabilities
-            </span>
-            <h2
-              style={{
-                fontSize: '32px',
-                fontWeight: 800,
-                color: '#0f172a',
-                margin: '8px 0 12px',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              Engineered for Strategic Autonomous Agents
-            </h2>
-            <p
-              style={{
-                fontSize: '16px',
-                color: '#64748b',
-                maxWidth: '680px',
-                margin: '0 auto',
-              }}
-            >
-              A robust simulation framework that allows researchers and engineers to test
-              agent bargaining protocols with precision.
-            </p>
-          </div>
-
-          <div className="feature-grid">
-            <div className="landing-card">
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '10px',
-                  backgroundColor: '#eff6ff',
-                  border: '1px solid #bfdbfe',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#1d4ed8',
-                  fontWeight: 700,
-                  fontSize: '16px',
-                  marginBottom: '16px',
-                }}
-              >
-                P
-              </div>
-              <h3
-                style={{
-                  fontSize: '18px',
-                  fontWeight: 700,
-                  color: '#0f172a',
-                  margin: '0 0 8px',
-                }}
-              >
-                Multi-Agent Personas
-              </h3>
-              <p
-                style={{
-                  fontSize: '14px',
-                  color: '#475569',
-                  lineHeight: 1.6,
-                  margin: 0,
-                }}
-              >
-                Assign behavioral profiles such as Aggressive anchorers, Collaborative
-                value-creators, or Risk-Averse deal-closers to observe varied concession
-                velocities and strategic opening stances.
-              </p>
-            </div>
-
-            <div className="landing-card">
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '10px',
-                  backgroundColor: '#eff6ff',
-                  border: '1px solid #bfdbfe',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#1d4ed8',
-                  fontWeight: 700,
-                  fontSize: '16px',
-                  marginBottom: '16px',
-                }}
-              >
-                L
-              </div>
-              <h3
-                style={{
-                  fontSize: '18px',
-                  fontWeight: 700,
-                  color: '#0f172a',
-                  margin: '0 0 8px',
-                }}
-              >
-                Custom Limits & Constraints
-              </h3>
-              <p
-                style={{
-                  fontSize: '14px',
-                  color: '#475569',
-                  lineHeight: 1.6,
-                  margin: 0,
-                }}
-              >
-                Configure fine-grained numerical reservation limits, ceiling budgets,
-                floors, and categorical business rules. The simulator rigorously checks
-                that no agreement crosses defined boundaries.
-              </p>
-            </div>
-
-            <div className="landing-card">
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '10px',
-                  backgroundColor: '#eff6ff',
-                  border: '1px solid #bfdbfe',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#1d4ed8',
-                  fontWeight: 700,
-                  fontSize: '16px',
-                  marginBottom: '16px',
-                }}
-              >
-                S
-              </div>
-              <h3
-                style={{
-                  fontSize: '18px',
-                  fontWeight: 700,
-                  color: '#0f172a',
-                  margin: '0 0 8px',
-                }}
-              >
-                Real-Time Negotiation Strategy
-              </h3>
-              <p
-                style={{
-                  fontSize: '14px',
-                  color: '#475569',
-                  lineHeight: 1.6,
-                  margin: 0,
-                }}
-              >
-                Inspect turn-by-turn counter-offers, trade-offs between multiple items,
-                and reciprocal concessions as agents communicate across structured
-                negotiation rounds.
-              </p>
-            </div>
-
-            <div className="landing-card">
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '10px',
-                  backgroundColor: '#eff6ff',
-                  border: '1px solid #bfdbfe',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#1d4ed8',
-                  fontWeight: 700,
-                  fontSize: '16px',
-                  marginBottom: '16px',
-                }}
-              >
-                I
-              </div>
-              <h3
-                style={{
-                  fontSize: '18px',
-                  fontWeight: 700,
-                  color: '#0f172a',
-                  margin: '0 0 8px',
-                }}
-              >
-                Interactive Scenarios
-              </h3>
-              <p
-                style={{
-                  fontSize: '14px',
-                  color: '#475569',
-                  lineHeight: 1.6,
-                  margin: 0,
-                }}
-              >
-                Switch between pre-built real-world templates including vendor contract
-                discussions, executive salary offers, and capital budget allocation
-                with instant parameter editing.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section
-          id="scenarios"
-          style={{
-            backgroundColor: '#ffffff',
-            borderTop: '1px solid #e2e8f0',
-            borderBottom: '1px solid #e2e8f0',
-            padding: '72px 24px',
-          }}
-        >
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-              <span
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: '#2563eb',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                }}
-              >
-                Negotiation Arenas
-              </span>
-              <h2
-                style={{
-                  fontSize: '32px',
-                  fontWeight: 800,
-                  color: '#0f172a',
-                  margin: '8px 0 12px',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                Pre-Loaded Negotiation Scenarios
-              </h2>
-              <p
-                style={{
-                  fontSize: '16px',
-                  color: '#64748b',
-                  maxWidth: '680px',
-                  margin: '0 auto',
-                }}
-              >
-                Ready-to-use business scenarios modeled with realistic stakeholder goals and constraints.
-              </p>
-            </div>
-
-            <div className="scenarios-grid">
-              <div
-                style={{
-                  backgroundColor: '#f8fafc',
-                  border: '1.5px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '24px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '14px',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      backgroundColor: '#eff6ff',
-                      color: '#1d4ed8',
-                      padding: '3px 8px',
-                      borderRadius: '9999px',
-                      border: '1px solid #bfdbfe',
-                    }}
-                  >
-                    vendor_pricing
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '12px',
-                      color: '#64748b',
-                      fontWeight: 500,
-                    }}
-                  >
-                    10 Rounds
-                  </span>
+          <div className="flex items-center gap-3">
+            {currentUser ? (
+              <div className="flex items-center gap-2.5 bg-slate-900/90 border border-slate-800 rounded-full py-1.5 pl-2 pr-3">
+                <div className="w-7 h-7 rounded-full bg-indigo-950 border border-indigo-500/40 text-indigo-300 font-bold text-xs flex items-center justify-center">
+                  {userInitial}
                 </div>
-                <h3
-                  style={{
-                    fontSize: '18px',
-                    fontWeight: 700,
-                    color: '#0f172a',
-                    margin: 0,
-                  }}
+                <span className="text-xs font-semibold text-slate-200">
+                  {currentUser.name || currentUser.username}
+                </span>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="text-xs font-medium text-slate-400 hover:text-rose-400 ml-1 transition-colors cursor-pointer"
                 >
-                  Vendor Pricing Negotiation
-                </h3>
-                <p
-                  style={{
-                    fontSize: '13px',
-                    color: '#475569',
-                    lineHeight: 1.5,
-                    margin: 0,
-                    flexGrow: 1,
-                  }}
-                >
-                  Procurement Manager negotiates bulk order pricing with an enterprise Sales
-                  Representative to reach mutual commercial profitability.
-                </p>
-                <div
-                  style={{
-                    borderTop: '1px solid #e2e8f0',
-                    paddingTop: '12px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    Stakeholders: Buyer, Vendor
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleStart}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#2563eb',
-                      fontWeight: 600,
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Select Scenario
-                  </button>
-                </div>
+                  Log Out
+                </button>
               </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setAuthModal('login')}
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-slate-900/80 border border-slate-800 hover:border-slate-700 hover:text-white transition-colors cursor-pointer"
+                >
+                  Log In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuthModal('signup')}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25 transition-all cursor-pointer"
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
 
-              <div
-                style={{
-                  backgroundColor: '#f8fafc',
-                  border: '1.5px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '24px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '14px',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      backgroundColor: '#eff6ff',
-                      color: '#1d4ed8',
-                      padding: '3px 8px',
-                      borderRadius: '9999px',
-                      border: '1px solid #bfdbfe',
-                    }}
-                  >
-                    job_offer
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '12px',
-                      color: '#64748b',
-                      fontWeight: 500,
-                    }}
-                  >
-                    10 Rounds
-                  </span>
-                </div>
-                <h3
-                  style={{
-                    fontSize: '18px',
-                    fontWeight: 700,
-                    color: '#0f172a',
-                    margin: 0,
-                  }}
-                >
-                  Job Offer Negotiation
-                </h3>
-                <p
-                  style={{
-                    fontSize: '13px',
-                    color: '#475569',
-                    lineHeight: 1.5,
-                    margin: 0,
-                    flexGrow: 1,
-                  }}
-                >
-                  Software Developer Candidate bargains compensation and remote work policy
-                  with an Engineering Hiring Manager.
-                </p>
-                <div
-                  style={{
-                    borderTop: '1px solid #e2e8f0',
-                    paddingTop: '12px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    Stakeholders: Candidate, Employer
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleStart}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#2563eb',
-                      fontWeight: 600,
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Select Scenario
-                  </button>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  backgroundColor: '#f8fafc',
-                  border: '1.5px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '24px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '14px',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      backgroundColor: '#eff6ff',
-                      color: '#1d4ed8',
-                      padding: '3px 8px',
-                      borderRadius: '9999px',
-                      border: '1px solid #bfdbfe',
-                    }}
-                  >
-                    project_budget
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '12px',
-                      color: '#64748b',
-                      fontWeight: 500,
-                    }}
-                  >
-                    10 Rounds
-                  </span>
-                </div>
-                <h3
-                  style={{
-                    fontSize: '18px',
-                    fontWeight: 700,
-                    color: '#0f172a',
-                    margin: 0,
-                  }}
-                >
-                  Project Budget Allocation
-                </h3>
-                <p
-                  style={{
-                    fontSize: '13px',
-                    color: '#475569',
-                    lineHeight: 1.5,
-                    margin: 0,
-                    flexGrow: 1,
-                  }}
-                >
-                  Engineering Lead and Product Manager debate capital expenditure and headcount
-                  split across quarterly development sprints.
-                </p>
-                <div
-                  style={{
-                    borderTop: '1px solid #e2e8f0',
-                    paddingTop: '12px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    Stakeholders: Engineering, Product
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleStart}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#2563eb',
-                      fontWeight: 600,
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Select Scenario
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section
-          id="how-it-works"
-          style={{
-            maxWidth: '1200px',
-            margin: '0 auto',
-            padding: '72px 24px 80px',
-          }}
-        >
-          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-            <span
-              style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                color: '#2563eb',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-              }}
-            >
-              Step-by-Step Workflow
-            </span>
-            <h2
-              style={{
-                fontSize: '32px',
-                fontWeight: 800,
-                color: '#0f172a',
-                margin: '8px 0 12px',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              How NegotiationAI Operates
-            </h2>
-            <p
-              style={{
-                fontSize: '16px',
-                color: '#64748b',
-                maxWidth: '680px',
-                margin: '0 auto',
-              }}
-            >
-              Seamless progression from domain selection to multi-agent simulation and outcome evaluation.
-            </p>
-          </div>
-
-          <div className="steps-grid">
-            <div className="landing-card" style={{ position: 'relative' }}>
-              <div
-                style={{
-                  fontSize: '48px',
-                  fontWeight: 900,
-                  color: '#e2e8f0',
-                  lineHeight: 1,
-                  marginBottom: '12px',
-                }}
-              >
-                01
-              </div>
-              <h3
-                style={{
-                  fontSize: '18px',
-                  fontWeight: 700,
-                  color: '#0f172a',
-                  margin: '0 0 8px',
-                }}
-              >
-                Select Scenario
-              </h3>
-              <p
-                style={{
-                  fontSize: '14px',
-                  color: '#475569',
-                  lineHeight: 1.6,
-                  margin: 0,
-                }}
-              >
-                Browse through real-world business scenarios. Choose the context, review
-                default agents, and verify baseline limits before configuration.
-              </p>
-            </div>
-
-            <div className="landing-card" style={{ position: 'relative' }}>
-              <div
-                style={{
-                  fontSize: '48px',
-                  fontWeight: 900,
-                  color: '#e2e8f0',
-                  lineHeight: 1,
-                  marginBottom: '12px',
-                }}
-              >
-                02
-              </div>
-              <h3
-                style={{
-                  fontSize: '18px',
-                  fontWeight: 700,
-                  color: '#0f172a',
-                  margin: '0 0 8px',
-                }}
-              >
-                Configure Limits & Personalities
-              </h3>
-              <p
-                style={{
-                  fontSize: '14px',
-                  color: '#475569',
-                  lineHeight: 1.6,
-                  margin: 0,
-                }}
-              >
-                Fine-tune stakeholder goals, edit numeric bounds (such as price or salary),
-                update constraints, and set psychological profiles like Collaborative or Aggressive.
-              </p>
-            </div>
-
-            <div className="landing-card" style={{ position: 'relative' }}>
-              <div
-                style={{
-                  fontSize: '48px',
-                  fontWeight: 900,
-                  color: '#e2e8f0',
-                  lineHeight: 1,
-                  marginBottom: '12px',
-                }}
-              >
-                03
-              </div>
-              <h3
-                style={{
-                  fontSize: '18px',
-                  fontWeight: 700,
-                  color: '#0f172a',
-                  margin: '0 0 8px',
-                }}
-              >
-                Run Simulation Arena
-              </h3>
-              <p
-                style={{
-                  fontSize: '14px',
-                  color: '#475569',
-                  lineHeight: 1.6,
-                  margin: 0,
-                }}
-              >
-                Initialize the multi-turn conversational loop. Watch agents exchange offers,
-                make strategic concessions, and reach verified mutual agreements.
-              </p>
-            </div>
-          </div>
-
-          <div
-            style={{
-              backgroundColor: '#eff6ff',
-              border: '1px solid #bfdbfe',
-              borderRadius: '16px',
-              padding: '36px',
-              marginTop: '48px',
-              textAlign: 'center',
-            }}
-          >
-            <h3
-              style={{
-                fontSize: '22px',
-                fontWeight: 800,
-                color: '#1e3a8a',
-                margin: '0 0 8px',
-              }}
-            >
-              Ready to Launch Your Negotiation Experiment?
-            </h3>
-            <p
-              style={{
-                fontSize: '14px',
-                color: '#1e40af',
-                maxWidth: '600px',
-                margin: '0 auto 20px',
-              }}
-            >
-              Start the interactive simulator now and explore how different personalities
-              and reservation limits shape final settlement deals.
-            </p>
             <button
               type="button"
               onClick={handleStart}
-              className="landing-btn-primary"
-              style={{
-                padding: '12px 28px',
-                fontSize: '15px',
-              }}
+              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white shadow-lg shadow-indigo-500/25 transition-all cursor-pointer"
             >
-              Launch Simulator
+              <span>Launch Arena</span>
+              <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z"
+                  clipRule="evenodd"
+                />
+              </svg>
             </button>
           </div>
-        </section>
+        </div>
+      </header>
 
-        <footer
-          style={{
-            borderTop: '1px solid #e2e8f0',
-            backgroundColor: '#ffffff',
-            padding: '32px 24px',
-          }}
-        >
-          <div
-            style={{
-              maxWidth: '1200px',
-              margin: '0 auto',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '16px',
-            }}
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 text-center">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs font-semibold uppercase tracking-wider mb-6">
+          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+          Autonomous Multi-Party Negotiation Environment
+        </div>
+
+        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-indigo-300 tracking-tight max-w-4xl mx-auto leading-[1.1] mb-6">
+          Simulate & Optimize Complex Multi-Agent Negotiations
+        </h1>
+
+        <p className="text-base sm:text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed mb-10">
+          An enterprise-grade simulation framework for evaluating automated bargaining strategies, strategic concession dynamics, and stakeholder alignment under strict reservation boundaries.
+        </p>
+
+        <div className="flex flex-wrap items-center justify-center gap-4 mb-16">
+          <button
+            type="button"
+            onClick={handleStart}
+            className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-xl font-semibold text-sm bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all cursor-pointer"
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <img
-                src="/favicon.svg"
-                alt="NegotiationAI Logo"
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '6px',
-                  flexShrink: 0,
-                  display: 'block',
-                }}
+            <span>Try Simulator</span>
+            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z"
+                clipRule="evenodd"
               />
-              <span style={{ fontWeight: 700, color: '#0f172a' }}>NegotiationAI</span>
-              <span style={{ color: '#94a3b8' }}>|</span>
-              <span style={{ fontSize: '13px', color: '#64748b' }}>
-                Multi-Agent Negotiation Simulator Platform
-              </span>
-            </div>
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowDocsModal(true)}
+            className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-sm bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-slate-700/80 hover:border-slate-600 hover:-translate-y-0.5 transition-all cursor-pointer"
+          >
+            <span>Platform Overview</span>
+          </button>
+        </div>
 
-            <div style={{ fontSize: '13px', color: '#64748b' }}>
-              All validation checks enforced via boundary constraints.
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-4xl mx-auto bg-slate-900/70 backdrop-blur-md border border-slate-800/80 rounded-2xl p-6 sm:p-8 shadow-2xl">
+          <div className="flex flex-col items-center justify-center p-3">
+            <span className="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400 font-mono">
+              3 Arenas
+            </span>
+            <span className="text-xs font-semibold text-slate-300 mt-2">
+              Ready-to-Use Scenarios
+            </span>
+            <span className="text-[11px] text-slate-400 mt-1">
+              Procurement, Hiring & Budgets
+            </span>
+          </div>
+
+          <div className="flex flex-col items-center justify-center p-3 border-y sm:border-y-0 sm:border-x border-slate-800/80">
+            <span className="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400 font-mono">
+              3 Personas
+            </span>
+            <span className="text-xs font-semibold text-slate-300 mt-2">
+              Behavioral Archetypes
+            </span>
+            <span className="text-[11px] text-slate-400 mt-1">
+              Aggressive, Collaborative, Risk-Averse
+            </span>
+          </div>
+
+          <div className="flex flex-col items-center justify-center p-3">
+            <span className="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-indigo-400 font-mono">
+              100% Bound
+            </span>
+            <span className="text-xs font-semibold text-slate-300 mt-2">
+              Strict Mathematical Guardrails
+            </span>
+            <span className="text-[11px] text-slate-400 mt-1">
+              Deterministic Reservation Bounds
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-3">
+            Core Capabilities
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-100 tracking-tight mb-3">
+            Engineered for High-Stakes Autonomous Systems
+          </h2>
+          <p className="text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            A battle-tested simulation framework that lets teams evaluate multi-agent bargaining mechanics under granular reservation conditions.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="rounded-2xl p-7 bg-slate-900/70 backdrop-blur-md border border-slate-800/80 hover:border-indigo-500/50 hover:bg-slate-900/90 transition-all duration-300 group shadow-xl">
+            <div className="w-11 h-11 rounded-xl bg-indigo-950/80 border border-indigo-500/40 text-indigo-400 flex items-center justify-center font-bold text-lg mb-5 group-hover:scale-105 transition-transform">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-slate-100 mb-2 group-hover:text-indigo-300 transition-colors">
+              Adaptive Persona Profiles
+            </h3>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Equip stakeholders with defined tactical personalities including Aggressive anchors, Collaborative trade-off makers, and Risk-Averse closers to evaluate contrasting bargaining trajectories.
+            </p>
+          </div>
+
+          <div className="rounded-2xl p-7 bg-slate-900/70 backdrop-blur-md border border-slate-800/80 hover:border-indigo-500/50 hover:bg-slate-900/90 transition-all duration-300 group shadow-xl">
+            <div className="w-11 h-11 rounded-xl bg-cyan-950/80 border border-cyan-500/40 text-cyan-400 flex items-center justify-center font-bold text-lg mb-5 group-hover:scale-105 transition-transform">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-slate-100 mb-2 group-hover:text-cyan-300 transition-colors">
+              Granular Boundary Engine
+            </h3>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Define discrete minimums and maximums across each negotiation item. The platform mathematically confirms that zero final settlements violate stakeholder reservation frontiers.
+            </p>
+          </div>
+
+          <div className="rounded-2xl p-7 bg-slate-900/70 backdrop-blur-md border border-slate-800/80 hover:border-indigo-500/50 hover:bg-slate-900/90 transition-all duration-300 group shadow-xl">
+            <div className="w-11 h-11 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 flex items-center justify-center font-bold text-lg mb-5 group-hover:scale-105 transition-transform">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-slate-100 mb-2 group-hover:text-emerald-300 transition-colors">
+              Multi-Round Concession Dynamics
+            </h3>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Trace round-by-round counter-proposals, cross-item concessions, and reciprocal value compromises across sequential turn intervals with real-time feedback.
+            </p>
+          </div>
+
+          <div className="rounded-2xl p-7 bg-slate-900/70 backdrop-blur-md border border-slate-800/80 hover:border-indigo-500/50 hover:bg-slate-900/90 transition-all duration-300 group shadow-xl">
+            <div className="w-11 h-11 rounded-xl bg-indigo-950/80 border border-indigo-500/40 text-indigo-400 flex items-center justify-center font-bold text-lg mb-5 group-hover:scale-105 transition-transform">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-slate-100 mb-2 group-hover:text-indigo-300 transition-colors">
+              Pluggable Business Domains
+            </h3>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Jump straight into realistic procurement negotiations, developer compensation offers, or capital expenditure roadmaps, or customize bounds instantly.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="scenarios" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-3">
+            Negotiation Arenas
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-100 tracking-tight mb-3">
+            Pre-Loaded Negotiation Arenas
+          </h2>
+          <p className="text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            Select one of the three pre-configured negotiation sandboxes to initiate stakeholder configuration.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="flex flex-col justify-between rounded-2xl p-6 bg-slate-900/70 backdrop-blur-md border border-slate-800/80 hover:border-indigo-500/50 hover:-translate-y-1 transition-all duration-300 shadow-xl">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-md bg-slate-950/80 border border-slate-800 text-slate-300">
+                  vendor_pricing
+                </span>
+                <span className="text-xs font-medium px-2 py-0.5 rounded border border-indigo-500/30 bg-indigo-500/10 text-indigo-300">
+                  10 Rounds
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-slate-100 mb-2">
+                Vendor Pricing Negotiation
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed mb-4">
+                Enterprise procurement manager negotiates tier pricing, service commitments, and delivery timelines with a cloud software vendor.
+              </p>
+            </div>
+            <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between">
+              <span className="text-xs text-slate-400">Buyer vs Vendor</span>
+              <button
+                type="button"
+                onClick={handleStart}
+                className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
+              >
+                Launch Arena
+              </button>
             </div>
           </div>
-        </footer>
-      </div>
+
+          <div className="flex flex-col justify-between rounded-2xl p-6 bg-slate-900/70 backdrop-blur-md border border-slate-800/80 hover:border-cyan-500/50 hover:-translate-y-1 transition-all duration-300 shadow-xl">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-md bg-slate-950/80 border border-slate-800 text-slate-300">
+                  job_offer
+                </span>
+                <span className="text-xs font-medium px-2 py-0.5 rounded border border-cyan-500/30 bg-cyan-500/10 text-cyan-300">
+                  10 Rounds
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-slate-100 mb-2">
+                Job Offer Negotiation
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed mb-4">
+                Senior engineering candidate negotiates base salary, equity vesting, signing bonus, and remote schedule with an engineering hiring leader.
+              </p>
+            </div>
+            <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between">
+              <span className="text-xs text-slate-400">Candidate vs Manager</span>
+              <button
+                type="button"
+                onClick={handleStart}
+                className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
+              >
+                Launch Arena
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col justify-between rounded-2xl p-6 bg-slate-900/70 backdrop-blur-md border border-slate-800/80 hover:border-emerald-500/50 hover:-translate-y-1 transition-all duration-300 shadow-xl">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-md bg-slate-950/80 border border-slate-800 text-slate-300">
+                  project_budget
+                </span>
+                <span className="text-xs font-medium px-2 py-0.5 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
+                  10 Rounds
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-slate-100 mb-2">
+                Project Budget Allocation
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed mb-4">
+                Engineering Director and Product Lead bargain infrastructure headcount, tool licenses, and sprint allocations across limited quarterly reserves.
+              </p>
+            </div>
+            <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between">
+              <span className="text-xs text-slate-400">Engineering vs Product</span>
+              <button
+                type="button"
+                onClick={handleStart}
+                className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
+              >
+                Launch Arena
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="how-it-works" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-3">
+            Workflow Process
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-100 tracking-tight mb-3">
+            How The Simulator Operates
+          </h2>
+          <p className="text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            Three simple phases from domain selection to multi-turn autonomous settlement.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="rounded-2xl p-7 bg-slate-900/70 backdrop-blur-md border border-slate-800/80 relative shadow-xl">
+            <span className="text-5xl font-black text-slate-800 block mb-4 font-mono">
+              01
+            </span>
+            <h3 className="text-lg font-bold text-slate-100 mb-2">
+              Select Scenario
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Pick from predefined enterprise negotiation domains. Inspect stakeholder objectives, baseline parameters, and maximum allowed rounds.
+            </p>
+          </div>
+
+          <div className="rounded-2xl p-7 bg-slate-900/70 backdrop-blur-md border border-slate-800/80 relative shadow-xl">
+            <span className="text-5xl font-black text-indigo-950 block mb-4 font-mono">
+              02
+            </span>
+            <h3 className="text-lg font-bold text-slate-100 mb-2">
+              Configure Bounds & Personas
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Fine-tune reservation floors, ceiling limits, qualitative constraints, and behavioral archetypes (Aggressive, Collaborative, Risk-Averse).
+            </p>
+          </div>
+
+          <div className="rounded-2xl p-7 bg-slate-900/70 backdrop-blur-md border border-slate-800/80 relative shadow-xl">
+            <span className="text-5xl font-black text-cyan-950 block mb-4 font-mono">
+              03
+            </span>
+            <h3 className="text-lg font-bold text-slate-100 mb-2">
+              Execute Simulation
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Watch autonomous agents generate strategic proposals, trade concessions, and converge upon mathematically verified mutual deals.
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl bg-gradient-to-r from-indigo-950/70 via-slate-900/80 to-cyan-950/70 border border-indigo-500/30 p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">
+          <h3 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">
+            Ready to Run Your First Multi-Agent Experiment?
+          </h3>
+          <p className="text-sm text-slate-300 max-w-xl mx-auto mb-6 leading-relaxed">
+            Configure agent limits, adjust negotiation personas, and analyze turn-by-turn strategic outcomes in real time.
+          </p>
+          <button
+            type="button"
+            onClick={handleStart}
+            className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-sm bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white shadow-xl shadow-indigo-500/25 transition-all cursor-pointer"
+          >
+            <span>Launch Negotiation Arena</span>
+            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      <footer className="border-t border-slate-800/80 bg-slate-950/90 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <img src="/favicon.svg" alt="NegotiationAI Logo" className="w-6 h-6 block" />
+            <span className="text-sm font-bold text-slate-200">NegotiationAI</span>
+            <span className="text-slate-600">|</span>
+            <span className="text-xs text-slate-400">
+              Multi-Agent Autonomous Simulator
+            </span>
+          </div>
+          <div className="text-xs text-slate-500">
+            Engineered with strict reservation boundary enforcement
+          </div>
+        </div>
+      </footer>
 
       {authModal && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '12px',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-              maxWidth: '440px',
-              width: '100%',
-              padding: '28px',
-              boxSizing: 'border-box',
-              textAlign: 'left',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '16px',
-              }}
-            >
-              <h2
-                style={{
-                  fontSize: '20px',
-                  fontWeight: 700,
-                  color: '#0f172a',
-                  margin: 0,
-                }}
-              >
-                {authModal === 'login' ? 'Log In to NegotiationAI' : 'Create Your Account'}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 p-7 shadow-2xl relative">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-slate-100">
+                {authModal === 'login' ? 'Log In to NegotiationAI' : 'Create Simulator Account'}
               </h2>
               <button
                 type="button"
                 onClick={closeAuthModal}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '18px',
-                  fontWeight: 600,
-                  color: '#94a3b8',
-                  cursor: 'pointer',
-                  padding: '4px',
-                }}
+                className="w-8 h-8 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
               >
-                X
+                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                </svg>
               </button>
             </div>
 
-            <form onSubmit={handleAuthSubmit}>
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
               {authModal === 'signup' && (
-                <div style={{ marginBottom: '14px' }}>
-                  <label
-                    htmlFor="auth-name-input"
-                    style={{
-                      display: 'block',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      color: '#334155',
-                      marginBottom: '6px',
-                    }}
-                  >
+                <div>
+                  <label htmlFor="auth-name" className="block text-xs font-semibold text-slate-300 mb-1.5">
                     Full Name
                   </label>
                   <input
-                    id="auth-name-input"
+                    id="auth-name"
                     type="text"
                     required
                     value={authName}
                     onChange={(e) => setAuthName(e.target.value)}
                     placeholder="Enter your name"
-                    style={{
-                      width: '100%',
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '6px',
-                      padding: '9px 12px',
-                      fontSize: '14px',
-                      color: '#0f172a',
-                      outline: 'none',
-                    }}
+                    className="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
                   />
                 </div>
               )}
 
-              <div style={{ marginBottom: '14px' }}>
-                <label
-                  htmlFor="auth-email-input"
-                  style={{
-                    display: 'block',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: '#334155',
-                    marginBottom: '6px',
-                  }}
-                >
+              <div>
+                <label htmlFor="auth-email" className="block text-xs font-semibold text-slate-300 mb-1.5">
                   Email Address
                 </label>
                 <input
-                  id="auth-email-input"
+                  id="auth-email"
                   type="email"
                   required
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  style={{
-                    width: '100%',
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '6px',
-                    padding: '9px 12px',
-                    fontSize: '14px',
-                    color: '#0f172a',
-                    outline: 'none',
-                  }}
+                  placeholder="name@company.com"
+                  className="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
                 />
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label
-                  htmlFor="auth-password-input"
-                  style={{
-                    display: 'block',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: '#334155',
-                    marginBottom: '6px',
-                  }}
-                >
+              <div>
+                <label htmlFor="auth-password" className="block text-xs font-semibold text-slate-300 mb-1.5">
                   Password
                 </label>
                 <input
-                  id="auth-password-input"
+                  id="auth-password"
                   type="password"
                   required
                   value={authPassword}
                   onChange={(e) => setAuthPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  style={{
-                    width: '100%',
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '6px',
-                    padding: '9px 12px',
-                    fontSize: '14px',
-                    color: '#0f172a',
-                    outline: 'none',
-                  }}
+                  placeholder="Enter password"
+                  className="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
                 />
               </div>
 
               <button
                 type="submit"
-                className="landing-btn-primary"
-                style={{
-                  width: '100%',
-                  padding: '11px',
-                  fontSize: '14px',
-                  marginBottom: '14px',
-                }}
+                className="w-full py-3 rounded-xl font-semibold text-xs bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25 transition-all cursor-pointer mt-2"
               >
-                {authModal === 'login' ? 'Log In' : 'Create Account'}
+                {authModal === 'login' ? 'Sign In' : 'Create Account'}
               </button>
 
-              <div style={{ textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
+              <div className="text-center text-xs text-slate-400 pt-2">
                 {authModal === 'login' ? (
                   <span>
                     Do not have an account?{' '}
                     <button
                       type="button"
                       onClick={() => setAuthModal('signup')}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#2563eb',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        padding: 0,
-                      }}
+                      className="text-indigo-400 font-semibold hover:underline ml-1 cursor-pointer"
                     >
                       Sign Up
                     </button>
@@ -1503,14 +614,7 @@ export default function LandingPage({
                     <button
                       type="button"
                       onClick={() => setAuthModal('login')}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#2563eb',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        padding: 0,
-                      }}
+                      className="text-indigo-400 font-semibold hover:underline ml-1 cursor-pointer"
                     >
                       Log In
                     </button>
@@ -1523,168 +627,64 @@ export default function LandingPage({
       )}
 
       {showDocsModal && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '12px',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-              maxWidth: '640px',
-              width: '100%',
-              maxHeight: '85vh',
-              overflowY: 'auto',
-              padding: '28px',
-              boxSizing: 'border-box',
-              textAlign: 'left',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '16px',
-              }}
-            >
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl bg-slate-900 border border-slate-800 p-7 shadow-2xl relative">
+            <div className="flex items-center justify-between mb-5 border-b border-slate-800 pb-4">
               <div>
-                <span
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    color: '#2563eb',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                  }}
-                >
-                  Documentation
+                <span className="text-xs font-semibold text-indigo-400 uppercase tracking-wider block">
+                  Platform Architecture
                 </span>
-                <h2
-                  style={{
-                    fontSize: '20px',
-                    fontWeight: 700,
-                    color: '#0f172a',
-                    margin: '4px 0 0',
-                  }}
-                >
-                  NegotiationAI Architecture
+                <h2 className="text-xl font-bold text-slate-100 mt-1">
+                  NegotiationAI Technical Architecture
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={() => setShowDocsModal(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '18px',
-                  fontWeight: 600,
-                  color: '#94a3b8',
-                  cursor: 'pointer',
-                  padding: '4px',
-                }}
+                className="w-8 h-8 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
               >
-                X
+                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                </svg>
               </button>
             </div>
 
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px',
-                fontSize: '14px',
-                color: '#334155',
-                lineHeight: 1.6,
-              }}
-            >
-              <div>
-                <h3
-                  style={{
-                    fontSize: '15px',
-                    fontWeight: 700,
-                    color: '#0f172a',
-                    margin: '0 0 6px',
-                  }}
-                >
-                  1. Scenario Execution Framework
+            <div className="space-y-5 text-xs text-slate-300 leading-relaxed">
+              <div className="rounded-xl bg-slate-950/60 border border-slate-800 p-4">
+                <h3 className="font-bold text-sm text-slate-100 mb-1.5">
+                  1. Scenario Definition Model
                 </h3>
-                <p style={{ margin: 0 }}>
-                  Each scenario JSON provides defined stakeholders, role descriptions,
-                  specific goals, qualitative constraints, and quantitative limits. Scenarios
-                  run over a configurable maximum number of rounds (default: 10).
+                <p className="text-slate-400">
+                  Negotiation scenarios define autonomous stakeholders, their specific commercial goals, qualitative behavioral constraints, and explicit numerical limit boundaries (minima and maxima).
                 </p>
               </div>
 
-              <div>
-                <h3
-                  style={{
-                    fontSize: '15px',
-                    fontWeight: 700,
-                    color: '#0f172a',
-                    margin: '0 0 6px',
-                  }}
-                >
-                  2. Behavioral Archetypes
+              <div className="rounded-xl bg-slate-950/60 border border-slate-800 p-4">
+                <h3 className="font-bold text-sm text-slate-100 mb-1.5">
+                  2. Behavioral Persona Engine
                 </h3>
-                <p style={{ margin: 0 }}>
-                  Agents are assigned behavioral profiles: Aggressive (high anchor, small concessions),
-                  Collaborative (reciprocal trades, mutual gains), and Risk-Averse (early agreement,
-                  loss avoidance). These govern opening positions and willingness to compromise.
+                <p className="text-slate-400">
+                  Agents adopt one of three psychological personas: Aggressive (high initial anchor, reluctant concessions), Collaborative (reciprocal trade-offs, value creation), and Risk-Averse (early agreement prioritization, conservative concessions).
                 </p>
               </div>
 
-              <div>
-                <h3
-                  style={{
-                    fontSize: '15px',
-                    fontWeight: 700,
-                    color: '#0f172a',
-                    margin: '0 0 6px',
-                  }}
-                >
-                  3. Boundary Validation Engine
+              <div className="rounded-xl bg-slate-950/60 border border-slate-800 p-4">
+                <h3 className="font-bold text-sm text-slate-100 mb-1.5">
+                  3. Mathematical Guardrail Verification
                 </h3>
-                <p style={{ margin: 0 }}>
-                  Before any negotiation starts, configurations are strictly validated by the
-                  backend. The validator ensures compatible reservation limits (e.g., buyer maximum
-                  cannot be strictly lower than vendor minimum) to confirm a feasible bargaining zone.
+                <p className="text-slate-400">
+                  Every negotiation exchange is continuously evaluated against reservation frontiers. The simulator ensures that non-viable agreements are rejected and that concessions stay within allowable feasibility bounds.
                 </p>
               </div>
             </div>
 
-            <div
-              style={{
-                marginTop: '24px',
-                paddingTop: '16px',
-                borderTop: '1px solid #e2e8f0',
-                display: 'flex',
-                justifyContent: 'flex-end',
-              }}
-            >
+            <div className="mt-6 pt-4 border-t border-slate-800 flex justify-end">
               <button
                 type="button"
                 onClick={() => setShowDocsModal(false)}
-                className="landing-btn-secondary"
-                style={{
-                  padding: '8px 18px',
-                  fontSize: '13px',
-                }}
+                className="px-5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
               >
-                Close
+                Close Documentation
               </button>
             </div>
           </div>
