@@ -1,4 +1,16 @@
 import { useState } from 'react';
+import {
+  Sun,
+  Moon,
+  Home,
+  Check,
+  LogOut,
+  LogIn,
+  Layers,
+  Sliders,
+  Play,
+} from 'lucide-react';
+import BrandLogo from './components/BrandLogo';
 import vendorPricing from './data/vendor_pricing.json';
 import jobOffer from './data/job_offer.json';
 import projectBudgetAllocation from './data/project_budget_allocation.json';
@@ -12,76 +24,121 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 const scenarios = [vendorPricing, jobOffer, projectBudgetAllocation];
 
 const STEPS = [
-  { key: 'select',    number: 1, label: 'Select Arena' },
-  { key: 'config',    number: 2, label: 'Configure Agents' },
-  { key: 'negotiate', number: 3, label: 'Simulation' },
+  { number: 1, key: 'select', label: 'Select Arena', icon: Layers },
+  { number: 2, key: 'config', label: 'Configure Agents', icon: Sliders },
+  { number: 3, key: 'negotiate', label: 'Simulation Arena', icon: Play },
 ];
 
-function CheckIcon() {
-  return (
-    <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
-      <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
-    </svg>
-  );
+/**
+ * Normalizes any step identifier (number or string) to a reliable step index or route.
+ * Guarantees that unhandled or corrupted values safely fall back to 0 (Landing Page).
+ */
+function normalizeStep(step) {
+  if (step === 0 || step === '0' || step === 'landing' || step === 'home') return 0;
+  if (step === 1 || step === '1' || step === 'select') return 1;
+  if (step === 2 || step === '2' || step === 'config') return 2;
+  if (step === 3 || step === '3' || step === 'negotiate') return 3;
+  if (step === 'login') return 'login';
+  return 0; // Default active screen fallback: step = 0 (Landing Page)
 }
 
-function AppNav({ currentStep, currentUser, onGoHome, onLogout, onNavigateStep, selectedScenario, negotiationConfig }) {
+function AppNav({
+  currentStep,
+  currentUser,
+  onGoHome,
+  onLogout,
+  onNavigateStep,
+  selectedScenario,
+  negotiationConfig,
+}) {
   const { isDark, toggleTheme } = useTheme();
+  const currentStepNum = normalizeStep(currentStep);
+  const isHomeActive = currentStepNum === 0;
 
-  const getStepStatus = (stepKey) => {
-    if (currentStep === stepKey) return 'active';
-    if (currentStep === 'config' && stepKey === 'select') return 'completed';
-    if (currentStep === 'negotiate' && (stepKey === 'select' || stepKey === 'config')) return 'completed';
+  const getStepStatus = (stepNumber) => {
+    if (currentStepNum === stepNumber) return 'active';
+    if (typeof currentStepNum === 'number' && currentStepNum > stepNumber) return 'completed';
     return 'pending';
   };
 
   return (
     <nav
-      className={`sticky top-0 z-40 backdrop-blur-md border-b shadow-md transition-colors duration-200 ${
-        isDark ? 'bg-[#0b0f17]/95 border-slate-800' : 'bg-white/95 border-slate-200'
+      className={`sticky top-0 z-40 backdrop-blur-xl border-b shadow-md transition-colors duration-200 ${
+        isDark ? 'bg-slate-950/80 border-slate-800/80' : 'bg-white/95 border-slate-200 shadow-slate-200/50'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col lg:flex-row items-center justify-between gap-3">
-        {/* Brand Logo */}
+        {/* Brand Logo / Home Navigation */}
         <div className="flex items-center justify-between w-full lg:w-auto gap-4">
           <button
             type="button"
             onClick={onGoHome}
-            className="flex items-center gap-3 cursor-pointer group bg-transparent border-0 p-0 text-left"
+            aria-label="Return to Home Page"
+            className="flex items-center gap-3 cursor-pointer group bg-transparent border-0 p-0 text-left outline-none"
+            title="Return to Home Page"
           >
-            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-sm flex items-center justify-center shadow-md shadow-blue-600/30">
-              ⚖️
-            </div>
+            <BrandLogo className="w-8 h-8" />
             <div className="flex flex-col">
-              <span className="text-sm font-black tracking-tight leading-tight">
-                Negotiation<span className="text-blue-500">AI</span>
+              <span
+                className={`text-sm font-extrabold tracking-tight leading-tight group-hover:text-indigo-400 transition-colors ${
+                  isDark ? 'text-slate-100' : 'text-slate-900'
+                }`}
+              >
+                Negotiation<span className="text-indigo-500">AI</span>
               </span>
-              <span className={`text-[9px] uppercase tracking-widest font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <span
+                className={`text-[9px] uppercase tracking-widest font-bold ${
+                  isDark ? 'text-slate-400' : 'text-slate-500'
+                }`}
+              >
                 Autonomous Simulator
               </span>
             </div>
           </button>
 
-          {/* Mobile Theme Toggle & Home */}
+          {/* Mobile Actions: Theme Toggle, Home, & Auth */}
           <div className="flex items-center gap-2 lg:hidden">
             <button
               type="button"
               onClick={toggleTheme}
-              className={`p-1.5 rounded-lg border text-xs font-bold ${
-                isDark ? 'bg-slate-900 border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'
+              className={`p-1.5 rounded-lg border transition-colors ${
+                isDark ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-slate-200 bg-slate-100 text-slate-700'
               }`}
+              title="Toggle Theme"
             >
-              {isDark ? '☀️' : '🌙'}
+              {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-indigo-500" />}
             </button>
             <button
               type="button"
               onClick={onGoHome}
-              className={`text-xs font-bold px-3 py-1.5 rounded-lg border ${
-                isDark ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-slate-200 bg-slate-100 text-slate-700'
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
+                isHomeActive
+                  ? 'bg-indigo-600 text-white border-transparent'
+                  : isDark
+                  ? 'border-slate-800 bg-slate-900 text-slate-300'
+                  : 'border-slate-200 bg-slate-100 text-slate-700'
               }`}
             >
-              Hub
+              Home
             </button>
+            {!currentUser ? (
+              <button
+                type="button"
+                onClick={() => onNavigateStep('login')}
+                className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white shadow-sm"
+              >
+                Sign In
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onLogout}
+                className="p-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-rose-500"
+                title="Log Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -91,59 +148,71 @@ function AppNav({ currentStep, currentUser, onGoHome, onLogout, onNavigateStep, 
           <button
             type="button"
             onClick={onGoHome}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              currentStep === 'home'
-                ? 'bg-blue-600 text-white shadow-sm'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              isHomeActive
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                 : isDark
-                ? 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-slate-200'
-                : 'bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900'
+                ? 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                : 'bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300'
             }`}
           >
-            <span>🏠</span>
-            <span className="hidden sm:inline">Hub</span>
+            <Home className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Home</span>
           </button>
 
           <div className={`w-2 h-0.5 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
 
           {STEPS.map((step, index) => {
-            const status = getStepStatus(step.key);
+            const status = getStepStatus(step.number);
             const isClickable =
-              step.key === 'select' ||
-              (step.key === 'config' && selectedScenario) ||
-              (step.key === 'negotiate' && negotiationConfig);
+              step.number === 1 ||
+              (step.number === 2 && (selectedScenario || scenarios[0])) ||
+              (step.number === 3 && (negotiationConfig || selectedScenario));
 
             return (
               <div key={step.key} className="flex items-center gap-2 sm:gap-3">
                 <button
                   type="button"
                   disabled={!isClickable}
-                  onClick={() => isClickable && onNavigateStep(step.key)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  onClick={() => isClickable && onNavigateStep(step.number)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                     status === 'active'
-                      ? 'bg-blue-600 text-white shadow-sm'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                       : status === 'completed'
                       ? isDark
-                        ? 'bg-slate-900/60 border border-slate-800 text-slate-300 hover:text-white cursor-pointer'
-                        : 'bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 cursor-pointer'
+                        ? 'bg-slate-900/80 border border-slate-800 text-slate-300 hover:text-white hover:border-indigo-500/40 cursor-pointer'
+                        : 'bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 hover:border-slate-300 cursor-pointer'
                       : isDark
                       ? 'bg-slate-950/40 border border-slate-900 text-slate-600 cursor-not-allowed opacity-50'
                       : 'bg-slate-50 border border-slate-200 text-slate-400 cursor-not-allowed opacity-50'
                   }`}
                 >
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
-                    status === 'active'
-                      ? 'bg-blue-500 text-white'
-                      : status === 'completed'
-                      ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
-                      : isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-500'
-                  }`}>
-                    {status === 'completed' ? <CheckIcon /> : step.number}
+                  <span
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                      status === 'active'
+                        ? 'bg-indigo-500 text-white'
+                        : status === 'completed'
+                        ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
+                        : isDark
+                        ? 'bg-slate-800 text-slate-400'
+                        : 'bg-slate-200 text-slate-500'
+                    }`}
+                  >
+                    {status === 'completed' ? <Check className="w-3 h-3 stroke-[2.5]" /> : step.number}
                   </span>
                   <span className="hidden sm:inline">{step.label}</span>
                 </button>
 
                 {index < STEPS.length - 1 && (
-                  <div className={`w-4 sm:w-6 h-0.5 ${status === 'completed' ? 'bg-blue-500/50' : isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
+                  <div
+                    className={`w-4 sm:w-6 h-0.5 ${
+                      status === 'completed'
+                        ? 'bg-indigo-500/50'
+                        : isDark
+                        ? 'bg-slate-800'
+                        : 'bg-slate-200'
+                    }`}
+                  />
                 )}
               </div>
             );
@@ -156,37 +225,56 @@ function AppNav({ currentStep, currentUser, onGoHome, onLogout, onNavigateStep, 
           <button
             type="button"
             onClick={toggleTheme}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
               isDark
-                ? 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800'
-                : 'bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-900 hover:bg-slate-200 shadow-sm'
+                ? 'border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white hover:border-slate-700'
+                : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200'
             }`}
             title="Toggle Bright/Dark Mode"
           >
-            <span>{isDark ? '☀️ Bright' : '🌙 Dark'}</span>
+            {isDark ? (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                <span>Light Mode</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Dark Mode</span>
+              </>
+            )}
           </button>
 
-          {currentUser && (
+          {currentUser ? (
             <div
               className={`flex items-center gap-2 rounded-full py-1 pl-2 pr-3 border ${
-                isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+                isDark ? 'border-slate-800/90 bg-slate-900/80 shadow-sm' : 'border-slate-200 bg-white shadow-sm'
               }`}
             >
-              <div className="w-6 h-6 rounded-full bg-blue-600/20 text-blue-500 font-bold text-[11px] flex items-center justify-center border border-blue-500/30">
+              <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-500 font-bold text-[11px] flex items-center justify-center border border-indigo-500/30">
                 {(currentUser.name || 'U').charAt(0).toUpperCase()}
               </div>
-              <span className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+              <span className={`text-xs font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                 {currentUser.name}
               </span>
               <button
                 type="button"
                 onClick={onLogout}
-                className="text-[11px] text-slate-400 hover:text-rose-500 ml-1.5 transition-colors cursor-pointer font-bold"
-                title="Sign out or switch persona"
+                className="text-slate-400 hover:text-rose-500 ml-1.5 transition-colors cursor-pointer"
+                title="Log Out"
               >
-                Log Out
+                <LogOut className="w-3 h-3" />
               </button>
             </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onNavigateStep('login')}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all cursor-pointer"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </button>
           )}
         </div>
       </div>
@@ -196,86 +284,190 @@ function AppNav({ currentStep, currentUser, onGoHome, onLogout, onNavigateStep, 
 
 function MainApp() {
   const { isDark } = useTheme();
-  const [currentUser, setCurrentUser] = useState(null);
-  const [selectedScenario, setSelectedScenario] = useState(null);
-  const [currentStep, setCurrentStep] = useState('home');
-  const [negotiationConfig, setNegotiationConfig] = useState(null);
 
+  // 1. Authenticated session safely restored from localStorage
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('negotiation_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // 2. Scenario state safely restored from localStorage
+  const [selectedScenario, setSelectedScenario] = useState(() => {
+    try {
+      const saved = localStorage.getItem('negotiation_scenario');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return scenarios.find((s) => s.id === parsed?.id) || parsed || scenarios[0];
+      }
+    } catch {
+      // fallback
+    }
+    return scenarios[0];
+  });
+
+  // 3. Negotiation config safely restored from localStorage
+  const [negotiationConfig, setNegotiationConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem('negotiation_config');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // 4. Default active screen state: step = 0 (Landing Page) as requested
+  const [currentStep, setCurrentStep] = useState(() => {
+    try {
+      const saved = localStorage.getItem('negotiation_step');
+      if (saved !== null && saved !== undefined && saved !== '') {
+        return normalizeStep(saved);
+      }
+    } catch {
+      // fallback
+    }
+    return 0; // Default active screen state: step = 0 (Landing Page)
+  });
+
+  // Safe unified step setter that updates state and persists safely
+  const handleSetStep = (newStep) => {
+    const normalized = normalizeStep(newStep);
+    setCurrentStep(normalized);
+    try {
+      localStorage.setItem('negotiation_step', String(normalized));
+    } catch {
+      // ignore
+    }
+  };
+
+  // Requirement 2: Brand Logo / Home navigation resets to step = 0
+  const handleGoHome = () => {
+    handleSetStep(0);
+  };
+
+  // Starting from Landing Page
+  const handleStartFromLanding = (scenario) => {
+    if (scenario) {
+      const targetScenario = scenarios.find((s) => s.id === scenario?.id || s.id === scenario) || scenario;
+      setSelectedScenario(targetScenario);
+      try {
+        localStorage.setItem('negotiation_scenario', JSON.stringify(targetScenario));
+      } catch (err) {
+        console.debug('Failed to cache scenario:', err);
+      }
+    }
+    handleSetStep(1); // Proceed to Step 1: Select Arena
+  };
+
+  // Scenario selection
+  const handleSelectScenario = (scenario) => {
+    setSelectedScenario(scenario);
+    try {
+      localStorage.setItem('negotiation_scenario', JSON.stringify(scenario));
+    } catch (err) {
+      console.debug('Failed to cache selected scenario:', err);
+    }
+  };
+
+  // Login handler
   const handleLogin = (userData) => {
+    try {
+      localStorage.setItem('negotiation_user', JSON.stringify(userData));
+    } catch (err) {
+      console.debug('Failed to cache user session:', err);
+    }
     setCurrentUser(userData);
-    setCurrentStep('home');
+    handleSetStep(1); // Proceed to Step 1: Select Arena
   };
 
+  // Logout handler
   const handleLogout = () => {
+    try {
+      localStorage.removeItem('negotiation_user');
+    } catch (err) {
+      console.debug('Failed to clear user session:', err);
+    }
     setCurrentUser(null);
-    setCurrentStep('home');
+    handleSetStep(0); // Reset to Step 0: Home / Landing Page
   };
 
+  // Start negotiation handler
   const handleStartNegotiation = (config) => {
     setNegotiationConfig(config);
-    setCurrentStep('negotiate');
+    try {
+      localStorage.setItem('negotiation_config', JSON.stringify(config));
+    } catch (err) {
+      console.debug('Failed to cache negotiation config:', err);
+    }
+    handleSetStep(3); // Proceed to Step 3: Simulation Arena
   };
 
+  // Reset handler from Arena
   const handleReset = () => {
-    setSelectedScenario(null);
     setNegotiationConfig(null);
-    setCurrentStep('select');
+    try {
+      localStorage.removeItem('negotiation_config');
+    } catch (err) {
+      console.debug('Failed to clear negotiation config:', err);
+    }
+    handleSetStep(1); // Return to Step 1: Select Arena
   };
 
-  const activeConfig = negotiationConfig || selectedScenario;
+  const activeConfig = negotiationConfig || selectedScenario || scenarios[0];
+  const activeStep = normalizeStep(currentStep);
 
-  // Entry: Modern Login Page with Google SSO and Theme Toggle
-  if (!currentUser) {
-    return <LoginPage onLogin={handleLogin} />;
+  // If in 'login' mode, render LoginPage with full-screen container and onGoHome
+  if (activeStep === 'login') {
+    return <LoginPage onLogin={handleLogin} onGoHome={handleGoHome} />;
   }
 
   return (
     <div
-      className={`min-h-screen w-full flex flex-col font-sans selection:bg-blue-600 selection:text-white transition-colors duration-200 relative ${
-        isDark ? 'bg-[#080b11] text-slate-100' : 'bg-slate-50 text-slate-900'
+      className={`min-h-screen w-full flex flex-col font-sans transition-colors duration-200 relative selection:bg-indigo-500 selection:text-white ${
+        isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
       }`}
     >
       {/* Global Nav */}
       <AppNav
-        currentStep={currentStep}
+        currentStep={activeStep}
         currentUser={currentUser}
-        onGoHome={() => setCurrentStep('home')}
+        onGoHome={handleGoHome}
         onLogout={handleLogout}
-        onNavigateStep={setCurrentStep}
+        onNavigateStep={handleSetStep}
         selectedScenario={selectedScenario}
         negotiationConfig={negotiationConfig}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 relative z-10 w-full">
-        {currentStep === 'home' && (
-          <LandingPage
-            currentUser={currentUser}
-            onLogout={handleLogout}
-            onStart={() => setCurrentStep('select')}
-          />
+        {activeStep === 0 && (
+          <LandingPage onStart={handleStartFromLanding} />
         )}
 
-        {currentStep === 'select' && (
+        {activeStep === 1 && (
           <ScenarioSelectionScreen
             scenarios={scenarios}
-            selectedScenario={selectedScenario}
-            onSelectScenario={(s) => setSelectedScenario(s)}
-            onContinue={() => setCurrentStep('config')}
+            selectedScenario={selectedScenario || scenarios[0]}
+            onSelectScenario={handleSelectScenario}
+            onContinue={(scenario) => {
+              if (scenario) handleSelectScenario(scenario);
+              handleSetStep(2);
+            }}
           />
         )}
 
-        {currentStep === 'config' && (
+        {activeStep === 2 && (
           <AgentConfigScreen
-            scenarios={scenarios}
-            selectedScenario={selectedScenario}
-            onSelectScenario={(s) => setSelectedScenario(s)}
-            onBack={() => setCurrentStep('select')}
+            selectedScenario={selectedScenario || scenarios[0]}
+            onBack={() => handleSetStep(1)}
             onStartNegotiation={handleStartNegotiation}
           />
         )}
 
-        {currentStep === 'negotiate' && (
+        {activeStep === 3 && (
           <NegotiationArena
             config={activeConfig}
             onReset={handleReset}

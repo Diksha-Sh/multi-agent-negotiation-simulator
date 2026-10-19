@@ -1,3 +1,6 @@
+/* eslint-disable react-refresh/only-export-components */
+import { Activity, Info } from 'lucide-react';
+
 export function predictConflict(p1 = 'Collaborative', p2 = 'Collaborative') {
   const pair = [p1, p2].sort().join('+');
 
@@ -7,7 +10,7 @@ export function predictConflict(p1 = 'Collaborative', p2 = 'Collaborative') {
         severity: 'critical',
         deadlockProb: 86,
         dealProb: 14,
-        badge: '⚠️ High Deadlock Hazard (86%)',
+        badge: 'High Deadlock Hazard (86%)',
         status: 'Dual-Anchor Impasse',
         textColor: 'text-rose-400',
         borderColor: 'border-rose-500/40',
@@ -24,7 +27,7 @@ export function predictConflict(p1 = 'Collaborative', p2 = 'Collaborative') {
         severity: 'moderate',
         deadlockProb: 28,
         dealProb: 72,
-        badge: '⚡ Hard Bargaining (72% Deal)',
+        badge: 'Hard Bargaining (72% Deal)',
         status: 'Asymmetric Value Capture',
         textColor: 'text-amber-400',
         borderColor: 'border-amber-500/40',
@@ -41,7 +44,7 @@ export function predictConflict(p1 = 'Collaborative', p2 = 'Collaborative') {
         severity: 'warning',
         deadlockProb: 22,
         dealProb: 78,
-        badge: '🎯 Exploitative Asymmetry (78% Deal)',
+        badge: 'Exploitative Asymmetry (78% Deal)',
         status: 'Early Anchor Concession',
         textColor: 'text-orange-400',
         borderColor: 'border-orange-500/40',
@@ -58,7 +61,7 @@ export function predictConflict(p1 = 'Collaborative', p2 = 'Collaborative') {
         severity: 'optimal',
         deadlockProb: 5,
         dealProb: 95,
-        badge: '✨ Pareto-Optimal (95% Deal)',
+        badge: 'Pareto-Optimal (95% Deal)',
         status: 'Win-Win Convergence',
         textColor: 'text-emerald-400',
         borderColor: 'border-emerald-500/40',
@@ -75,7 +78,7 @@ export function predictConflict(p1 = 'Collaborative', p2 = 'Collaborative') {
         severity: 'harmonic',
         deadlockProb: 8,
         dealProb: 92,
-        badge: '🌱 High Harmony (92% Deal)',
+        badge: 'High Harmony (92% Deal)',
         status: 'Fast Constructive Consensus',
         textColor: 'text-teal-400',
         borderColor: 'border-teal-500/40',
@@ -93,7 +96,7 @@ export function predictConflict(p1 = 'Collaborative', p2 = 'Collaborative') {
         severity: 'safe',
         deadlockProb: 12,
         dealProb: 88,
-        badge: '🛡️ Conservative Closing (88% Deal)',
+        badge: 'Conservative Closing (88% Deal)',
         status: 'Risk-Minimizing Agreement',
         textColor: 'text-sky-400',
         borderColor: 'border-sky-500/40',
@@ -114,7 +117,7 @@ export function ConflictPredictorBanner({ agent1Name, agent1Personality, agent2N
     <div className={`rounded-xl border p-4 transition-all duration-300 ${prediction.bgColor} ${prediction.borderColor}`}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
         <div className="flex items-center gap-2">
-          <span className="text-base">🔮</span>
+          <Activity className="w-4 h-4 text-indigo-400" />
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
               Pre-Flight Game-Theoretic Forecast
@@ -154,10 +157,10 @@ export function ConflictPredictorBanner({ agent1Name, agent1Personality, agent2N
         {prediction.analysis}
       </p>
       <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center gap-1.5 text-[11px] text-slate-400">
-        <span className="font-semibold text-indigo-400">💡 Advisory:</span>
+        <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+        <span className="font-semibold text-indigo-400">Advisory:</span>
         <span>{prediction.advisory}</span>
       </div>
     </div>
   );
 }
-

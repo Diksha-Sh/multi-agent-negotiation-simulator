@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * High-quality vector illustration banners for the 3 negotiation scenarios.

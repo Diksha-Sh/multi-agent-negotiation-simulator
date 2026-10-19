@@ -1,4 +1,6 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useMemo } from 'react';
+import { useTheme } from '../context/ThemeContext';
 
 // Quantitative behavioral traits (0-100)
 export const PERSONALITY_TRAITS = {
@@ -13,7 +15,7 @@ export const PERSONALITY_TRAITS = {
     color: '#f43f5e',
     fillColor: 'rgba(244, 63, 94, 0.25)',
     glow: 'rgba(244, 63, 94, 0.6)',
-    badge: '🦁 Aggressive Profile',
+    badge: 'Aggressive Profile',
     styleTag: 'High Anchor • Slow Concessions',
   },
   Collaborative: {
@@ -27,7 +29,7 @@ export const PERSONALITY_TRAITS = {
     color: '#10b981',
     fillColor: 'rgba(16, 185, 129, 0.25)',
     glow: 'rgba(16, 185, 129, 0.6)',
-    badge: '🌱 Collaborative Profile',
+    badge: 'Collaborative Profile',
     styleTag: 'Reciprocal Trades • Value Expansion',
   },
   'Risk-Averse': {
@@ -41,12 +43,13 @@ export const PERSONALITY_TRAITS = {
     color: '#38bdf8',
     fillColor: 'rgba(56, 189, 248, 0.25)',
     glow: 'rgba(56, 189, 248, 0.6)',
-    badge: '🛡️ Risk-Averse Profile',
+    badge: 'Risk-Averse Profile',
     styleTag: 'Impasse Avoidance • High Certainty',
   },
 };
 
 export function PersonalityRadar({ personality = 'Collaborative', size = 240 }) {
+  const { isDark } = useTheme();
   const profile = PERSONALITY_TRAITS[personality] || PERSONALITY_TRAITS.Collaborative;
   const traits = profile.traits;
   const total = traits.length;
@@ -109,9 +112,11 @@ export function PersonalityRadar({ personality = 'Collaborative', size = 240 }) 
   }, [center, radius, total, traits]);
 
   return (
-    <div className="flex flex-col items-center bg-slate-950/70 border border-slate-800 rounded-2xl p-4 shadow-inner">
+    <div className={`flex flex-col items-center rounded-2xl p-4 shadow-inner border ${
+      isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+    }`}>
       <div className="flex items-center justify-between w-full mb-1">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+        <span className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
           Cognitive Radar
         </span>
         <span
@@ -145,7 +150,7 @@ export function PersonalityRadar({ personality = 'Collaborative', size = 240 }) 
               key={idx}
               points={points}
               fill="none"
-              stroke="#334155"
+              stroke={isDark ? '#334155' : '#cbd5e1'}
               strokeWidth={idx === rings.length - 1 ? '1.2' : '0.8'}
               strokeDasharray={idx < rings.length - 1 ? '2 2' : 'none'}
               opacity={0.7}
@@ -160,7 +165,7 @@ export function PersonalityRadar({ personality = 'Collaborative', size = 240 }) 
               y1={axis.y1}
               x2={axis.x2}
               y2={axis.y2}
-              stroke="#334155"
+              stroke={isDark ? '#334155' : '#cbd5e1'}
               strokeWidth="0.8"
               opacity={0.6}
             />
@@ -184,7 +189,7 @@ export function PersonalityRadar({ personality = 'Collaborative', size = 240 }) 
                 cy={v.y}
                 r="3.5"
                 fill={profile.color}
-                stroke="#0f172a"
+                stroke={isDark ? '#0f172a' : '#ffffff'}
                 strokeWidth="1.5"
                 className="transition-all duration-500 ease-out"
               />
@@ -193,7 +198,9 @@ export function PersonalityRadar({ personality = 'Collaborative', size = 240 }) 
                 x={v.xLabel}
                 y={v.yLabel + 3}
                 textAnchor="middle"
-                className="fill-slate-400 text-[9px] font-semibold select-none pointer-events-none"
+                className={`text-[9px] font-semibold select-none pointer-events-none ${
+                  isDark ? 'fill-slate-400' : 'fill-slate-600'
+                }`}
               >
                 {v.trait.label}
               </text>
@@ -203,7 +210,9 @@ export function PersonalityRadar({ personality = 'Collaborative', size = 240 }) 
       </div>
 
       {/* Trait Metric Grid */}
-      <div className="grid grid-cols-5 gap-1 w-full mt-3 pt-2.5 border-t border-slate-800/80 text-center">
+      <div className={`grid grid-cols-5 gap-1 w-full mt-3 pt-2.5 border-t text-center ${
+        isDark ? 'border-slate-800/80' : 'border-slate-200'
+      }`}>
         {traits.map((t) => (
           <div key={t.key} className="flex flex-col items-center">
             <span className="text-[9px] text-slate-500 truncate w-full">{t.label.split(' ')[0]}</span>

@@ -1,11 +1,31 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
+import {
+  ArrowLeft,
+  Sliders,
+  Shuffle,
+  Activity,
+  CheckCircle2,
+  AlertTriangle,
+  RotateCcw,
+  Target,
+  TrendingUp,
+  TrendingDown,
+  Code2,
+  Play,
+  Zap,
+  Flame,
+  Users,
+  Shield,
+  X,
+  Scale,
+} from 'lucide-react';
 import vendorPricing from '../data/vendor_pricing.json';
 import { AgentAvatar } from './AgentAvatars';
 import { PersonalityRadar } from './PersonalityRadar';
 import { predictConflict } from './ConflictPredictor';
 import { PayloadInspectorModal } from './PayloadInspectorModal';
-import { useTheme } from '../context/ThemeContext';
 import { validateConfig } from '../services/api';
+import { useTheme } from '../context/ThemeContext';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');
@@ -16,37 +36,34 @@ const PERSONALITIES = [
   {
     id: 'Aggressive',
     name: 'Aggressive',
-    icon: '🦁',
+    icon: Flame,
     badge: 'High Anchor · Hardline',
     anchorStat: '95%',
     flexStat: '15%',
     riskStat: 'High',
-    lightActive: 'bg-rose-50 border-rose-500 text-rose-900 ring-2 ring-rose-400/40 shadow-md',
-    darkActive: 'bg-rose-950/40 border-rose-500 text-rose-100 ring-2 ring-rose-500/50 shadow-lg shadow-rose-950/50',
+    activeStyles: 'border-rose-500/80 ring-1 ring-rose-500/50 bg-rose-500/10 text-rose-200 shadow-[0_0_20px_rgba(244,63,94,0.12)]',
     desc: 'Commands high initial anchor, concedes slowly, leverages walkaway pressure.',
   },
   {
     id: 'Collaborative',
     name: 'Collaborative',
-    icon: '🤝',
+    icon: Users,
     badge: 'Mutual Gain · Win-Win',
     anchorStat: '60%',
     flexStat: '80%',
     riskStat: 'Low',
-    lightActive: 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-400/40 shadow-md',
-    darkActive: 'bg-emerald-950/40 border-emerald-500 text-emerald-100 ring-2 ring-emerald-500/50 shadow-lg shadow-emerald-950/50',
-    desc: 'Offers reciprocal concessions, explores trade-offs, drives mutual value.',
+    activeStyles: 'border-indigo-500/80 ring-1 ring-indigo-500/50 bg-indigo-500/10 text-indigo-200 shadow-[0_0_20px_rgba(99,102,241,0.12)]',
+    desc: 'Offers reciprocal concessions, explores trade-offs, drives mutual value expansion.',
   },
   {
     id: 'Risk-Averse',
     name: 'Risk-Averse',
-    icon: '🛡️',
+    icon: Shield,
     badge: 'Walkaway Guard · Closes Early',
     anchorStat: '40%',
     flexStat: '90%',
     riskStat: 'Zero',
-    lightActive: 'bg-sky-50 border-sky-500 text-sky-900 ring-2 ring-sky-400/40 shadow-md',
-    darkActive: 'bg-sky-950/40 border-sky-500 text-sky-100 ring-2 ring-sky-500/50 shadow-lg shadow-sky-950/50',
+    activeStyles: 'border-sky-500/80 ring-1 ring-sky-500/50 bg-sky-500/10 text-sky-200 shadow-[0_0_20px_rgba(56,189,248,0.12)]',
     desc: 'Guards strictly against impasse, concedes steadily to guarantee settlement.',
   },
 ];
@@ -114,15 +131,13 @@ function computeAgreementZone(scenario, agentConfigs) {
 }
 
 export default function AgentConfigScreen({
-  scenarios = [],
   selectedScenario = vendorPricing,
-  onSelectScenario,
   onBack,
   onStartNegotiation,
 }) {
   const { isDark } = useTheme();
   const scenario = selectedScenario || vendorPricing;
-  const agents = scenario?.agents || [];
+  const agents = useMemo(() => scenario?.agents || [], [scenario]);
 
   const [maxRounds, setMaxRounds] = useState(() => scenario?.max_rounds ?? 10);
   const [showPayloadModal, setShowPayloadModal] = useState(false);
@@ -145,8 +160,10 @@ export default function AgentConfigScreen({
     return initial;
   });
 
-  // Re-sync if scenario changes
-  useEffect(() => {
+  // Re-sync if scenario changes via standard React state-from-props pattern
+  const [prevScenarioId, setPrevScenarioId] = useState(scenario?.id);
+  if (scenario?.id !== prevScenarioId) {
+    setPrevScenarioId(scenario?.id);
     setMaxRounds(scenario?.max_rounds ?? 10);
     setBackendErrors([]);
     const initial = {};
@@ -159,7 +176,7 @@ export default function AgentConfigScreen({
       };
     }
     setAgentConfigs(initial);
-  }, [scenario?.id]);
+  }
 
   const handleUpdate = (agentId, field, value) => {
     setAgentConfigs((prev) => ({
@@ -202,8 +219,8 @@ export default function AgentConfigScreen({
       };
     }
     setAgentConfigs(updated);
-    setChaosToast('⚡ Chaos Mode Triggered: Personalities randomized for stress testing!');
-    setTimeout(() => setChaosToast(null), 4000);
+    setChaosToast('Chaos Mode Triggered: Personalities randomized for stress testing');
+    setTimeout(() => setChaosToast(null), 3500);
   };
 
   // Compute live ZOPA
@@ -263,7 +280,6 @@ export default function AgentConfigScreen({
         }
       }
     } catch (err) {
-      // If backend is not currently running, proceed with frontend ZOPA verification
       console.warn('Backend validation call skipped:', err);
     } finally {
       setIsValidating(false);
@@ -275,54 +291,51 @@ export default function AgentConfigScreen({
   };
 
   return (
-    <div
-      className={`w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-left transition-colors duration-200 ${
-        isDark ? 'text-slate-100' : 'text-slate-900'
-      }`}
-    >
+    <div className={`w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-left ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
       {/* ── TOP CONTROL DECK ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3 mb-2.5">
             <button
               type="button"
               onClick={onBack}
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 isDark
-                  ? 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'
-                  : 'bg-white border-slate-300 text-slate-700 hover:text-slate-900 hover:bg-slate-100 shadow-sm'
+                  ? 'bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 text-slate-300 hover:text-white hover:border-indigo-500/40 hover:shadow-[0_0_20px_rgba(99,102,241,0.15)]'
+                  : 'bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:border-indigo-400 shadow-sm'
               }`}
             >
-              <span>←</span>
+              <ArrowLeft className="w-3.5 h-3.5" />
               <span>Change Scenario</span>
             </button>
-            <span className="text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">
-              Step 2 of 3 · Agent Configuration Studio
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+              <Sliders className="w-3 h-3" />
+              <span>Step 2 of 3 · Agent Configuration Studio</span>
             </span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
+          <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
             {scenario.title}
           </h1>
-          <p className={`text-sm mt-1 max-w-2xl font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          <p className={`text-xs sm:text-sm mt-1 max-w-2xl ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             {scenario.description}
           </p>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-3 flex-wrap self-start sm:self-center">
+        <div className="flex items-center gap-2.5 flex-wrap self-start sm:self-center">
           {/* Chaos Test */}
           <button
             type="button"
             onClick={handleChaosMode}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95 ${
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold backdrop-blur-xl border transition-all cursor-pointer ${
               isDark
-                ? 'bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-800'
-                : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                ? 'bg-slate-900/60 border-slate-800/80 text-slate-300 hover:text-white hover:border-indigo-500/40 hover:shadow-[0_0_20px_rgba(99,102,241,0.15)]'
+                : 'bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:border-indigo-400 shadow-sm'
             }`}
             title="Randomize personalities for stress testing"
           >
-            <span>🎲</span>
+            <Shuffle className="w-3.5 h-3.5 text-indigo-500" />
             <span>Chaos Test</span>
           </button>
 
@@ -330,19 +343,23 @@ export default function AgentConfigScreen({
           <button
             type="button"
             onClick={() => setShowRadarModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25 hover:from-blue-500 hover:to-indigo-500 transition-all cursor-pointer hover:scale-105 active:scale-95"
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold backdrop-blur-xl border transition-all cursor-pointer ${
+              isDark
+                ? 'bg-slate-900/60 border-slate-800/80 text-slate-300 hover:text-white hover:border-indigo-500/40 hover:shadow-[0_0_20px_rgba(99,102,241,0.15)]'
+                : 'bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:border-indigo-400 shadow-sm'
+            }`}
             title="View pentagon cognitive radar charts"
           >
-            <span>🕸️</span>
+            <Activity className="w-3.5 h-3.5 text-indigo-500" />
             <span>View Radar</span>
           </button>
 
           {/* Max Rounds Stepper */}
-          <div
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold ${
-              isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-300 text-slate-700 shadow-sm'
-            }`}
-          >
+          <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl backdrop-blur-xl border text-xs font-semibold ${
+            isDark
+              ? 'bg-slate-900/60 border-slate-800/80 text-slate-300'
+              : 'bg-white border border-slate-200 text-slate-700 shadow-sm'
+          }`}>
             <span>Rounds:</span>
             <input
               type="number"
@@ -350,58 +367,56 @@ export default function AgentConfigScreen({
               max="50"
               value={maxRounds}
               onChange={(e) => setMaxRounds(e.target.value)}
-              className={`w-12 text-center font-black rounded-lg py-1 outline-none border text-sm ${
+              className={`w-12 text-center font-bold rounded-lg py-0.5 outline-none border text-xs ${
                 isDark
-                  ? 'bg-slate-950 border-slate-700 text-blue-400'
-                  : 'bg-slate-100 border-slate-300 text-blue-600'
+                  ? 'bg-slate-950/80 border-slate-800 focus:border-indigo-500 text-indigo-300'
+                  : 'bg-slate-50 border-slate-300 focus:border-indigo-500 text-indigo-600'
               }`}
             />
           </div>
         </div>
       </div>
 
-      {/* ── Chaos Alert ── */}
+      {/* ── Chaos Alert Toast ── */}
       {chaosToast && (
-        <div className="p-4 mb-6 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-500 text-sm font-bold flex items-center gap-2.5 animate-bounce">
-          <span>⚡</span>
+        <div className="p-3.5 mb-6 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold flex items-center gap-2.5 shadow-lg backdrop-blur-md">
+          <Zap className="w-4 h-4 text-indigo-500 shrink-0" />
           <span>{chaosToast}</span>
         </div>
       )}
 
       {/* ── CENTRAL TELEMETRY: HIGH-TECH ZOPA OVERLAP GAUGE ── */}
-      <div
-        className={`rounded-3xl border p-6 sm:p-7 mb-8 transition-all relative overflow-hidden ${
-          isDark
-            ? 'bg-[#0f1420] border-slate-800 shadow-2xl'
-            : 'bg-white border-slate-200 shadow-lg'
-        }`}
-      >
+      <div className={`rounded-2xl backdrop-blur-xl border p-5 sm:p-6 mb-8 transition-all relative overflow-hidden shadow-2xl ${
+        isDark ? 'bg-slate-900/60 border-slate-800/80' : 'bg-white border-slate-200/90 shadow-slate-200/50'
+      }`}>
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
           <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-sm sm:text-base font-black uppercase tracking-wider">
-              Mathematical ZOPA Feasibility Monitor
-            </span>
+            <div className={`flex items-center gap-2 text-sm sm:text-base font-bold ${
+              isDark ? 'text-slate-100' : 'text-slate-900'
+            }`}>
+              <Scale className="w-4 h-4 text-indigo-500" />
+              <span>Mathematical ZOPA Feasibility Monitor</span>
+            </div>
             {agreement.valid ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-1 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Agreement Zone Open (Feasible)
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Agreement Zone Open (Feasible)</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-1 rounded-full bg-rose-500/15 text-rose-500 border border-rose-500/30">
-                ⚠️ Impasse (Ceiling Below Floor)
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Impasse (Ceiling Below Floor)</span>
               </span>
             )}
           </div>
 
           {/* Game-Theoretic Forecast Dial */}
-          <div
-            className={`inline-flex items-center gap-3 text-xs px-4 py-2 rounded-2xl border font-bold ${
-              isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
-            }`}
-          >
-            <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Convergence Forecast:</span>
-            <strong className={`text-sm ${conflict.textColor}`}>{conflict.status}</strong>
-            <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20 font-black">
+          <div className={`inline-flex items-center gap-2.5 text-xs px-3.5 py-1.5 rounded-xl border font-semibold ${
+            isDark ? 'border-slate-800/80 bg-slate-950/80 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-700'
+          }`}>
+            <span className={isDark ? "text-slate-400" : "text-slate-500"}>Forecast:</span>
+            <strong className={`font-bold ${conflict.textColor}`}>{conflict.status}</strong>
+            <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 font-bold">
               {conflict.dealProb}% Deal Rate
             </span>
           </div>
@@ -412,38 +427,36 @@ export default function AgentConfigScreen({
           <div className="space-y-3">
             <div className="flex items-center justify-between text-xs sm:text-sm">
               <div>
-                <span className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Reservation Floor ({agreement.overlaps[0].minAgent})
+                <span className={`block text-[10px] font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Floor ({agreement.overlaps[0].minAgent})
                 </span>
-                <span className="text-emerald-500 text-lg sm:text-2xl font-black">
+                <span className="text-emerald-500 text-base sm:text-xl font-bold font-mono">
                   {agreement.overlaps[0].min} {agreement.overlaps[0].unit}
                 </span>
               </div>
 
               <div className="text-center">
-                <span className="text-xs font-mono font-black uppercase tracking-widest text-blue-500 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+                <span className="text-xs font-mono font-semibold uppercase tracking-wider text-indigo-500 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20">
                   {agreement.overlaps[0].item}
                 </span>
               </div>
 
               <div className="text-right">
-                <span className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Reservation Ceiling ({agreement.overlaps[0].maxAgent})
+                <span className={`block text-[10px] font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Ceiling ({agreement.overlaps[0].maxAgent})
                 </span>
-                <span className="text-blue-500 text-lg sm:text-2xl font-black">
+                <span className="text-indigo-500 text-base sm:text-xl font-bold font-mono">
                   {agreement.overlaps[0].max} {agreement.overlaps[0].unit}
                 </span>
               </div>
             </div>
 
             {/* Glowing Gradient Progress Track */}
-            <div
-              className={`w-full h-4 rounded-full overflow-hidden border p-0.5 ${
-                isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-300'
-              }`}
-            >
+            <div className={`w-full h-3 rounded-full overflow-hidden border p-0.5 ${
+              isDark ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-slate-100'
+            }`}>
               {agreement.overlaps[0].isFeasible ? (
-                <div className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-blue-500 rounded-full transition-all duration-300 shadow-lg shadow-emerald-500/20" />
+                <div className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-indigo-500 rounded-full transition-all duration-300 shadow-md shadow-emerald-500/20" />
               ) : (
                 <div className="h-full bg-rose-500 rounded-full transition-all duration-300" />
               )}
@@ -452,8 +465,8 @@ export default function AgentConfigScreen({
         )}
       </div>
 
-      {/* ── BATTLE ARENA: AGENT 1 VS AGENT 2 STUDIO ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      {/* ── BATTLE ARENA: SIDE-BY-SIDE BALANCED GLASS CARDS (AGENT 1 VS AGENT 2) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {agents.map((agent, aIdx) => {
           const cfg = agentConfigs[agent.id] || {};
           const currentP = cfg.personality || agent.default_personality || 'Collaborative';
@@ -461,36 +474,34 @@ export default function AgentConfigScreen({
           return (
             <div
               key={agent.id}
-              className={`rounded-3xl border p-6 sm:p-8 flex flex-col justify-between space-y-7 transition-all duration-200 relative ${
+              className={`rounded-2xl backdrop-blur-xl border p-6 flex flex-col justify-between space-y-6 transition-all duration-200 shadow-2xl ${
                 isDark
-                  ? 'bg-[#0f1420] border-slate-800 shadow-2xl'
-                  : 'bg-white border-slate-200 shadow-xl'
+                  ? 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700/80'
+                  : 'bg-white border-slate-200/90 shadow-slate-200/50 hover:border-slate-300'
               }`}
             >
               {/* Agent Identity Header */}
-              <div
-                className={`flex items-center justify-between pb-5 border-b ${
-                  isDark ? 'border-slate-800' : 'border-slate-100'
-                }`}
-              >
-                <div className="flex items-center gap-4">
+              <div className={`flex items-center justify-between pb-4 border-b ${
+                isDark ? 'border-slate-800/80' : 'border-slate-100'
+              }`}>
+                <div className="flex items-center gap-3.5">
                   <AgentAvatar role={agent.role || agent.id} size="md" />
                   <div>
-                    <div className="flex items-center gap-2.5">
-                      <h2 className="text-xl sm:text-2xl font-black tracking-tight">
+                    <div className="flex items-center gap-2">
+                      <h2 className={`text-lg sm:text-xl font-bold tracking-tight ${
+                        isDark ? 'text-slate-100' : 'text-slate-900'
+                      }`}>
                         {agent.name}
                       </h2>
-                      <span
-                        className={`text-xs font-mono font-black px-2.5 py-0.5 rounded-full uppercase ${
-                          isDark
-                            ? 'bg-slate-900 text-slate-300 border border-slate-800'
-                            : 'bg-slate-100 text-slate-700 border border-slate-200'
-                        }`}
-                      >
-                        Agent {aIdx + 1}
+                      <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full uppercase border ${
+                        isDark ? 'bg-slate-800/80 text-slate-400 border-slate-700/60' : 'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}>
+                        Agent {aIdx === 0 ? 'A' : 'B'}
                       </span>
                     </div>
-                    <p className={`text-xs sm:text-sm font-semibold mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    <p className={`text-xs font-medium mt-0.5 ${
+                      isDark ? 'text-slate-400' : 'text-slate-500'
+                    }`}>
                       {agent.role}
                     </p>
                   </div>
@@ -505,71 +516,76 @@ export default function AgentConfigScreen({
                       handleUpdate(agent.id, 'limits', agent.limits.map((l) => ({ ...l })));
                     }
                   }}
-                  className={`text-xs font-bold transition-all cursor-pointer px-3 py-1.5 rounded-xl border ${
+                  className={`inline-flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer px-2.5 py-1 rounded-lg border ${
                     isDark
-                      ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900'
+                      ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
                       : 'border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                   title="Reset to scenario defaults"
                 >
-                  ↺ Reset
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Reset</span>
                 </button>
               </div>
 
               {/* 1. Personality Selection (Tactile Cards with Stats) */}
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-blue-500 mb-3">
+                <label className="block text-xs font-bold uppercase tracking-wider text-indigo-500 mb-2.5">
                   Behavioral Personality Style
                 </label>
 
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {PERSONALITIES.map((p) => {
                     const isSelected = currentP === p.id;
+                    const IconComp = p.icon;
                     return (
                       <button
                         key={p.id}
                         type="button"
                         onClick={() => handleUpdate(agent.id, 'personality', p.id)}
                         className={cn(
-                          'w-full p-4 rounded-2xl border text-left transition-all duration-150 cursor-pointer flex items-center justify-between gap-4',
+                          'w-full p-3.5 rounded-xl border text-left transition-all duration-150 cursor-pointer flex items-center justify-between gap-3.5',
                           isSelected
-                            ? isDark
-                              ? p.darkActive
-                              : p.lightActive
+                            ? p.activeStyles
                             : isDark
-                            ? 'bg-slate-950/60 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            ? 'bg-slate-950/60 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:border-slate-700/80 hover:bg-slate-900/60'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-100'
                         )}
                       >
-                        <div className="flex items-center gap-3.5">
-                          <span className="text-3xl shrink-0">{p.icon}</span>
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={cn(
+                              'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border',
+                              isSelected
+                                ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-500'
+                                : isDark
+                                ? 'bg-slate-900 border-slate-800 text-slate-400'
+                                : 'bg-white border-slate-200 text-slate-500'
+                            )}
+                          >
+                            <IconComp className="w-4 h-4" />
+                          </div>
                           <div>
                             <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-sm font-black tracking-tight text-current">
+                              <span className={`text-xs font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
                                 {p.name}
                               </span>
-                              <span
-                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                                  isSelected
-                                    ? 'bg-current/10 border-current/20'
-                                    : isDark
-                                    ? 'bg-slate-900 border-slate-800 text-slate-400'
-                                    : 'bg-slate-200 border-slate-300 text-slate-600'
-                                }`}
-                              >
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                                isDark ? 'bg-slate-900/80 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
+                              }`}>
                                 {p.badge}
                               </span>
                             </div>
-                            <p className="text-xs leading-snug line-clamp-1 opacity-80">
+                            <p className={`text-[11px] leading-snug line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                               {p.desc}
                             </p>
                           </div>
                         </div>
 
                         {/* Stat Snapshot */}
-                        <div className="hidden sm:flex flex-col text-right shrink-0 text-[11px] font-mono">
-                          <span className="font-bold">Anchor: {p.anchorStat}</span>
-                          <span className="opacity-70">Flex: {p.flexStat}</span>
+                        <div className={`hidden sm:flex flex-col text-right shrink-0 text-[10px] font-mono ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Anchor: {p.anchorStat}</span>
+                          <span>Flex: {p.flexStat}</span>
                         </div>
                       </button>
                     );
@@ -579,51 +595,61 @@ export default function AgentConfigScreen({
 
               {/* 2. Primary Objective */}
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-blue-500 mb-2">
-                  🎯 Primary Objective
-                </label>
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-500 mb-2">
+                  <Target className="w-3.5 h-3.5" />
+                  <span>Primary Objective</span>
+                </div>
                 <textarea
                   rows={2}
                   value={cfg.objective || ''}
                   onChange={(e) => handleUpdate(agent.id, 'objective', e.target.value)}
-                  className={`w-full rounded-2xl p-4 text-sm font-medium outline-none transition-all border ${
+                  className={`w-full rounded-lg p-3 text-xs sm:text-sm font-medium border focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all resize-none ${
                     isDark
-                      ? 'bg-slate-950 border-slate-800 text-white focus:border-blue-500'
-                      : 'bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-sm'
+                      ? 'bg-slate-950/80 border-slate-800 text-slate-100 placeholder-slate-500'
+                      : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
                   }`}
                   placeholder="Define the agent's primary negotiation target..."
                 />
               </div>
 
-              {/* 3. Reservation Boundaries (ZOPA Limits) */}
+              {/* 3. Reservation Boundaries (ZOPA Bounds) */}
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-blue-500 mb-2">
-                  📏 Reservation Boundaries (ZOPA Bounds)
-                </label>
-                <div className="space-y-3">
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-500 mb-2.5">
+                  <Sliders className="w-3.5 h-3.5" />
+                  <span>Reservation Boundaries (ZOPA Bounds)</span>
+                </div>
+                <div className="space-y-2.5">
                   {(cfg.limits || []).map((l, idx) => {
                     const isMin = String(l.type).toLowerCase() === 'min';
                     return (
                       <div
                         key={idx}
-                        className={`flex items-center justify-between p-3.5 rounded-2xl border text-sm ${
-                          isDark
-                            ? 'bg-slate-950/80 border-slate-800'
-                            : 'bg-slate-50 border-slate-200'
+                        className={`flex items-center justify-between p-3 rounded-xl border text-xs ${
+                          isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-2">
                           <span
                             className={cn(
-                              'text-xs font-black px-2.5 py-1 rounded-lg border uppercase tracking-wider',
+                              'inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider border',
                               isMin
-                                ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
-                                : 'bg-blue-500/15 text-blue-500 border-blue-500/30'
+                                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
                             )}
                           >
-                            {isMin ? 'Floor' : 'Ceiling'}
+                            {isMin ? (
+                              <>
+                                <TrendingUp className="w-3 h-3" />
+                                <span>MIN (Floor)</span>
+                              </>
+                            ) : (
+                              <>
+                                <TrendingDown className="w-3 h-3" />
+                                <span>MAX (Ceiling)</span>
+                              </>
+                            )}
                           </span>
-                          <span className="font-bold capitalize truncate">
+                          <span className={`font-semibold capitalize truncate ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                             {(l.item || '').replace(/_/g, ' ')}
                           </span>
                         </div>
@@ -633,13 +659,11 @@ export default function AgentConfigScreen({
                             type="number"
                             value={l.value ?? ''}
                             onChange={(e) => handleLimitChange(agent.id, idx, e.target.value)}
-                            className={`w-28 border rounded-xl px-3 py-1.5 text-right text-base font-black outline-none transition-colors ${
-                              isDark
-                                ? 'bg-slate-900 border-slate-700 text-white focus:border-blue-500'
-                                : 'bg-white border-slate-300 text-slate-900 focus:border-blue-600 shadow-sm'
+                            className={`w-28 border focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-2.5 py-1 text-right font-mono font-bold text-xs sm:text-sm outline-none transition-colors ${
+                              isDark ? 'bg-slate-950/80 border-slate-800 text-slate-100' : 'bg-white border-slate-300 text-slate-900'
                             }`}
                           />
-                          <span className={`text-xs font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          <span className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                             {l.unit}
                           </span>
                         </div>
@@ -651,28 +675,15 @@ export default function AgentConfigScreen({
 
               {/* 4. Behavioral Constraints */}
               {Array.isArray(cfg.constraints) && cfg.constraints.length > 0 && (
-                <div
-                  className={`pt-4 border-t ${
-                    isDark ? 'border-slate-800' : 'border-slate-100'
-                  }`}
-                >
-                  <span
-                    className={`block text-[11px] font-black uppercase tracking-wider mb-2.5 ${
-                      isDark ? 'text-slate-400' : 'text-slate-500'
-                    }`}
-                  >
+                <div className={`pt-4 border-t ${isDark ? 'border-slate-800/80' : 'border-slate-100'}`}>
+                  <span className={`block text-[10px] font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                     Active Constraints
                   </span>
-                  <ul className="space-y-2">
+                  <ul className="space-y-1.5">
                     {cfg.constraints.map((c, i) => (
-                      <li
-                        key={i}
-                        className={`text-xs sm:text-sm flex items-start gap-2.5 ${
-                          isDark ? 'text-slate-300' : 'text-slate-700'
-                        }`}
-                      >
-                        <span className="text-blue-500 font-black text-base leading-none">•</span>
-                        <span className="leading-snug font-medium">{c}</span>
+                      <li key={i} className={`text-xs flex items-start gap-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
+                        <span className="leading-snug">{c}</span>
                       </li>
                     ))}
                   </ul>
@@ -685,110 +696,114 @@ export default function AgentConfigScreen({
 
       {/* ── Impasse Alerts if Mathematical Collision ── */}
       {!agreement.valid && (
-        <div className="p-5 rounded-3xl bg-rose-500/10 border border-rose-500/40 mb-8 text-sm text-rose-500 space-y-2 animate-bounce">
-          <div className="font-black flex items-center gap-2 text-base">
-            <span>⚠️</span>
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 mb-8 text-xs sm:text-sm text-rose-500 space-y-1.5">
+          <div className="font-bold flex items-center gap-2 text-sm text-rose-500">
+            <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
             <span>Mathematical Impasse Detected in Reservation Boundaries:</span>
           </div>
           {agreement.errors.map((err, i) => (
-            <p key={i} className="pl-7 font-bold">• {err}</p>
+            <p key={i} className="pl-6 font-medium">• {err}</p>
           ))}
         </div>
       )}
 
       {/* ── Backend Validation Errors ── */}
       {backendErrors.length > 0 && (
-        <div className="p-5 rounded-3xl bg-rose-500/10 border border-rose-500/40 mb-8 text-sm text-rose-500 space-y-2">
-          <div className="font-black flex items-center gap-2 text-base">
-            <span>⚠️</span>
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 mb-8 text-xs sm:text-sm text-rose-500 space-y-1.5">
+          <div className="font-bold flex items-center gap-2 text-sm text-rose-500">
+            <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
             <span>Backend API Invariant Check Failed:</span>
           </div>
           {backendErrors.map((err, i) => (
-            <p key={i} className="pl-7 font-bold">• {err}</p>
+            <p key={i} className="pl-6 font-medium">• {err}</p>
           ))}
         </div>
       )}
 
       {/* ── BOTTOM FLOATING ACTION DOCK ── */}
-      <div
-        className={`flex flex-col sm:flex-row items-center justify-between gap-5 p-6 sm:p-7 rounded-3xl border transition-all ${
-          isDark
-            ? 'bg-[#0f1420] border-slate-800 shadow-2xl'
-            : 'bg-white border-slate-200 shadow-xl'
-        }`}
-      >
+      <div className={`flex flex-col sm:flex-row items-center justify-between gap-5 p-5 sm:p-6 rounded-2xl backdrop-blur-xl border shadow-2xl transition-all ${
+        isDark ? 'bg-slate-900/60 border-slate-800/80' : 'bg-white border-slate-200/90 shadow-slate-200/50'
+      }`}>
         <div>
-          <span className="text-base sm:text-lg font-black block">
-            {agreement.valid ? '✓ Ready for Simulation Arena' : '⚠️ Adjust Limits to Re-Open Agreement Zone'}
-          </span>
-          <span className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Both agent profiles verified against mathematical constraints and backend/validation.py rules.
+          <div className="flex items-center gap-2">
+            {agreement.valid ? (
+              <>
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <span className={`text-sm sm:text-base font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                  Ready for Simulation Arena
+                </span>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="w-4 h-4 text-rose-500" />
+                <span className="text-sm sm:text-base font-bold text-rose-500">
+                  Adjust Limits to Re-Open Agreement Zone
+                </span>
+              </>
+            )}
+          </div>
+          <span className={`text-xs block mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            Both agent profiles verified against mathematical constraints and system validation rules.
           </span>
         </div>
 
-        <div className="flex items-center gap-3.5 w-full sm:w-auto justify-end">
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
           <button
             type="button"
             onClick={() => setShowPayloadModal(true)}
-            className={`px-5 py-3 rounded-2xl text-xs font-bold border transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
               isDark
-                ? 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'
-                : 'bg-white border-slate-300 text-slate-700 hover:text-slate-900 hover:bg-slate-100 shadow-sm'
+                ? 'bg-slate-900/80 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
+                : 'bg-slate-100 border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-200'
             }`}
           >
-            📦 Inspect JSON
+            <Code2 className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Inspect JSON</span>
           </button>
 
           <button
             type="button"
             disabled={!agreement.valid || isValidating}
             onClick={handleLaunchNegotiation}
-            className="px-8 py-3.5 rounded-2xl font-black text-sm text-white bg-blue-600 hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/30 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/30 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0"
           >
-            {isValidating ? 'Validating API...' : 'Start Simulation Arena 🚀'}
+            <Play className="w-4 h-4 fill-current" />
+            <span>{isValidating ? 'Validating API...' : 'Start Simulation Arena'}</span>
           </button>
         </div>
       </div>
 
       {/* ── Cognitive Radar Modal ── */}
       {showRadarModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div
-            className={`w-full max-w-2xl rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 border ${
-              isDark ? 'bg-[#0f1420] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-            }`}
-          >
-            <div
-              className={`flex items-center justify-between pb-4 border-b ${
-                isDark ? 'border-slate-800' : 'border-slate-100'
-              }`}
-            >
-              <h3 className="text-lg font-black flex items-center gap-2">
-                <span>🕸️</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className={`w-full max-w-2xl rounded-2xl border p-6 sm:p-7 shadow-2xl space-y-6 ${
+            isDark ? 'bg-slate-900/95 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className={`flex items-center justify-between pb-4 border-b ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
+              <div className="flex items-center gap-2.5 text-base font-bold">
+                <Activity className="w-4 h-4 text-indigo-500" />
                 <span>Cognitive Personality Radars</span>
-              </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowRadarModal(false)}
-                className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-colors ${
-                  isDark
-                    ? 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-                    : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'
+                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                  isDark ? 'bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-500 hover:text-slate-800'
                 }`}
               >
-                ✕ Close
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="text-center">
-                <span className="block text-sm font-black mb-2">
+                <span className={`block text-xs font-bold mb-2 ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
                   {agents[0]?.name} ({p1})
                 </span>
                 <PersonalityRadar personality={p1} size={230} />
               </div>
               <div className="text-center">
-                <span className="block text-sm font-black mb-2">
+                <span className={`block text-xs font-bold mb-2 ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
                   {agents[1]?.name} ({p2})
                 </span>
                 <PersonalityRadar personality={p2} size={230} />

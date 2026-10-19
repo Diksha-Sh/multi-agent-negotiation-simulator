@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * Illustrated Agent Character Portraits for the Negotiation Simulator.
@@ -17,7 +16,7 @@ export function AgentAvatar({ role = 'buyer', size = 'md', className = '' }) {
   const roleKey = String(role).toLowerCase();
 
   if (roleKey.includes('buyer') || roleKey.includes('procurement')) {
-    // 🏢 Procurement Buyer: Blue suit, smart glasses, calculating expression
+    // Procurement Buyer: Blue suit, smart glasses, calculating expression
     return (
       <div className={`relative rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 p-0.5 shadow-lg shadow-indigo-500/25 shrink-0 ${dim} ${className}`}>
         <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center overflow-hidden">
@@ -46,7 +45,7 @@ export function AgentAvatar({ role = 'buyer', size = 'md', className = '' }) {
   }
 
   if (roleKey.includes('vendor') || roleKey.includes('sales')) {
-    // 🏭 Sales Vendor: Amber/Gold theme, sales headset, welcoming smile
+    // Sales Vendor: Amber/Gold theme, sales headset, welcoming smile
     return (
       <div className={`relative rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-600 to-rose-500 p-0.5 shadow-lg shadow-orange-500/25 shrink-0 ${dim} ${className}`}>
         <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center overflow-hidden">
@@ -79,7 +78,7 @@ export function AgentAvatar({ role = 'buyer', size = 'md', className = '' }) {
   }
 
   if (roleKey.includes('candidate') || roleKey.includes('developer')) {
-    // 👩‍💻 Dev Candidate: Purple/Cyan theme, tech hoodie, modern glasses
+    // Dev Candidate: Purple/Cyan theme, tech hoodie, modern glasses
     return (
       <div className={`relative rounded-2xl bg-gradient-to-tr from-fuchsia-500 via-purple-600 to-cyan-400 p-0.5 shadow-lg shadow-purple-500/25 shrink-0 ${dim} ${className}`}>
         <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center overflow-hidden">
@@ -108,7 +107,7 @@ export function AgentAvatar({ role = 'buyer', size = 'md', className = '' }) {
   }
 
   if (roleKey.includes('hiring') || roleKey.includes('employer')) {
-    // 👔 Hiring Manager: Emerald/Cyan theme, professional executive look
+    // Hiring Manager: Emerald/Cyan theme, professional executive look
     return (
       <div className={`relative rounded-2xl bg-gradient-to-tr from-cyan-500 via-teal-600 to-indigo-600 p-0.5 shadow-lg shadow-teal-500/25 shrink-0 ${dim} ${className}`}>
         <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center overflow-hidden">
@@ -135,7 +134,7 @@ export function AgentAvatar({ role = 'buyer', size = 'md', className = '' }) {
   }
 
   if (roleKey.includes('finance')) {
-    // 📈 Finance Manager: Golden amber theme, ledger badge, sharp look
+    // Finance Manager: Golden amber theme, ledger badge, sharp look
     return (
       <div className={`relative rounded-2xl bg-gradient-to-tr from-amber-400 via-emerald-600 to-teal-600 p-0.5 shadow-lg shadow-emerald-500/25 shrink-0 ${dim} ${className}`}>
         <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center overflow-hidden">
@@ -164,7 +163,7 @@ export function AgentAvatar({ role = 'buyer', size = 'md', className = '' }) {
     );
   }
 
-  // Default: 🚀 Project Manager / General Leader
+  // Default: Project Manager / General Leader
   return (
     <div className={`relative rounded-2xl bg-gradient-to-tr from-indigo-500 via-violet-600 to-pink-500 p-0.5 shadow-lg shadow-violet-500/25 shrink-0 ${dim} ${className}`}>
       <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center overflow-hidden">

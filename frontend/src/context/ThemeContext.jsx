@@ -21,7 +21,9 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     try {
       localStorage.setItem('negotiation_theme', theme);
-    } catch {}
+    } catch {
+      // LocalStorage might be disabled or unavailable
+    }
 
     const root = document.documentElement;
     if (theme === 'dark') {
@@ -46,6 +48,7 @@ export function ThemeProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTheme() {
   return useContext(ThemeContext);
 }
