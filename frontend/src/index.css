@@ -1,20 +1,354 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: dark;
+  color-scheme: dark light;
+}
+
+html.dark body {
+  background-color: #080b11;
+  color: #f1f5f9;
+}
+
+html.light body {
+  background-color: #f8fafc;
+  color: #0f172a;
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: #020617;
-  color: #f8fafc;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 #root {
   min-height: 100vh;
   width: 100%;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+html.dark ::-webkit-scrollbar-track {
+  background: #090d16;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+html.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+html.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Modern Glow & Card utilities */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-hover:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 12px 32px -8px rgba(99, 102, 241, 0.15);
+}
+
+.glow-indigo {
+  box-shadow: 0 0 40px -10px rgba(99, 102, 241, 0.35);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 30px -10px rgba(16, 185, 129, 0.35);
+}
+
+.glow-rose {
+  box-shadow: 0 0 30px -10px rgba(244, 63, 94, 0.35);
+}
+
+/* Animations */
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.02); }
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 3s ease-in-out infinite;
+}
+
+/* Floating Elements */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+
+@keyframes floatReverse {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(10px) rotate(-2deg); }
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-8px) scale(1.02); }
+}
+
+.animate-float {
+  animation: float 4.5s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: floatReverse 5.5s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: floatSlow 6s ease-in-out infinite;
+}
+
+/* ──────────────────────────────────────────────────────────
+   LUXURY EDITORIAL REVEAL & 3D FLIP ANIMATIONS
+   ────────────────────────────────────────────────────────── */
+@keyframes cardFlip3D {
+  0% {
+    transform: perspective(1200px) rotateY(0deg) scale(0.9);
+    opacity: 0.4;
+  }
+  40% {
+    transform: perspective(1200px) rotateY(180deg) scale(1.04);
+    opacity: 1;
+  }
+  75% {
+    transform: perspective(1200px) rotateY(180deg) scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: perspective(1200px) rotateY(180deg) scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes curtainSplitLeft {
+  0% {
+    transform: translateX(0%);
+  }
+  45% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-102%);
+  }
+}
+
+@keyframes curtainSplitRight {
+  0% {
+    transform: translateX(0%);
+  }
+  45% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(102%);
+  }
+}
+
+@keyframes flashReveal {
+  0% { opacity: 0; }
+  50% { opacity: 0.5; }
+  100% { opacity: 0; }
+}
+
+.animate-card-flip {
+  animation: cardFlip3D 1.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-curtain-left {
+  animation: curtainSplitLeft 1.4s cubic-bezier(0.77, 0, 0.175, 1) forwards;
+}
+
+.animate-curtain-right {
+  animation: curtainSplitRight 1.4s cubic-bezier(0.77, 0, 0.175, 1) forwards;
+}
+
+.animate-flash-reveal {
+  animation: flashReveal 1.35s ease-out forwards;
+}
+
+/* Hide printable report on regular screen */
+#print-area {
+  display: none;
+}
+
+/* ──────────────────────────────────────────────────────────
+   CLEAN & BEAUTIFUL PRINT STYLES FOR PDF EXPORT
+   ────────────────────────────────────────────────────────── */
+@media print {
+  * {
+    color-scheme: light !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    font-size: 11pt !important;
+    line-height: 1.5 !important;
+    margin: 0 !important;
+    padding: 20mm !important;
+  }
+
+  /* Hide regular UI elements when printing */
+  nav, footer, button, .no-print, header button {
+    display: none !important;
+  }
+
+  #print-area {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .print-header {
+    border-bottom: 2px solid #4f46e5;
+    padding-bottom: 14px;
+    margin-bottom: 24px;
+  }
+
+  .print-header h1 {
+    font-size: 20pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 6px 0;
+  }
+
+  .print-header p {
+    color: #475569;
+    font-size: 11pt;
+    margin: 0;
+  }
+
+  .print-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+
+  .print-meta-item span {
+    display: block;
+    font-size: 8pt;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #64748b;
+  }
+
+  .print-meta-item strong {
+    font-size: 10.5pt;
+    color: #0f172a;
+  }
+
+  .print-agents-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+  }
+
+  .print-agent-card {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 16px;
+    background: #ffffff;
+    page-break-inside: avoid;
+  }
+
+  .print-agent-card h2 {
+    font-size: 14pt;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 2px 0;
+  }
+
+  .print-agent-role {
+    font-size: 9.5pt;
+    color: #64748b;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .print-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 9pt;
+    font-weight: 600;
+    background: #e0e7ff;
+    color: #3730a3;
+    border: 1px solid #c7d2fe;
+    margin-bottom: 12px;
+  }
+
+  .print-section-title {
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #475569;
+    letter-spacing: 0.05em;
+    margin-top: 10px;
+    margin-bottom: 4px;
+  }
+
+  .print-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 9.5pt;
+    color: #1e293b;
+    margin-bottom: 10px;
+  }
+
+  .print-limits-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 6px;
+  }
+
+  .print-limits-table td {
+    padding: 4px 6px;
+    font-size: 9pt;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .print-footer {
+    margin-top: 36px;
+    padding-top: 12px;
+    border-top: 1px solid #cbd5e1;
+    font-size: 8pt;
+    color: #94a3b8;
+    display: flex;
+    justify-content: space-between;
+  }
 }
