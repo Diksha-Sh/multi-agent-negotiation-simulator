@@ -1,4 +1,4 @@
-"""Validation of the final negotiation config (Task 1, Sathish).
+"""Validation of the final negotiation config (Task 1).
 
 The UI calls ``validate_config(config)`` after building the config with
 ``build_negotiation_config(...)`` and keeps the Start button disabled
@@ -29,6 +29,7 @@ in ``errors`` so the UI can show it to the user.
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -152,7 +153,12 @@ def _filled(value: Any) -> bool:
 
 
 def _is_number(value: Any) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
+    """True for a real, finite number (not a bool, NaN or infinity)."""
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+    )
 
 
 def _agent_label(agent: dict[str, Any], index: int) -> str:

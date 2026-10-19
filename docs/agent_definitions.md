@@ -2,9 +2,6 @@
 
 Task 1 deliverable: a document defining each agent's role, goal, constraints and personality.
 
-- Section 1, Personalities: Sathish
-- Section 2, Agents per scenario: Sathish and Abirami
-
 The machine-readable versions are `scenarios/personalities.json` and the scenario files in `scenarios/`. This document mirrors them, so update both together.
 
 ## 1. Personalities

@@ -175,3 +175,10 @@ def test_reports_all_errors_at_once(config):
 def test_never_raises_on_garbage(bad):
     result = validate_config(bad)
     assert result["valid"] is False and result["errors"]
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_non_finite_limit_value_is_rejected(config, bad):
+    config["agents"][0]["limits"][0]["value"] = bad
+    errors = validate_config(config)["errors"]
+    assert "Agent 'buyer': limit #1 value must be a number." in errors

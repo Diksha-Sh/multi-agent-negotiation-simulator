@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import vendorPricing from '../data/vendor_pricing.json';
 import personalityList from '../data/personalities.json';
+import { validateConfig } from '../services/api';
 
 export default function AgentConfigScreen({
   selectedScenario = vendorPricing,
@@ -10,6 +11,8 @@ export default function AgentConfigScreen({
   const scenario = selectedScenario || vendorPricing;
 
   const [maxRounds, setMaxRounds] = useState(() => scenario?.max_rounds ?? 10);
+  const [validationErrors, setValidationErrors] = useState([]);
+  const [isValidating, setIsValidating] = useState(false);
   const [prevScenarioId, setPrevScenarioId] = useState(() => scenario?.id);
 
   const [agentConfigs, setAgentConfigs] = useState(() => {
@@ -40,6 +43,7 @@ export default function AgentConfigScreen({
   if (prevScenarioId !== scenario?.id) {
     setPrevScenarioId(scenario?.id);
     setMaxRounds(scenario?.max_rounds ?? 10);
+    setValidationErrors([]);
     const updated = {};
     const currentAgents = scenario?.agents || [];
     for (let i = 0; i < currentAgents.length; i += 1) {
@@ -123,7 +127,7 @@ export default function AgentConfigScreen({
     });
   };
 
-  const handleStartNegotiation = () => {
+  const handleStartNegotiation = async () => {
     const customScenarioConfig = {
       scenario_id: scenario.id || scenario.scenario_id,
       id: scenario.id || scenario.scenario_id,
@@ -145,7 +149,12 @@ export default function AgentConfigScreen({
           limits: (cfg.limits || agent.limits || []).map((limit) => ({
             item: limit.item,
             type: limit.type,
-            value: Number(limit.value) || 0,
+            // Empty or non-numeric input is sent as null so validation reports
+            // "value must be a number" instead of treating it as 0.
+            value:
+              limit.value === '' || limit.value === null || Number.isNaN(Number(limit.value))
+                ? null
+                : Number(limit.value),
             unit: limit.unit || '',
           })),
           personality:
@@ -156,6 +165,22 @@ export default function AgentConfigScreen({
         };
       }),
     };
+
+    // Check the config with the backend before starting (validate_config).
+    setIsValidating(true);
+    setValidationErrors([]);
+    try {
+      const result = await validateConfig(customScenarioConfig);
+      if (!result.valid) {
+        setValidationErrors(result.errors || ['The configuration is not valid.']);
+        return;
+      }
+    } catch (error) {
+      setValidationErrors([error.message]);
+      return;
+    } finally {
+      setIsValidating(false);
+    }
 
     if (typeof onStartNegotiation === 'function') {
       onStartNegotiation(customScenarioConfig);
@@ -415,6 +440,22 @@ export default function AgentConfigScreen({
         })}
       </main>
 
+      {validationErrors.length > 0 && (
+        <div
+          role="alert"
+          className="mb-4 rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 sm:p-5 text-sm text-rose-200"
+        >
+          <div className="font-semibold text-rose-300 mb-2">
+            Fix these before launching the simulation:
+          </div>
+          <ul className="list-disc pl-5 space-y-1">
+            {validationErrors.map((error, index) => (
+              <li key={index}>{error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <footer className="bg-slate-900/80 backdrop-blur-md border border-slate-800/90 rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <div className="text-sm font-bold text-slate-100">
@@ -439,9 +480,10 @@ export default function AgentConfigScreen({
           <button
             type="button"
             onClick={handleStartNegotiation}
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 text-center"
+            disabled={isValidating}
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 text-center disabled:opacity-60 disabled:cursor-wait"
           >
-            <span>Launch Simulation</span>
+            <span>{isValidating ? 'Validating…' : 'Launch Simulation'}</span>
             <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
               <path
                 fillRule="evenodd"
