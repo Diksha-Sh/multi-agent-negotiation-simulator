@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   FileText,
   Code2,
@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { AgentAvatar } from './AgentAvatars';
 import { useTheme } from '../context/ThemeContext';
-import { runOrchestrator } from '../services/api';
+import { getEngineStatus, runOrchestrator, stepOrchestrator } from '../services/api';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');
@@ -151,6 +151,24 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
   const [orchestratorStatus, setOrchestratorStatus] = useState('ongoing'); // 'ongoing' | 'accepted' | 'rejected' | 'deadlock'
   const [orchestratorWinner, setOrchestratorWinner] = useState(null);
   const [isRunningAll, setIsRunningAll] = useState(false);
+  const [isStepping, setIsStepping] = useState(false);
+  // Which engine produced the turns: 'llm' | 'rule-based' | 'mixed' | 'mock' | 'offline'
+  const [engineMode, setEngineMode] = useState(null);
+  const [engineModel, setEngineModel] = useState(null);
+
+  useEffect(() => {
+    getEngineStatus()
+      .then((status) => {
+        setEngineMode(status.mode);
+        setEngineModel(status.model);
+      })
+      .catch(() => setEngineMode('offline'));
+  }, []);
+
+  const withAgentInfo = (t, i) => {
+    const agentObj = agents.find((a) => a.id === t.agent_id) || {};
+    return { ...t, turn_number: i + 1, agent_name: agentObj.name || t.agent_id, role: agentObj.role || '' };
+  };
 
   const scenarioMeta = SCENARIO_META[config?.id] || SCENARIO_META.vendor_pricing;
   const ScenarioIcon = scenarioMeta.icon;
@@ -228,9 +246,26 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     };
   };
 
-  // Step 1 Turn at a time through Orchestrator
-  const handleSimulateNextTurn = () => {
-    if (orchestratorStatus !== 'ongoing') return;
+  // Step 1 Turn at a time through the backend Orchestrator + LLM Reasoning Engine
+  const handleSimulateNextTurn = async () => {
+    if (orchestratorStatus !== 'ongoing' || isStepping) return;
+    setIsStepping(true);
+    try {
+      const response = await stepOrchestrator(config, turns);
+      if (response.turn) {
+        setTurns([...turns, withAgentInfo(response.turn, turns.length)]);
+      }
+      setOrchestratorStatus(response.status || 'ongoing');
+      setOrchestratorWinner(response.winner || null);
+      if (response.engine) setEngineMode(response.engine);
+      return;
+    } catch {
+      setEngineMode('offline');
+    } finally {
+      setIsStepping(false);
+    }
+
+    // Backend not reachable: local simulation
     const nextTurn = generateLocalTurn(turns.length);
     const updated = [...turns, nextTurn];
     setTurns(updated);
@@ -253,21 +288,14 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     try {
       const response = await runOrchestrator(config);
       if (response && response.history) {
-        const mapped = response.history.map((t, i) => {
-          const agentObj = agents.find((a) => a.id === t.agent_id) || {};
-          return {
-            ...t,
-            turn_number: i + 1,
-            agent_name: agentObj.name || t.agent_id,
-            role: agentObj.role || '',
-          };
-        });
-        setTurns(mapped);
+        setTurns(response.history.map(withAgentInfo));
+        if (response.engine) setEngineMode(response.engine);
         setOrchestratorStatus(response.status || 'deadlock');
         setOrchestratorWinner(response.winner || null);
       }
     } catch {
       // Graceful client fallback: simulate full orchestrator loop
+      setEngineMode('offline');
       let simulatedTurns = [];
       let status = 'ongoing';
       let winner = null;
@@ -326,6 +354,30 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 Orchestrator Active
               </span>
+              {engineMode && (
+                <span
+                  title={engineMode === 'offline' ? 'Backend not reachable: turns are simulated in the browser' : 'Reasoning engine used for the turns'}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold',
+                    engineMode === 'llm'
+                      ? 'bg-violet-500/10 text-violet-500 border-violet-500/30'
+                      : engineMode === 'offline'
+                      ? 'bg-rose-500/10 text-rose-500 border-rose-500/30'
+                      : 'bg-amber-500/10 text-amber-500 border-amber-500/30',
+                  )}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {engineMode === 'llm'
+                    ? `LLM Engine${engineModel ? ` · ${engineModel}` : ''}`
+                    : engineMode === 'mixed'
+                    ? 'LLM + Rule-based Fallback'
+                    : engineMode === 'offline'
+                    ? 'Offline Simulation'
+                    : engineMode === 'mock'
+                    ? 'Mock Engine'
+                    : 'Rule-based Engine'}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center shrink-0">
@@ -440,17 +492,17 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
 
             <button
               type="button"
-              disabled={orchestratorStatus !== 'ongoing'}
+              disabled={orchestratorStatus !== 'ongoing' || isStepping || isRunningAll}
               onClick={handleSimulateNextTurn}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-md shadow-indigo-600/20 transition-all cursor-pointer shrink-0"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
-              <span>Simulate Next Turn</span>
+              <span>{isStepping ? 'Thinking...' : 'Simulate Next Turn'}</span>
             </button>
 
             <button
               type="button"
-              disabled={orchestratorStatus !== 'ongoing' || isRunningAll}
+              disabled={orchestratorStatus !== 'ongoing' || isRunningAll || isStepping}
               onClick={handleRunFullOrchestrator}
               className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-md shadow-emerald-600/20 transition-all cursor-pointer shrink-0"
             >

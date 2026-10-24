@@ -66,3 +66,16 @@ export function runOrchestrator(config) {
     body: config,
   });
 }
+
+/** POST /api/orchestrator/step -> { turn, status, round, winner, engine } for the next turn only */
+export function stepOrchestrator(config, history = []) {
+  return request('/api/orchestrator/step', {
+    method: 'POST',
+    body: { config, history },
+  });
+}
+
+/** GET /api/orchestrator/engine -> { mode: "llm" | "rule-based", model, base_url, counteroffer_module } */
+export function getEngineStatus() {
+  return request('/api/orchestrator/engine');
+}
