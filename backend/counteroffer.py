@@ -1,17 +1,21 @@
 
 """
-Counteroffer Evaluation and Concession Module.
+Counteroffer Evaluation and Concession Module (Task 3).
 
-Task 3 responsibilities:
-- Evaluate an incoming offer against the agent's goals and limits.
-- Decide whether to accept, counter, or reject.
-- Calculate personality-based concessions.
-- Support single-issue and multi-issue negotiations.
+Supports:
+- Vendor Pricing: price
+- Job Offer: salary, remote_days
+- Project Budget Allocation: project_allocation, total_budget
 
-Integration:
-Sathish's LLM reasoning engine can call evaluate_offer() and use
-its result to construct the Turn required by backend/orchestrator.py.
+Uses the existing scenario format:
+    agent["goal"]
+    agent["limits"]
+    agent["default_personality"]
+
+Returns a decision for the caller to convert into the project's Turn object.
 """
+
+from __future__ import annotations
 
 import math
 import re
@@ -19,41 +23,40 @@ from numbers import Real
 from typing import Any
 
 
-# Fraction of the distance from the agent's target toward the incoming offer.
-# A smaller value means the agent makes a smaller concession.
 CONCESSION_RATES = {
-    "aggressive": 0.15,
-    "collaborative": 0.50,
-    "risk-averse": 0.70,
+    "Aggressive": 0.15,
+    "Collaborative": 0.50,
+    "Risk-Averse": 0.70,
 }
 
 
-# Map scenario issue names to phrases used in the existing goal descriptions.
-# These aliases help derive targets without changing the scenario JSON files.
+# Natural-language terms used to identify an issue's target in the goal.
+# These aliases cover all three current scenario templates.
 ISSUE_ALIASES = {
-    "price": ("price", "purchase price", "selling price"),
+    "price": ("price",),
     "salary": ("salary",),
     "remote_days": (
         "remote workdays",
-        "remote workdays per week",
         "remote days",
-        "remote work",
+        "workdays",
     ),
     "project_allocation": (
+        "allocation for project activities",
         "project activities",
         "project allocation",
         "allocation",
     ),
     "total_budget": (
+        "total project budget",
         "total budget",
+        "total project spending",
         "total spending",
-        "project spending",
     ),
 }
 
 
 def _is_number(value: Any) -> bool:
-    """Accept finite numeric values but reject booleans."""
+    """Check for a finite numeric value, excluding booleans."""
     return (
         isinstance(value, Real)
         and not isinstance(value, bool)
@@ -61,228 +64,182 @@ def _is_number(value: Any) -> bool:
     )
 
 
-def _normalise_personality(agent: dict) -> str:
-    """Read the selected personality from the agent configuration."""
-    personality = (
+def _get_personality(agent: dict[str, Any]) -> str:
+    """Read the selected personality or the scenario default."""
+    value = (
         agent.get("personality")
         or agent.get("default_personality")
         or "Collaborative"
     )
 
-    personality = str(personality).strip().lower().replace("_", "-")
+    value = str(value).strip().lower()
 
-    if personality not in CONCESSION_RATES:
-        raise ValueError(
-            f"Unsupported personality: {personality!r}. "
-            "Expected Aggressive, Collaborative, or Risk-Averse."
-        )
+    for personality in CONCESSION_RATES:
+        if value == personality.lower():
+            return personality
 
-    return personality
-
-
-def _extract_target_from_goal(goal: str, item: str) -> float | None:
-    """
-    Extract the numeric target associated with an issue from an agent's goal.
-
-    Examples:
-        'Purchase at a price of no more than 37000 INR'
-        'Secure a salary of at least 12 LPA'
-        'Secure at least 60 lakh INR for project activities'
-
-    An explicit numeric target in agent['targets'] takes precedence.
-    If the goal cannot be interpreted, the hard limit is used as a fallback.
-    """
-    if not goal:
-        return None
-
-    aliases = ISSUE_ALIASES.get(item, (item.replace("_", " "),))
-    number_pattern = re.compile(
-        r"(?<![A-Za-z0-9])\d[\d,]*(?:\.\d+)?"
+    raise ValueError(
+        f"Unsupported personality: {value!r}. "
+        f"Allowed values: {', '.join(CONCESSION_RATES)}."
     )
-    number_matches = list(number_pattern.finditer(goal))
-
-    if not number_matches:
-        return None
-
-    best_distance = None
-    best_value = None
-    lower_goal = goal.lower()
-
-    for alias in aliases:
-        alias_pattern = re.compile(re.escape(alias), re.IGNORECASE)
-
-        for alias_match in alias_pattern.finditer(lower_goal):
-            for number_match in number_matches:
-                # Choose the numeric value closest to the issue phrase.
-                distance = min(
-                    abs(number_match.start() - alias_match.end()),
-                    abs(alias_match.start() - number_match.end()),
-                )
-
-                if best_distance is None or distance < best_distance:
-                    best_distance = distance
-                    best_value = float(
-                        number_match.group().replace(",", "")
-                    )
-
-    return best_value
 
 
-def _get_issue_rules(agent: dict) -> dict[str, dict]:
-    """
-    Convert the repository's limits list into a lookup by issue.
-
-    Existing format:
-        "limits": [
-            {"item": "price", "type": "max", "value": 40000}
-        ]
-
-    'min' means the agent must receive at least the specified value.
-    'max' means the agent must not exceed the specified value.
-    """
+def _get_limits(agent: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Convert the existing limits list into an issue lookup."""
     limits = agent.get("limits")
 
     if not isinstance(limits, list) or not limits:
-        raise ValueError(
-            f"Agent {agent.get('id', '<unknown>')} has no valid limits."
-        )
+        raise ValueError("Agent must have a non-empty limits list.")
 
-    rules = {}
+    result = {}
 
-    for limit in limits:
-        if not isinstance(limit, dict):
+    for entry in limits:
+        if not isinstance(entry, dict):
             raise ValueError("Each limit must be a dictionary.")
 
-        item = limit.get("item")
-        limit_type = limit.get("type")
-        limit_value = limit.get("value")
+        item = entry.get("item")
+        limit_type = entry.get("type")
+        value = entry.get("value")
 
         if not isinstance(item, str) or not item.strip():
-            raise ValueError("Each limit must have a valid item name.")
+            raise ValueError("Each limit must specify an item.")
 
-        if limit_type not in {"min", "max"}:
+        if limit_type not in ("min", "max"):
             raise ValueError(
                 f"Limit type for {item!r} must be 'min' or 'max'."
             )
 
-        if not _is_number(limit_value):
+        if not _is_number(value):
             raise ValueError(
-                f"Limit value for {item!r} must be a finite number."
+                f"Limit value for {item!r} must be numeric."
             )
 
-        if item in rules:
-            raise ValueError(
-                f"Duplicate limit for issue {item!r}."
-            )
+        item = item.strip()
 
-        rules[item] = {
+        if item in result:
+            raise ValueError(f"Duplicate limit for issue {item!r}.")
+
+        result[item] = {
             "type": limit_type,
-            "limit": float(limit_value),
+            "value": float(value),
         }
 
-    return rules
+    return result
 
 
-def _get_target(
-    agent: dict,
+def _extract_target(
+    goal: str,
     item: str,
-    rule: dict,
+    limit: dict[str, Any],
+    explicit_targets: dict[str, Any],
 ) -> float:
     """
-    Determine the preferred target for an issue.
+    Determine an agent's preferred target.
 
     Priority:
-    1. Optional explicit numeric target in agent['targets'].
-    2. Numeric target extracted from the existing goal description.
+    1. Explicit numeric target, if agent["targets"] supplies one.
+    2. Numeric value associated with the issue in the goal.
     3. Hard limit as a safe fallback.
 
-    Targets are clamped so they never contradict the hard limit.
+    A target is always kept on the feasible side of the hard limit.
     """
-    targets = agent.get("targets", {})
-    target = None
+    if item in explicit_targets:
+        target = explicit_targets[item]
 
-    if isinstance(targets, dict) and item in targets:
-        if not _is_number(targets[item]):
+        if not _is_number(target):
             raise ValueError(
-                f"Target for {item!r} must be numeric."
+                f"Explicit target for {item!r} must be numeric."
             )
-        target = float(targets[item])
 
-    if target is None:
-        target = _extract_target_from_goal(
-            str(agent.get("goal", "")),
+        target = float(target)
+
+    else:
+        target = None
+        aliases = ISSUE_ALIASES.get(
             item,
+            (item.replace("_", " "),),
         )
 
-    if target is None:
-        target = rule["limit"]
+        numbers = list(
+            re.finditer(r"(?<![A-Za-z0-9])\d[\d,]*(?:\.\d+)?", goal)
+        )
 
-    limit_value = rule["limit"]
+        candidates = []
 
-    # Keep the target within the feasible range for this agent.
-    if rule["type"] == "max":
-        target = min(target, limit_value)
-    else:
-        target = max(target, limit_value)
+        for alias in aliases:
+            for phrase in re.finditer(
+                re.escape(alias), goal, re.IGNORECASE
+            ):
+                for number in numbers:
+                    distance = min(
+                        abs(number.start() - phrase.end()),
+                        abs(phrase.start() - number.end()),
+                    )
+                    candidates.append(
+                        (
+                            distance,
+                            number.start(),
+                            float(number.group().replace(",", "")),
+                        )
+                    )
 
-    return target
+        if candidates:
+            # Prefer the nearest numeric value to the issue phrase.
+            target = min(candidates)[2]
+
+        if target is None:
+            target = limit["value"]
+
+    if limit["type"] == "max":
+        return min(target, limit["value"])
+
+    return max(target, limit["value"])
 
 
-def _within_limit(value: float, rule: dict) -> bool:
-    """Check whether an incoming value satisfies the agent's hard boundary."""
-    if rule["type"] == "max":
-        return value <= rule["limit"]
+def _within_limit(value: float, limit: dict[str, Any]) -> bool:
+    """Check whether a value respects the agent's hard boundary."""
+    if limit["type"] == "max":
+        return value <= limit["value"]
 
-    return value >= rule["limit"]
+    return value >= limit["value"]
 
 
-def _meets_target(value: float, target: float, rule: dict) -> bool:
-    """Check whether an incoming value meets the agent's goal."""
-    if rule["type"] == "max":
+def _meets_target(
+    value: float,
+    target: float,
+    limit: dict[str, Any],
+) -> bool:
+    """Check whether an incoming value satisfies the agent's goal."""
+    if limit["type"] == "max":
         return value <= target
 
     return value >= target
 
 
-def _calculate_concession(
+def _calculate_counteroffer(
     incoming_value: float,
     target: float,
-    rule: dict,
+    limit: dict[str, Any],
     concession_rate: float,
 ) -> float:
     """
-    Move the counteroffer from the incoming value toward the agent's target.
+    Move the agent's preferred target toward the incoming offer.
 
-    Aggressive agents move less.
-    Collaborative agents move moderately.
-    Risk-averse agents move further toward the incoming offer.
+    A smaller rate makes a smaller concession.
+    A larger rate moves further toward the incoming offer.
     """
-    counter_value = (
-        target
-        + concession_rate * (incoming_value - target)
-    )
+    counter = target + concession_rate * (incoming_value - target)
 
-    limit_value = rule["limit"]
-
-    if rule["type"] == "max":
-        lower_bound = target
-        upper_bound = limit_value
+    if limit["type"] == "max":
+        counter = max(target, min(counter, limit["value"]))
     else:
-        lower_bound = limit_value
-        upper_bound = target
+        counter = min(target, max(counter, limit["value"]))
 
-    counter_value = max(
-        lower_bound,
-        min(counter_value, upper_bound),
-    )
+    # Keep whole-number issues, such as remote workdays, as integers.
+    if incoming_value.is_integer() and target.is_integer():
+        return int(round(counter))
 
-    # Keep whole-number values whole, e.g. remote workdays.
-    if float(incoming_value).is_integer() and float(target).is_integer():
-        counter_value = int(round(counter_value))
-    else:
-        counter_value = round(counter_value, 2)
-
-    return counter_value
+    return round(counter, 2)
 
 
 def evaluate_offer(
@@ -290,28 +247,25 @@ def evaluate_offer(
     agent_config: dict[str, Any],
 ) -> dict[str, Any]:
     """
-    Evaluate an incoming offer and calculate the appropriate response.
+    Evaluate an offer for any of the three configured scenarios.
 
-    Parameters
-    ----------
-    incoming_offer:
-        The other agent's current offer, e.g. {"price": 39500}.
+    Args:
+        incoming_offer:
+            A dictionary containing the offered value for each issue.
+            Example: {"price": 39000}
 
-    agent_config:
-        The current agent's configuration from the scenario, including
-        id, goal, limits, and personality/default_personality.
+        agent_config:
+            One agent dictionary from the scenario configuration.
 
-    Returns
-    -------
-    {
-        "action": "accept" | "counter" | "reject",
-        "counteroffer": dict | None,
-        "reasoning": str,
-        "stance": "firm" | "flexible" | "urgent"
-    }
+    Returns:
+        {
+            "action": "accept" | "counter" | "reject",
+            "counteroffer": dict | None,
+            "reasoning": str,
+            "stance": "firm" | "flexible" | "urgent"
+        }
 
-    This function does not create a complete Turn. The calling agent
-    engine supplies agent_id and round and builds the Turn object.
+    This function does not call an LLM or construct a complete Turn.
     """
     if not isinstance(incoming_offer, dict) or not incoming_offer:
         raise ValueError(
@@ -321,11 +275,11 @@ def evaluate_offer(
     if not isinstance(agent_config, dict):
         raise ValueError("agent_config must be a dictionary.")
 
-    rules = _get_issue_rules(agent_config)
+    limits = _get_limits(agent_config)
 
-    if set(incoming_offer) != set(rules):
-        missing = set(rules) - set(incoming_offer)
-        unexpected = set(incoming_offer) - set(rules)
+    if set(incoming_offer) != set(limits):
+        missing = set(limits) - set(incoming_offer)
+        unexpected = set(incoming_offer) - set(limits)
 
         details = []
         if missing:
@@ -334,29 +288,40 @@ def evaluate_offer(
             details.append(f"unexpected issues: {sorted(unexpected)}")
 
         raise ValueError(
-            "Incoming offer does not match the agent's configured issues: "
+            "Offer issues do not match agent limits: "
             + "; ".join(details)
         )
 
     for item, value in incoming_offer.items():
         if not _is_number(value):
             raise ValueError(
-                f"Offer value for {item!r} must be a finite number."
+                f"Offer value for {item!r} must be numeric."
             )
 
-    personality = _normalise_personality(agent_config)
+    personality = _get_personality(agent_config)
     concession_rate = CONCESSION_RATES[personality]
 
+    explicit_targets = agent_config.get("targets", {})
+    if not isinstance(explicit_targets, dict):
+        raise ValueError("'targets' must be a dictionary when provided.")
+
+    goal = str(agent_config.get("goal", ""))
+
     targets = {
-        item: _get_target(agent_config, item, rule)
-        for item, rule in rules.items()
+        item: _extract_target(
+            goal,
+            item,
+            limit,
+            explicit_targets,
+        )
+        for item, limit in limits.items()
     }
 
-    # Reject an offer that violates any of the agent's hard limits.
+    # Reject if any issue violates a hard boundary.
     violations = [
         item
         for item, value in incoming_offer.items()
-        if not _within_limit(float(value), rules[item])
+        if not _within_limit(float(value), limits[item])
     ]
 
     if violations:
@@ -364,55 +329,53 @@ def evaluate_offer(
             "action": "reject",
             "counteroffer": None,
             "reasoning": (
-                "The incoming offer violates the agent's hard limit for: "
+                "The offer violates the agent's hard limit for: "
                 + ", ".join(violations)
                 + "."
             ),
             "stance": "firm",
         }
 
-    # Accept only when every issue meets the agent's goal.
+    # Accept only when every issue meets its target.
     if all(
         _meets_target(
             float(incoming_offer[item]),
             targets[item],
-            rules[item],
+            limits[item],
         )
-        for item in rules
+        for item in limits
     ):
         return {
             "action": "accept",
             "counteroffer": None,
             "reasoning": (
-                "The incoming offer meets the agent's target "
-                "for every negotiation issue."
+                "The offer meets the agent's target for every issue."
             ),
             "stance": "flexible",
         }
 
-    # Counter only on issues that do not meet the target.
-    # Preserve incoming values for issues that are already satisfactory.
+    # Counter on issues that miss the target; preserve satisfactory terms.
     counteroffer = {}
 
     for item, value in incoming_offer.items():
         numeric_value = float(value)
+        limit = limits[item]
         target = targets[item]
-        rule = rules[item]
 
-        if _meets_target(numeric_value, target, rule):
+        if _meets_target(numeric_value, target, limit):
             counteroffer[item] = value
         else:
-            counteroffer[item] = _calculate_concession(
+            counteroffer[item] = _calculate_counteroffer(
                 incoming_value=numeric_value,
                 target=target,
-                rule=rule,
+                limit=limit,
                 concession_rate=concession_rate,
             )
 
-    # Safety check: never return a counteroffer outside hard limits.
+    # Never return a counteroffer outside the agent's hard limits.
     if not all(
-        _within_limit(float(counteroffer[item]), rules[item])
-        for item in rules
+        _within_limit(float(counteroffer[item]), limits[item])
+        for item in limits
     ):
         return {
             "action": "reject",
@@ -424,17 +387,12 @@ def evaluate_offer(
             "stance": "firm",
         }
 
-    stance = (
-        "firm" if personality == "aggressive" else "flexible"
-    )
-
     return {
         "action": "counter",
         "counteroffer": counteroffer,
         "reasoning": (
-            f"The offer is within the agent's hard limits but does not "
-            f"meet every target. A {personality} concession strategy "
-            f"was applied."
+            f"The offer is within hard limits but misses at least one "
+            f"target. The {personality} concession strategy was applied."
         ),
-        "stance": stance,
+        "stance": "firm" if personality == "Aggressive" else "flexible",
     }
