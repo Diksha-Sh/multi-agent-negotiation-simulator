@@ -58,3 +58,11 @@ export function buildConfig(scenarioId, personalities = {}) {
     body: { scenario_id: scenarioId, personalities },
   });
 }
+
+/** POST /api/orchestrator/run -> execute negotiation loop with orchestrator */
+export function runOrchestrator(config) {
+  return request('/api/orchestrator/run', {
+    method: 'POST',
+    body: config,
+  });
+}
