@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { onAuthStateChange, signOutUser } from './services/supabase';
+import SimulationHistoryModal from './components/SimulationHistoryModal';
 import {
   Sun,
   Moon,
@@ -9,6 +11,7 @@ import {
   Layers,
   Sliders,
   Play,
+  History,
 } from 'lucide-react';
 import BrandLogo from './components/BrandLogo';
 import vendorPricing from './data/vendor_pricing.json';
@@ -48,6 +51,7 @@ function AppNav({
   onGoHome,
   onLogout,
   onNavigateStep,
+  onOpenHistory,
   selectedScenario,
   negotiationConfig,
 }) {
@@ -107,6 +111,16 @@ function AppNav({
               title="Toggle Theme"
             >
               {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-indigo-500" />}
+            </button>
+            <button
+              type="button"
+              onClick={onOpenHistory}
+              className={`p-1.5 rounded-lg border transition-colors ${
+                isDark ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-slate-200 bg-slate-100 text-slate-700'
+              }`}
+              title="Simulation History"
+            >
+              <History className="w-3.5 h-3.5 text-indigo-500" />
             </button>
             <button
               type="button"
@@ -221,6 +235,21 @@ function AppNav({
 
         {/* User Pill & Theme Switcher (Desktop) */}
         <div className="hidden lg:flex items-center gap-3">
+          {/* History Button */}
+          <button
+            type="button"
+            onClick={onOpenHistory}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
+              isDark
+                ? 'border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white hover:border-slate-700'
+                : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200'
+            }`}
+            title="View Simulation History"
+          >
+            <History className="w-3.5 h-3.5 text-indigo-500" />
+            <span>History</span>
+          </button>
+
           {/* Theme Toggle Button */}
           <button
             type="button"
@@ -284,8 +313,9 @@ function AppNav({
 
 function MainApp() {
   const { isDark } = useTheme();
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
-  // 1. Authenticated session safely restored from localStorage
+  // 1. Authenticated session safely restored from localStorage / Supabase
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('negotiation_user');
@@ -318,6 +348,28 @@ function MainApp() {
       return null;
     }
   });
+
+  // Supabase Auth State Synchronization
+  useEffect(() => {
+    const unsubscribe = onAuthStateChange((event, user) => {
+      if (user) {
+        setCurrentUser(user);
+        try {
+          localStorage.setItem('negotiation_user', JSON.stringify(user));
+        } catch {
+          // ignore
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+        try {
+          localStorage.removeItem('negotiation_user');
+        } catch {
+          // ignore
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // 4. Default active screen state: step = 0 (Landing Page) as requested
   const [currentStep, setCurrentStep] = useState(() => {
@@ -383,8 +435,13 @@ function MainApp() {
     handleSetStep(1); // Proceed to Step 1: Select Arena
   };
 
-  // Logout handler
-  const handleLogout = () => {
+  // Logout handler with Supabase signout
+  const handleLogout = async () => {
+    try {
+      await signOutUser();
+    } catch {
+      // ignore
+    }
     try {
       localStorage.removeItem('negotiation_user');
     } catch (err) {
@@ -437,6 +494,7 @@ function MainApp() {
         onGoHome={handleGoHome}
         onLogout={handleLogout}
         onNavigateStep={handleSetStep}
+        onOpenHistory={() => setIsHistoryOpen(true)}
         selectedScenario={selectedScenario}
         negotiationConfig={negotiationConfig}
       />
@@ -475,6 +533,13 @@ function MainApp() {
           />
         )}
       </main>
+
+      {/* Simulation History Modal */}
+      <SimulationHistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        currentUser={currentUser}
+      />
     </div>
   );
 }
