@@ -147,6 +147,67 @@ def test_build_config_unknown_scenario_is_404():
     assert r.status_code == 404
 
 
+@pytest.mark.parametrize("scenario_id", SCENARIO_IDS)
+def test_config_to_orchestrator_runs_full_mock_negotiation(scenario_id):
+    built = client.post("/api/config", json={"scenario_id": scenario_id})
+    assert built.status_code == 200
+    config = built.json()["config"]
+    assert built.json()["validation"] == {"valid": True, "errors": []}
+
+    response = client.post("/api/orchestrator/run", json=config)
+    assert response.status_code == 200
+    result = response.json()
+    assert result["status"] == "deadlock"
+    assert result["round"] == config["max_rounds"]
+    assert len(result["history"]) == config["max_rounds"]
+    assert [turn["agent_id"] for turn in result["history"]] == [
+        config["agents"][index % len(config["agents"])]["id"]
+        for index in range(config["max_rounds"])
+    ]
+    assert [turn["round"] for turn in result["history"]] == list(
+        range(1, config["max_rounds"] + 1)
+    )
+    assert result["state"]["history"] == result["history"]
+
+
+def test_orchestrator_accepts_wrapped_config_and_custom_personality():
+    built = client.post("/api/config", json={
+        "scenario_id": "job_offer",
+        "personalities": {"employer": "Aggressive"},
+    })
+    config = built.json()["config"]
+    response = client.post("/api/orchestrator/run", json={"config": config})
+
+    assert response.status_code == 200
+    agents = {agent["id"]: agent for agent in response.json()["state"]["agents"]}
+    assert agents["candidate"]["personality"] == "Collaborative"
+    assert agents["employer"]["personality"] == "Aggressive"
+
+
+def test_orchestrator_rejects_invalid_config():
+    config = _frontend_config("vendor_pricing")
+    config["agents"][0]["personality"] = "Friendly"
+
+    response = client.post("/api/orchestrator/run", json=config)
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["message"] == "Invalid negotiation configuration"
+    assert any("invalid personality 'Friendly'" in error
+               for error in response.json()["detail"]["errors"])
+
+
+def test_orchestrator_rejects_missing_and_malformed_requests():
+    missing = client.post("/api/orchestrator/run", json={})
+    malformed = client.post(
+        "/api/orchestrator/run",
+        content="{bad json",
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert missing.status_code == 400
+    assert malformed.status_code == 422
+
+
 def test_cors_allows_frontend_dev_server():
     r = client.options("/api/scenarios", headers={
         "Origin": "http://localhost:5173", "Access-Control-Request-Method": "GET"})

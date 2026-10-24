@@ -1,0 +1,354 @@
+﻿{
+    "generated_at_utc":  "2026-10-24T12:34:33.1053041Z",
+    "endpoint":  "POST /api/orchestrator/run",
+    "scenario_id":  "project_budget_allocation",
+    "configuration":  {
+                          "scenario_id":  "project_budget_allocation",
+                          "title":  "Project Budget Allocation",
+                          "description":  "A project manager and a finance manager negotiate the allocation of a limited project budget while balancing project requirements and financial constraints.",
+                          "max_rounds":  10,
+                          "agents":  [
+                                         {
+                                             "id":  "project_manager",
+                                             "name":  "Project Manager",
+                                             "role":  "Project Manager",
+                                             "role_description":  "Responsible for planning project activities and securing sufficient funding to complete essential deliverables successfully.",
+                                             "goal":  "Secure at least 60 lakh INR for project activities while ensuring the total budget does not exceed 100 lakh INR.",
+                                             "constraints":  [
+                                                                 "At least 60 lakh INR must be allocated to project activities.",
+                                                                 "The total project budget must not exceed 100 lakh INR."
+                                                             ],
+                                             "limits":  [
+                                                            {
+                                                                "item":  "project_allocation",
+                                                                "type":  "min",
+                                                                "value":  60,
+                                                                "unit":  "lakh INR"
+                                                            },
+                                                            {
+                                                                "item":  "total_budget",
+                                                                "type":  "max",
+                                                                "value":  100,
+                                                                "unit":  "lakh INR"
+                                                            }
+                                                        ],
+                                             "personality":  "Collaborative"
+                                         },
+                                         {
+                                             "id":  "finance_manager",
+                                             "name":  "Finance Manager",
+                                             "role":  "Finance Manager",
+                                             "role_description":  "Responsible for managing project expenditure, controlling financial risks, and ensuring that the proposed allocation remains within the approved budget.",
+                                             "goal":  "Limit the allocation for project activities to a maximum of 80 lakh INR and keep total project spending within 100 lakh INR.",
+                                             "constraints":  [
+                                                                 "The allocation for project activities must not exceed 80 lakh INR.",
+                                                                 "Total project spending must not exceed 100 lakh INR."
+                                                             ],
+                                             "limits":  [
+                                                            {
+                                                                "item":  "project_allocation",
+                                                                "type":  "max",
+                                                                "value":  80,
+                                                                "unit":  "lakh INR"
+                                                            },
+                                                            {
+                                                                "item":  "total_budget",
+                                                                "type":  "max",
+                                                                "value":  100,
+                                                                "unit":  "lakh INR"
+                                                            }
+                                                        ],
+                                             "personality":  "Risk-Averse"
+                                         }
+                                     ]
+                      },
+    "result":  {
+                   "status":  "deadlock",
+                   "round":  10,
+                   "winner":  null,
+                   "history":  [
+                                   {
+                                       "agent_id":  "project_manager",
+                                       "round":  1,
+                                       "action":  "counter",
+                                       "offer":  {
+                                                     "project_allocation":  66,
+                                                     "total_budget":  97
+                                                 },
+                                       "reasoning":  "Project Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                       "stance":  "flexible"
+                                   },
+                                   {
+                                       "agent_id":  "finance_manager",
+                                       "round":  2,
+                                       "action":  "counter",
+                                       "offer":  {
+                                                     "project_allocation":  78,
+                                                     "total_budget":  88
+                                                 },
+                                       "reasoning":  "Finance Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                       "stance":  "flexible"
+                                   },
+                                   {
+                                       "agent_id":  "project_manager",
+                                       "round":  3,
+                                       "action":  "counter",
+                                       "offer":  {
+                                                     "project_allocation":  66,
+                                                     "total_budget":  92
+                                                 },
+                                       "reasoning":  "Project Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                       "stance":  "flexible"
+                                   },
+                                   {
+                                       "agent_id":  "finance_manager",
+                                       "round":  4,
+                                       "action":  "counter",
+                                       "offer":  {
+                                                     "project_allocation":  79,
+                                                     "total_budget":  96
+                                                 },
+                                       "reasoning":  "Finance Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                       "stance":  "flexible"
+                                   },
+                                   {
+                                       "agent_id":  "project_manager",
+                                       "round":  5,
+                                       "action":  "counter",
+                                       "offer":  {
+                                                     "project_allocation":  62,
+                                                     "total_budget":  87
+                                                 },
+                                       "reasoning":  "Project Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                       "stance":  "flexible"
+                                   },
+                                   {
+                                       "agent_id":  "finance_manager",
+                                       "round":  6,
+                                       "action":  "counter",
+                                       "offer":  {
+                                                     "project_allocation":  73,
+                                                     "total_budget":  97
+                                                 },
+                                       "reasoning":  "Finance Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                       "stance":  "flexible"
+                                   },
+                                   {
+                                       "agent_id":  "project_manager",
+                                       "round":  7,
+                                       "action":  "counter",
+                                       "offer":  {
+                                                     "project_allocation":  65,
+                                                     "total_budget":  85
+                                                 },
+                                       "reasoning":  "Project Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                       "stance":  "flexible"
+                                   },
+                                   {
+                                       "agent_id":  "finance_manager",
+                                       "round":  8,
+                                       "action":  "counter",
+                                       "offer":  {
+                                                     "project_allocation":  74,
+                                                     "total_budget":  93
+                                                 },
+                                       "reasoning":  "Finance Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                       "stance":  "urgent"
+                                   },
+                                   {
+                                       "agent_id":  "project_manager",
+                                       "round":  9,
+                                       "action":  "counter",
+                                       "offer":  {
+                                                     "project_allocation":  64,
+                                                     "total_budget":  94
+                                                 },
+                                       "reasoning":  "Project Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                       "stance":  "firm"
+                                   },
+                                   {
+                                       "agent_id":  "finance_manager",
+                                       "round":  10,
+                                       "action":  "counter",
+                                       "offer":  {
+                                                     "project_allocation":  77,
+                                                     "total_budget":  90
+                                                 },
+                                       "reasoning":  "Finance Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                       "stance":  "firm"
+                                   }
+                               ],
+                   "state":  {
+                                 "scenario_id":  "project_budget_allocation",
+                                 "agents":  [
+                                                {
+                                                    "id":  "project_manager",
+                                                    "name":  "Project Manager",
+                                                    "role":  "Project Manager",
+                                                    "role_description":  "Responsible for planning project activities and securing sufficient funding to complete essential deliverables successfully.",
+                                                    "goal":  "Secure at least 60 lakh INR for project activities while ensuring the total budget does not exceed 100 lakh INR.",
+                                                    "constraints":  [
+                                                                        "At least 60 lakh INR must be allocated to project activities.",
+                                                                        "The total project budget must not exceed 100 lakh INR."
+                                                                    ],
+                                                    "limits":  [
+                                                                   {
+                                                                       "item":  "project_allocation",
+                                                                       "type":  "min",
+                                                                       "value":  60,
+                                                                       "unit":  "lakh INR"
+                                                                   },
+                                                                   {
+                                                                       "item":  "total_budget",
+                                                                       "type":  "max",
+                                                                       "value":  100,
+                                                                       "unit":  "lakh INR"
+                                                                   }
+                                                               ],
+                                                    "personality":  "Collaborative"
+                                                },
+                                                {
+                                                    "id":  "finance_manager",
+                                                    "name":  "Finance Manager",
+                                                    "role":  "Finance Manager",
+                                                    "role_description":  "Responsible for managing project expenditure, controlling financial risks, and ensuring that the proposed allocation remains within the approved budget.",
+                                                    "goal":  "Limit the allocation for project activities to a maximum of 80 lakh INR and keep total project spending within 100 lakh INR.",
+                                                    "constraints":  [
+                                                                        "The allocation for project activities must not exceed 80 lakh INR.",
+                                                                        "Total project spending must not exceed 100 lakh INR."
+                                                                    ],
+                                                    "limits":  [
+                                                                   {
+                                                                       "item":  "project_allocation",
+                                                                       "type":  "max",
+                                                                       "value":  80,
+                                                                       "unit":  "lakh INR"
+                                                                   },
+                                                                   {
+                                                                       "item":  "total_budget",
+                                                                       "type":  "max",
+                                                                       "value":  100,
+                                                                       "unit":  "lakh INR"
+                                                                   }
+                                                               ],
+                                                    "personality":  "Risk-Averse"
+                                                }
+                                            ],
+                                 "history":  [
+                                                 {
+                                                     "agent_id":  "project_manager",
+                                                     "round":  1,
+                                                     "action":  "counter",
+                                                     "offer":  {
+                                                                   "project_allocation":  66,
+                                                                   "total_budget":  97
+                                                               },
+                                                     "reasoning":  "Project Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                                     "stance":  "flexible"
+                                                 },
+                                                 {
+                                                     "agent_id":  "finance_manager",
+                                                     "round":  2,
+                                                     "action":  "counter",
+                                                     "offer":  {
+                                                                   "project_allocation":  78,
+                                                                   "total_budget":  88
+                                                               },
+                                                     "reasoning":  "Finance Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                                     "stance":  "flexible"
+                                                 },
+                                                 {
+                                                     "agent_id":  "project_manager",
+                                                     "round":  3,
+                                                     "action":  "counter",
+                                                     "offer":  {
+                                                                   "project_allocation":  66,
+                                                                   "total_budget":  92
+                                                               },
+                                                     "reasoning":  "Project Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                                     "stance":  "flexible"
+                                                 },
+                                                 {
+                                                     "agent_id":  "finance_manager",
+                                                     "round":  4,
+                                                     "action":  "counter",
+                                                     "offer":  {
+                                                                   "project_allocation":  79,
+                                                                   "total_budget":  96
+                                                               },
+                                                     "reasoning":  "Finance Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                                     "stance":  "flexible"
+                                                 },
+                                                 {
+                                                     "agent_id":  "project_manager",
+                                                     "round":  5,
+                                                     "action":  "counter",
+                                                     "offer":  {
+                                                                   "project_allocation":  62,
+                                                                   "total_budget":  87
+                                                               },
+                                                     "reasoning":  "Project Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                                     "stance":  "flexible"
+                                                 },
+                                                 {
+                                                     "agent_id":  "finance_manager",
+                                                     "round":  6,
+                                                     "action":  "counter",
+                                                     "offer":  {
+                                                                   "project_allocation":  73,
+                                                                   "total_budget":  97
+                                                               },
+                                                     "reasoning":  "Finance Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                                     "stance":  "flexible"
+                                                 },
+                                                 {
+                                                     "agent_id":  "project_manager",
+                                                     "round":  7,
+                                                     "action":  "counter",
+                                                     "offer":  {
+                                                                   "project_allocation":  65,
+                                                                   "total_budget":  85
+                                                               },
+                                                     "reasoning":  "Project Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                                     "stance":  "flexible"
+                                                 },
+                                                 {
+                                                     "agent_id":  "finance_manager",
+                                                     "round":  8,
+                                                     "action":  "counter",
+                                                     "offer":  {
+                                                                   "project_allocation":  74,
+                                                                   "total_budget":  93
+                                                               },
+                                                     "reasoning":  "Finance Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                                     "stance":  "urgent"
+                                                 },
+                                                 {
+                                                     "agent_id":  "project_manager",
+                                                     "round":  9,
+                                                     "action":  "counter",
+                                                     "offer":  {
+                                                                   "project_allocation":  64,
+                                                                   "total_budget":  94
+                                                               },
+                                                     "reasoning":  "Project Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                                     "stance":  "firm"
+                                                 },
+                                                 {
+                                                     "agent_id":  "finance_manager",
+                                                     "round":  10,
+                                                     "action":  "counter",
+                                                     "offer":  {
+                                                                   "project_allocation":  77,
+                                                                   "total_budget":  90
+                                                               },
+                                                     "reasoning":  "Finance Manager proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
+                                                     "stance":  "firm"
+                                                 }
+                                             ],
+                                 "round":  10,
+                                 "status":  "deadlock",
+                                 "winner":  null
+                             }
+               }
+}

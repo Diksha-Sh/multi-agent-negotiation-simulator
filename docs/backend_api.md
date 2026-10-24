@@ -58,6 +58,7 @@ python -m pytest -v
 | GET | `/api/personalities` | The three personalities from `scenarios/personalities.json` |
 | POST | `/api/validate` | `{"valid": true/false, "errors": [...]}` for the config sent in the body |
 | POST | `/api/config` | Builds the final config from a scenario id and personality choices, and validates it |
+| POST | `/api/orchestrator/run` | Runs a complete mock negotiation and returns its status, round count, winner and full turn history |
 
 ### POST /api/validate
 
@@ -112,6 +113,28 @@ Errors:
 |---|---|
 | 404 | Unknown `scenario_id` |
 | 422 | A personality choice for an agent id that isn't in the scenario |
+
+### POST /api/orchestrator/run
+
+Send the final config returned by `POST /api/config` as the request body. The route also accepts it wrapped as `{"config": {...}}`.
+
+```json
+{
+  "scenario_id": "vendor_pricing",
+  "title": "Vendor Pricing Negotiation",
+  "description": "...",
+  "max_rounds": 10,
+  "agents": ["... validated agent objects ..."]
+}
+```
+
+The response contains `status`, `round`, `winner`, `history`, and the complete final `state`. The current route uses `mock_agent_fn`; every mock action is a counteroffer, so a run without a different agent implementation ends in `deadlock` at `max_rounds`. This is not an LLM-backed negotiation and does not require an API key.
+
+| Status | When |
+|---|---|
+| 400 | The supplied negotiation config fails `validate_config` |
+| 422 | The request body is missing or malformed JSON |
+| 500 | An unexpected error occurs while running the orchestrator |
 
 ## Using it from the frontend
 
