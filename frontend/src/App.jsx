@@ -301,7 +301,7 @@ function MainApp() {
       const saved = localStorage.getItem('negotiation_scenario');
       if (saved) {
         const parsed = JSON.parse(saved);
-        return scenarios.find((s) => s.id === parsed?.id) || parsed || scenarios[0];
+        return scenarios.find((s) => s.id === parsed?.id) || scenarios[0];
       }
     } catch {
       // fallback
