@@ -32,10 +32,10 @@ The API now uses the LLM reasoning engine, which applies its rule-based strategy
 | A10 | Scenario file handling and CORS | Clear errors for malformed scenario files; local frontend origins permitted, remote origin rejected | Existing API tests passed for bad JSON/missing scenario ID, BOM, localhost origins, and rejection of a remote origin. | PASS |
 | F01 | Frontend ESLint | No lint errors | From `frontend/`, `npm run lint` exited 0 after integration. | PASS |
 | F02 | Frontend production build | Vite creates production bundle | From `frontend/`, `npm run build` succeeded after integration (Vite 8.3.4). | PASS |
-| F03 | Full browser walkthrough | Select scenario, customize agents, start and inspect transcript/status | The previously completed Task 3 browser walkthrough exercised the pre-integration mock flow. A browser walkthrough of the newly integrated engine was not repeated; API behavior was checked with FastAPI `TestClient`. | PRIOR RUN |
+| F03 | Full browser walkthrough | Run each scenario through the browser and inspect turns/status | All three scenarios ran through the browser with successful backend `/api/orchestrator/run` responses (HTTP 200), valid turn sequences, and accepted outcomes. Observed offers are recorded in the Browser Scenario Results section below. Runs used rule-based fallback, not a live LLM. | PASS |
 | F04 | Frontend offline fallback round cap | With the orchestrator request unavailable, fallback stops at configured `max_rounds` | Previously verified before this integration: blocked the run endpoint, set the limit to 3, and observed 3 turns and deadlock at round 3. | PRIOR RUN |
 | F05 | Transcript JSON export | Download a valid JSON transcript with status, turns, and round count | Previously verified before this integration: captured the export data URL for `negotiation_transcript_vendor_pricing.json`; it contained 3 turns and deadlock at 3 rounds. The browser export was not repeated after integration. | PRIOR RUN |
-| F06 | PDF export action | Export control invokes browser print | Verified the button invokes `window.print()`. The native print dialog and saving an actual PDF were not automated. | PARTIAL |
+| F06 | PDF export | Save a completed negotiation report to PDF through the browser print dialog | Print mode rendered the dedicated report, scenario limits, and completed transcript; the interactive UI was hidden. The user completed the print dialog and verified `C:\Users\Abirami S\Downloads\Vendor_Pricing_Negotiation_Report.pdf`; the file was also confirmed to exist at that path. | PASS |
 | L01 | Rule-based fallback and counteroffer integration | Run all scenarios without a key; use the evaluator and enforce guardrails | `engine_status()` reported `rule-based` and `counteroffer_module=true`. All three scenarios completed successfully; direct module tests and LLM-engine tests passed. | PASS |
 | L02 | Real-LLM workflow | Verify a successful call to a configured provider | Not attempted: no API key was configured or used. The LLM path is covered with mocked responses, not a real provider call. | NOT TESTED |
 
@@ -50,6 +50,18 @@ The following results came from FastAPI `TestClient` requests using `POST /api/c
 | `project_budget_allocation` | project_manager: Collaborative; finance_manager: Risk-Averse | 2 turns; accepted by finance_manager | [task3_transcripts/project_budget_allocation.json](task3_transcripts/project_budget_allocation.json) |
 
 Each transcript includes `execution_mode: "rule-based fallback (LLM_ENABLED=false)"` so the results cannot be mistaken for live LLM output. Offers respect the acting agent's limits and, where the scenario has an overlapping agreement range, both agents' hard limits. Concessions do not reverse earlier moves. Every recorded acceptance uses the immediately preceding agent's actual offer and satisfies all participants' limits.
+
+## Browser Scenario Results (2026-10-25)
+
+The completed browser runs posted to the local backend at `http://127.0.0.1:8000` and received HTTP 200 responses. The backend was running with `LLM_ENABLED=false`; these are observed rule-based fallback runs:
+
+| Scenario | Observed exchange | Result |
+|---|---|---|
+| Vendor Pricing Negotiation | Buyer countered at 35,800 INR; Vendor countered at 36,460 INR; Buyer accepted the Vendor's 36,460 INR offer. | Accepted by buyer after 3 turns; price remained within the 35,000–40,000 INR shared limits. |
+| Job Offer Negotiation | Candidate countered at 15 LPA and 3 remote days; Hiring Manager accepted that offer. | Accepted by employer after 2 turns; salary and remote days were within both parties' configured limits. |
+| Project Budget Allocation | Project Manager countered at 76.8 lakh project allocation and 100 lakh total budget; Finance Manager accepted that offer. | Accepted by finance manager after 2 turns; allocation and total budget were within both parties' configured limits. |
+
+The browser showed valid `counter`/`accept` actions and `flexible` stances in these runs. Acceptances repeated and applied the immediately preceding agent's offered terms.
 
 ## Error Cases Verified
 
@@ -106,6 +118,6 @@ npm run build
 
 - A successful live LLM provider call was not verified: no API key was configured or used. The engine's LLM request/guardrail paths were tested with mocked provider replies; the three recorded scenarios used the rule-based fallback.
 - The engine and counteroffer module evaluate offers, maintain limits and concessions, and can accept/reject/counter. When participants' limits overlap, generated offers remain in the shared feasible range. If no agreement range exists, no offer can satisfy both parties; each counter remains bounded by its maker's own limits. These checks do not constitute a real provider-generated negotiation.
-- The integrated API was verified with `TestClient`, not a new browser walkthrough. The previous browser walkthrough and frontend offline fallback results are retained above as pre-integration checks. Frontend lint and production build were rerun after integration.
-- PDF export was verified through the browser print call in the earlier Task 3 run, but the native print dialog and saving an actual PDF remain unverified.
-- The latest full current-worktree backend suite was run with `py -3.13 -m pytest -q`: 149 passed. It reported one Starlette/httpx deprecation warning.
+- The latest full current-worktree backend suite was run with `py -3.13 -m pytest -q`: 149 passed, 0 failed, with one Starlette/httpx deprecation warning.
+- The user completed the browser print dialog and verified the saved Vendor Pricing PDF at `C:\Users\Abirami S\Downloads\Vendor_Pricing_Negotiation_Report.pdf`; the file was confirmed to exist at the reported path.
+- Live LLM API calls have not been tested. The browser scenarios used the rule-based fallback with `LLM_ENABLED=false`; no API key was configured or used.
