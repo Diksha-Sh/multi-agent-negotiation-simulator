@@ -3,7 +3,8 @@
 from typing import Any
 from fastapi import APIRouter, Body, HTTPException
 
-from backend.orchestrator import NegotiationOrchestrator, mock_agent_fn
+from backend.llm_engine import make_agent_engine
+from backend.orchestrator import NegotiationOrchestrator
 from backend.validation import validate_config
 
 router = APIRouter(prefix="/api/orchestrator", tags=["orchestrator"])
@@ -28,7 +29,8 @@ def run_negotiation(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
 
     try:
         orchestrator = NegotiationOrchestrator(config)
-        final_state = orchestrator.run_loop(mock_agent_fn)
+        agent_engine = make_agent_engine(max_rounds=orchestrator.max_rounds)
+        final_state = orchestrator.run_loop(agent_engine)
         return {
             "status": final_state.status,
             "round": final_state.round,
@@ -38,4 +40,3 @@ def run_negotiation(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Orchestration failure: {exc}") from exc
-

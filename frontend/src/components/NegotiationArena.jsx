@@ -169,7 +169,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       orchestration_result: {
         status: orchestratorStatus,
         total_turns: turns.length,
-        rounds: Math.ceil(turns.length / (agents.length || 2)),
+        rounds: turns.length,
         winner: orchestratorWinner,
         history: turns,
       },
@@ -186,7 +186,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
   // Generate a mock turn locally if offline or step-by-step
   const generateLocalTurn = (currentTurnIndex) => {
     const activeAgent = agents[currentTurnIndex % agents.length];
-    const currentRound = Math.floor(currentTurnIndex / agents.length) + 1;
+    const currentRound = currentTurnIndex + 1;
     const limits = activeAgent?.limits || [];
 
     const offer = {};
@@ -207,7 +207,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       offer.price = 37500;
     }
 
-    const isLastTurn = currentTurnIndex + 1 >= maxRounds * agents.length;
+    const isLastTurn = currentTurnIndex + 1 >= maxRounds;
     let action = 'counter';
     if (currentRound >= 3 && Math.random() < 0.25) {
       action = 'accept';
@@ -241,7 +241,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     } else if (nextTurn.action === 'reject') {
       setOrchestratorStatus('rejected');
       setOrchestratorWinner(null);
-    } else if (updated.length >= maxRounds * agents.length) {
+    } else if (updated.length >= maxRounds) {
       setOrchestratorStatus('deadlock');
       setOrchestratorWinner(null);
     }
@@ -272,7 +272,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       let status = 'ongoing';
       let winner = null;
 
-      for (let i = 0; i < maxRounds * agents.length; i += 1) {
+      for (let i = 0; i < maxRounds; i += 1) {
         const turn = generateLocalTurn(i);
         simulatedTurns.push(turn);
         if (turn.action === 'accept') {
