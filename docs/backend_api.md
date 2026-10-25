@@ -58,6 +58,7 @@ python -m pytest -v
 | GET | `/api/personalities` | The three personalities from `scenarios/personalities.json` |
 | POST | `/api/validate` | `{"valid": true/false, "errors": [...]}` for the config sent in the body |
 | POST | `/api/config` | Builds the final config from a scenario id and personality choices, and validates it |
+| POST | `/api/orchestrator/run` | Runs a complete negotiation using the LLM reasoning engine, with rule-based fallback, and returns status, round count, winner and full turn history |
 
 ### POST /api/validate
 
@@ -112,6 +113,30 @@ Errors:
 |---|---|
 | 404 | Unknown `scenario_id` |
 | 422 | A personality choice for an agent id that isn't in the scenario |
+
+### POST /api/orchestrator/run
+
+Send the final config returned by `POST /api/config` as the request body. The route also accepts it wrapped as `{"config": {...}}`.
+
+```json
+{
+  "scenario_id": "vendor_pricing",
+  "title": "Vendor Pricing Negotiation",
+  "description": "...",
+  "max_rounds": 10,
+  "agents": ["... validated agent objects ..."]
+}
+```
+
+The response contains `status`, `round`, `winner`, `history`, and the complete final `state`. The route passes `make_agent_engine(max_rounds=...)` to the orchestrator's `run_loop()`. Without an API key (or with `LLM_ENABLED=false`), the engine uses its rule-based strategy and counteroffer evaluator. With a configured key and `LLM_ENABLED=true`, it attempts the configured OpenAI-compatible provider and falls back to the rule-based strategy if the call fails. The response shape is unchanged.
+
+To configure a provider, copy the root `.env.example` to `.env` and set `LLM_API_KEY` locally. The root `.env` is ignored by Git; never commit or share it. `httpx`, already listed in `backend/requirements.txt`, is used for provider requests. A successful fallback run does not establish that an external LLM call succeeded.
+
+| Status | When |
+|---|---|
+| 400 | The supplied negotiation config fails `validate_config` |
+| 422 | The request body is missing or malformed JSON |
+| 500 | An unexpected error occurs while running the orchestrator |
 
 ## Using it from the frontend
 

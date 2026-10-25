@@ -169,7 +169,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       orchestration_result: {
         status: orchestratorStatus,
         total_turns: turns.length,
-        rounds: Math.ceil(turns.length / (agents.length || 2)),
+        rounds: turns.length,
         winner: orchestratorWinner,
         history: turns,
       },
@@ -186,7 +186,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
   // Generate a mock turn locally if offline or step-by-step
   const generateLocalTurn = (currentTurnIndex) => {
     const activeAgent = agents[currentTurnIndex % agents.length];
-    const currentRound = Math.floor(currentTurnIndex / agents.length) + 1;
+    const currentRound = currentTurnIndex + 1;
     const limits = activeAgent?.limits || [];
 
     const offer = {};
@@ -207,7 +207,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       offer.price = 37500;
     }
 
-    const isLastTurn = currentTurnIndex + 1 >= maxRounds * agents.length;
+    const isLastTurn = currentTurnIndex + 1 >= maxRounds;
     let action = 'counter';
     if (currentRound >= 3 && Math.random() < 0.25) {
       action = 'accept';
@@ -241,7 +241,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     } else if (nextTurn.action === 'reject') {
       setOrchestratorStatus('rejected');
       setOrchestratorWinner(null);
-    } else if (updated.length >= maxRounds * agents.length) {
+    } else if (updated.length >= maxRounds) {
       setOrchestratorStatus('deadlock');
       setOrchestratorWinner(null);
     }
@@ -272,7 +272,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       let status = 'ongoing';
       let winner = null;
 
-      for (let i = 0; i < maxRounds * agents.length; i += 1) {
+      for (let i = 0; i < maxRounds; i += 1) {
         const turn = generateLocalTurn(i);
         simulatedTurns.push(turn);
         if (turn.action === 'accept') {
@@ -304,11 +304,12 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
   };
 
   return (
-    <div
-      className={`w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-left transition-colors duration-200 ${
-        isDark ? 'text-slate-100' : 'text-slate-900'
-      }`}
-    >
+    <>
+      <div
+        className={`screen-content w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-left transition-colors duration-200 ${
+          isDark ? 'text-slate-100' : 'text-slate-900'
+        }`}
+      >
       {/* ── Main Arena Header ── */}
       <header
         className={`border rounded-2xl p-6 sm:p-7 mb-8 shadow-xl transition-all backdrop-blur-xl ${
@@ -639,7 +640,76 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
             </p>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+      <section id="print-area">
+        <header className="print-header">
+          <h1>{config.title || 'Negotiation Report'}</h1>
+          <p>{config.description}</p>
+        </header>
+
+        <div className="print-meta-grid">
+          <div className="print-meta-item">
+            <span>Outcome</span>
+            <strong>{orchestratorStatus}</strong>
+          </div>
+          <div className="print-meta-item">
+            <span>Turns</span>
+            <strong>{turns.length}</strong>
+          </div>
+          <div className="print-meta-item">
+            <span>Maximum rounds</span>
+            <strong>{maxRounds}</strong>
+          </div>
+          <div className="print-meta-item">
+            <span>Outcome agent</span>
+            <strong>{agents.find((agent) => agent.id === orchestratorWinner)?.name || 'Not applicable'}</strong>
+          </div>
+        </div>
+
+        <h2 className="print-section-title">Agents and constraints</h2>
+        <div className="print-agents-grid">
+          {agents.map((agent) => (
+            <article className="print-agent-card" key={agent.id}>
+              <h2>{agent.name}</h2>
+              <span className="print-agent-role">{agent.role}</span>
+              <div className="print-section-title">Objective</div>
+              <div className="print-box">{agent.goal}</div>
+              <div className="print-section-title">Limits</div>
+              <table className="print-limits-table">
+                <tbody>
+                  {(agent.limits || []).map((limit) => (
+                    <tr key={`${agent.id}-${limit.item}`}>
+                      <td>{limit.item}</td>
+                      <td>{limit.type} {limit.value} {limit.unit}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </article>
+          ))}
+        </div>
+
+        <h2 className="print-section-title">Negotiation transcript</h2>
+        {turns.length === 0 ? (
+          <p>No turns have been recorded.</p>
+        ) : (
+          turns.map((turn, index) => (
+            <article className="print-box" key={`${turn.agent_id}-${index}`}>
+              <strong>Turn {turn.turn_number || index + 1}: {turn.agent_name || turn.agent_id}</strong>
+              <div>Action: {turn.action} · Stance: {turn.stance || 'not specified'}</div>
+              <div>
+                Offer: {Object.entries(turn.offer || {}).map(([key, value]) => `${key}: ${value}`).join(', ') || 'None'}
+              </div>
+              <div>{turn.reasoning}</div>
+            </article>
+          ))
+        )}
+        <footer className="print-footer">
+          <span>Generated by NegotiationAI</span>
+          <span>{config.title || 'Negotiation report'}</span>
+        </footer>
+      </section>
+    </>
   );
 }
