@@ -58,7 +58,7 @@ python -m pytest -v
 | GET | `/api/personalities` | The three personalities from `scenarios/personalities.json` |
 | POST | `/api/validate` | `{"valid": true/false, "errors": [...]}` for the config sent in the body |
 | POST | `/api/config` | Builds the final config from a scenario id and personality choices, and validates it |
-| POST | `/api/orchestrator/run` | Runs a complete mock negotiation and returns its status, round count, winner and full turn history |
+| POST | `/api/orchestrator/run` | Runs a complete negotiation using the LLM reasoning engine, with rule-based fallback, and returns status, round count, winner and full turn history |
 
 ### POST /api/validate
 
@@ -128,7 +128,9 @@ Send the final config returned by `POST /api/config` as the request body. The ro
 }
 ```
 
-The response contains `status`, `round`, `winner`, `history`, and the complete final `state`. The current route uses `mock_agent_fn`; every mock action is a counteroffer, so a run without a different agent implementation ends in `deadlock` at `max_rounds`. This is not an LLM-backed negotiation and does not require an API key.
+The response contains `status`, `round`, `winner`, `history`, and the complete final `state`. The route passes `make_agent_engine(max_rounds=...)` to the orchestrator's `run_loop()`. Without an API key (or with `LLM_ENABLED=false`), the engine uses its rule-based strategy and counteroffer evaluator. With a configured key and `LLM_ENABLED=true`, it attempts the configured OpenAI-compatible provider and falls back to the rule-based strategy if the call fails. The response shape is unchanged.
+
+To configure a provider, copy the root `.env.example` to `.env` and set `LLM_API_KEY` locally. The root `.env` is ignored by Git; never commit or share it. `httpx`, already listed in `backend/requirements.txt`, is used for provider requests. A successful fallback run does not establish that an external LLM call succeeded.
 
 | Status | When |
 |---|---|

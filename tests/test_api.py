@@ -148,7 +148,8 @@ def test_build_config_unknown_scenario_is_404():
 
 
 @pytest.mark.parametrize("scenario_id", SCENARIO_IDS)
-def test_config_to_orchestrator_runs_full_mock_negotiation(scenario_id):
+def test_config_to_orchestrator_runs_rule_based_negotiation(scenario_id, monkeypatch):
+    monkeypatch.setenv("LLM_ENABLED", "false")
     built = client.post("/api/config", json={"scenario_id": scenario_id})
     assert built.status_code == 200
     config = built.json()["config"]
@@ -157,20 +158,46 @@ def test_config_to_orchestrator_runs_full_mock_negotiation(scenario_id):
     response = client.post("/api/orchestrator/run", json=config)
     assert response.status_code == 200
     result = response.json()
-    assert result["status"] == "deadlock"
-    assert result["round"] == config["max_rounds"]
-    assert len(result["history"]) == config["max_rounds"]
+    assert result["status"] == "accepted"
+    assert result["round"] < config["max_rounds"]
     assert [turn["agent_id"] for turn in result["history"]] == [
         config["agents"][index % len(config["agents"])]["id"]
-        for index in range(config["max_rounds"])
+        for index in range(result["round"])
     ]
     assert [turn["round"] for turn in result["history"]] == list(
-        range(1, config["max_rounds"] + 1)
+        range(1, result["round"] + 1)
     )
     assert result["state"]["history"] == result["history"]
+    limits_by_agent = {
+        agent["id"]: {limit["item"]: limit for limit in agent["limits"]}
+        for agent in config["agents"]
+    }
+    previous_counters = {}
+    for turn in result["history"]:
+        assert turn["action"] in ("accept", "counter", "reject")
+        assert turn["stance"] in ("firm", "flexible", "urgent")
+        if turn["action"] != "counter":
+            continue
+        limits = limits_by_agent[turn["agent_id"]]
+        assert set(turn["offer"]) == set(limits)
+        for item, value in turn["offer"].items():
+            limit = limits[item]
+            assert value <= limit["value"] if limit["type"] == "max" else value >= limit["value"]
+            previous = previous_counters.get((turn["agent_id"], item))
+            if previous is not None:
+                assert value <= previous if limit["type"] == "max" else value >= previous
+            previous_counters[(turn["agent_id"], item)] = value
+    assert result["winner"] == result["history"][-1]["agent_id"]
+    accepted_offer = result["history"][-1]["offer"]
+    assert accepted_offer == result["history"][-2]["offer"]
+    for limits in limits_by_agent.values():
+        for item, limit in limits.items():
+            value = accepted_offer[item]
+            assert value <= limit["value"] if limit["type"] == "max" else value >= limit["value"]
 
 
-def test_orchestrator_accepts_wrapped_config_and_custom_personality():
+def test_orchestrator_accepts_wrapped_config_and_custom_personality(monkeypatch):
+    monkeypatch.setenv("LLM_ENABLED", "false")
     built = client.post("/api/config", json={
         "scenario_id": "job_offer",
         "personalities": {"employer": "Aggressive"},

@@ -1,310 +1,171 @@
-﻿{
-    "generated_at_utc":  "2026-10-24T12:34:32.9925599Z",
-    "endpoint":  "POST /api/orchestrator/run",
-    "scenario_id":  "vendor_pricing",
-    "configuration":  {
-                          "scenario_id":  "vendor_pricing",
-                          "title":  "Vendor Pricing Negotiation",
-                          "description":  "A buyer negotiates the price of a bulk product order with a vendor to reach a mutually acceptable agreement.",
-                          "max_rounds":  10,
-                          "agents":  [
-                                         {
-                                             "id":  "buyer",
-                                             "name":  "Buyer",
-                                             "role":  "Procurement Manager",
-                                             "role_description":  "Negotiates the purchase price of products while ensuring the order stays within the company\u0027s budget.",
-                                             "goal":  "Purchase the products at a price of no more than 37000 INR while meeting the required order quantity.",
-                                             "constraints":  [
-                                                                 "Maximum acceptable purchase price is 40000 INR.",
-                                                                 "Prefers a lower price while ensuring the required quantity is supplied."
-                                                             ],
-                                             "limits":  [
-                                                            {
-                                                                "item":  "price",
-                                                                "type":  "max",
-                                                                "value":  40000,
-                                                                "unit":  "INR"
-                                                            }
-                                                        ],
-                                             "personality":  "Collaborative"
-                                         },
-                                         {
-                                             "id":  "vendor",
-                                             "name":  "Vendor",
-                                             "role":  "Sales Representative",
-                                             "role_description":  "Negotiates the selling price of products while ensuring the transaction remains commercially profitable.",
-                                             "goal":  "Sell the products at a price of at least 38000 INR while retaining the buyer\u0027s interest.",
-                                             "constraints":  [
-                                                                 "Minimum acceptable selling price is 35000 INR.",
-                                                                 "Prefers a higher selling price while maintaining a successful business agreement."
-                                                             ],
-                                             "limits":  [
-                                                            {
-                                                                "item":  "price",
-                                                                "type":  "min",
-                                                                "value":  35000,
-                                                                "unit":  "INR"
-                                                            }
-                                                        ],
-                                             "personality":  "Risk-Averse"
-                                         }
-                                     ]
-                      },
-    "result":  {
-                   "status":  "deadlock",
-                   "round":  10,
-                   "winner":  null,
-                   "history":  [
-                                   {
-                                       "agent_id":  "buyer",
-                                       "round":  1,
-                                       "action":  "counter",
-                                       "offer":  {
-                                                     "price":  36575
-                                                 },
-                                       "reasoning":  "Buyer proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                       "stance":  "flexible"
-                                   },
-                                   {
-                                       "agent_id":  "vendor",
-                                       "round":  2,
-                                       "action":  "counter",
-                                       "offer":  {
-                                                     "price":  38250
-                                                 },
-                                       "reasoning":  "Vendor proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                       "stance":  "flexible"
-                                   },
-                                   {
-                                       "agent_id":  "buyer",
-                                       "round":  3,
-                                       "action":  "counter",
-                                       "offer":  {
-                                                     "price":  35964
-                                                 },
-                                       "reasoning":  "Buyer proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                       "stance":  "flexible"
-                                   },
-                                   {
-                                       "agent_id":  "vendor",
-                                       "round":  4,
-                                       "action":  "counter",
-                                       "offer":  {
-                                                     "price":  38507
-                                                 },
-                                       "reasoning":  "Vendor proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                       "stance":  "flexible"
-                                   },
-                                   {
-                                       "agent_id":  "buyer",
-                                       "round":  5,
-                                       "action":  "counter",
-                                       "offer":  {
-                                                     "price":  36646
-                                                 },
-                                       "reasoning":  "Buyer proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                       "stance":  "flexible"
-                                   },
-                                   {
-                                       "agent_id":  "vendor",
-                                       "round":  6,
-                                       "action":  "counter",
-                                       "offer":  {
-                                                     "price":  36969
-                                                 },
-                                       "reasoning":  "Vendor proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                       "stance":  "flexible"
-                                   },
-                                   {
-                                       "agent_id":  "buyer",
-                                       "round":  7,
-                                       "action":  "counter",
-                                       "offer":  {
-                                                     "price":  35879
-                                                 },
-                                       "reasoning":  "Buyer proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                       "stance":  "flexible"
-                                   },
-                                   {
-                                       "agent_id":  "vendor",
-                                       "round":  8,
-                                       "action":  "counter",
-                                       "offer":  {
-                                                     "price":  35881
-                                                 },
-                                       "reasoning":  "Vendor proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                       "stance":  "firm"
-                                   },
-                                   {
-                                       "agent_id":  "buyer",
-                                       "round":  9,
-                                       "action":  "counter",
-                                       "offer":  {
-                                                     "price":  38106
-                                                 },
-                                       "reasoning":  "Buyer proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                       "stance":  "urgent"
-                                   },
-                                   {
-                                       "agent_id":  "vendor",
-                                       "round":  10,
-                                       "action":  "counter",
-                                       "offer":  {
-                                                     "price":  35689
-                                                 },
-                                       "reasoning":  "Vendor proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                       "stance":  "urgent"
-                                   }
-                               ],
-                   "state":  {
-                                 "scenario_id":  "vendor_pricing",
-                                 "agents":  [
-                                                {
-                                                    "id":  "buyer",
-                                                    "name":  "Buyer",
-                                                    "role":  "Procurement Manager",
-                                                    "role_description":  "Negotiates the purchase price of products while ensuring the order stays within the company\u0027s budget.",
-                                                    "goal":  "Purchase the products at a price of no more than 37000 INR while meeting the required order quantity.",
-                                                    "constraints":  [
-                                                                        "Maximum acceptable purchase price is 40000 INR.",
-                                                                        "Prefers a lower price while ensuring the required quantity is supplied."
-                                                                    ],
-                                                    "limits":  [
-                                                                   {
-                                                                       "item":  "price",
-                                                                       "type":  "max",
-                                                                       "value":  40000,
-                                                                       "unit":  "INR"
-                                                                   }
-                                                               ],
-                                                    "personality":  "Collaborative"
-                                                },
-                                                {
-                                                    "id":  "vendor",
-                                                    "name":  "Vendor",
-                                                    "role":  "Sales Representative",
-                                                    "role_description":  "Negotiates the selling price of products while ensuring the transaction remains commercially profitable.",
-                                                    "goal":  "Sell the products at a price of at least 38000 INR while retaining the buyer\u0027s interest.",
-                                                    "constraints":  [
-                                                                        "Minimum acceptable selling price is 35000 INR.",
-                                                                        "Prefers a higher selling price while maintaining a successful business agreement."
-                                                                    ],
-                                                    "limits":  [
-                                                                   {
-                                                                       "item":  "price",
-                                                                       "type":  "min",
-                                                                       "value":  35000,
-                                                                       "unit":  "INR"
-                                                                   }
-                                                               ],
-                                                    "personality":  "Risk-Averse"
-                                                }
-                                            ],
-                                 "history":  [
-                                                 {
-                                                     "agent_id":  "buyer",
-                                                     "round":  1,
-                                                     "action":  "counter",
-                                                     "offer":  {
-                                                                   "price":  36575
-                                                               },
-                                                     "reasoning":  "Buyer proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                                     "stance":  "flexible"
-                                                 },
-                                                 {
-                                                     "agent_id":  "vendor",
-                                                     "round":  2,
-                                                     "action":  "counter",
-                                                     "offer":  {
-                                                                   "price":  38250
-                                                               },
-                                                     "reasoning":  "Vendor proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                                     "stance":  "flexible"
-                                                 },
-                                                 {
-                                                     "agent_id":  "buyer",
-                                                     "round":  3,
-                                                     "action":  "counter",
-                                                     "offer":  {
-                                                                   "price":  35964
-                                                               },
-                                                     "reasoning":  "Buyer proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                                     "stance":  "flexible"
-                                                 },
-                                                 {
-                                                     "agent_id":  "vendor",
-                                                     "round":  4,
-                                                     "action":  "counter",
-                                                     "offer":  {
-                                                                   "price":  38507
-                                                               },
-                                                     "reasoning":  "Vendor proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                                     "stance":  "flexible"
-                                                 },
-                                                 {
-                                                     "agent_id":  "buyer",
-                                                     "round":  5,
-                                                     "action":  "counter",
-                                                     "offer":  {
-                                                                   "price":  36646
-                                                               },
-                                                     "reasoning":  "Buyer proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                                     "stance":  "flexible"
-                                                 },
-                                                 {
-                                                     "agent_id":  "vendor",
-                                                     "round":  6,
-                                                     "action":  "counter",
-                                                     "offer":  {
-                                                                   "price":  36969
-                                                               },
-                                                     "reasoning":  "Vendor proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                                     "stance":  "flexible"
-                                                 },
-                                                 {
-                                                     "agent_id":  "buyer",
-                                                     "round":  7,
-                                                     "action":  "counter",
-                                                     "offer":  {
-                                                                   "price":  35879
-                                                               },
-                                                     "reasoning":  "Buyer proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                                     "stance":  "flexible"
-                                                 },
-                                                 {
-                                                     "agent_id":  "vendor",
-                                                     "round":  8,
-                                                     "action":  "counter",
-                                                     "offer":  {
-                                                                   "price":  35881
-                                                               },
-                                                     "reasoning":  "Vendor proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                                     "stance":  "firm"
-                                                 },
-                                                 {
-                                                     "agent_id":  "buyer",
-                                                     "round":  9,
-                                                     "action":  "counter",
-                                                     "offer":  {
-                                                                   "price":  38106
-                                                               },
-                                                     "reasoning":  "Buyer proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                                     "stance":  "urgent"
-                                                 },
-                                                 {
-                                                     "agent_id":  "vendor",
-                                                     "round":  10,
-                                                     "action":  "counter",
-                                                     "offer":  {
-                                                                   "price":  35689
-                                                               },
-                                                     "reasoning":  "Vendor proposes a counteroffer within reservation limits to advance negotiation towards mutual agreement.",
-                                                     "stance":  "urgent"
-                                                 }
-                                             ],
-                                 "round":  10,
-                                 "status":  "deadlock",
-                                 "winner":  null
-                             }
-               }
+{
+  "generated_at_utc": "2026-10-25T09:08:23.088037Z",
+  "endpoint": "POST /api/orchestrator/run",
+  "execution_mode": "rule-based fallback (LLM_ENABLED=false)",
+  "scenario_id": "vendor_pricing",
+  "configuration": {
+    "scenario_id": "vendor_pricing",
+    "title": "Vendor Pricing Negotiation",
+    "description": "A buyer negotiates the price of a bulk product order with a vendor to reach a mutually acceptable agreement.",
+    "max_rounds": 10,
+    "agents": [
+      {
+        "id": "buyer",
+        "name": "Buyer",
+        "role": "Procurement Manager",
+        "role_description": "Negotiates the purchase price of products while ensuring the order stays within the company's budget.",
+        "goal": "Purchase the products at a price of no more than 37000 INR while meeting the required order quantity.",
+        "constraints": [
+          "Maximum acceptable purchase price is 40000 INR.",
+          "Prefers a lower price while ensuring the required quantity is supplied."
+        ],
+        "limits": [
+          {
+            "item": "price",
+            "type": "max",
+            "value": 40000,
+            "unit": "INR"
+          }
+        ],
+        "personality": "Collaborative"
+      },
+      {
+        "id": "vendor",
+        "name": "Vendor",
+        "role": "Sales Representative",
+        "role_description": "Negotiates the selling price of products while ensuring the transaction remains commercially profitable.",
+        "goal": "Sell the products at a price of at least 38000 INR while retaining the buyer's interest.",
+        "constraints": [
+          "Minimum acceptable selling price is 35000 INR.",
+          "Prefers a higher selling price while maintaining a successful business agreement."
+        ],
+        "limits": [
+          {
+            "item": "price",
+            "type": "min",
+            "value": 35000,
+            "unit": "INR"
+          }
+        ],
+        "personality": "Risk-Averse"
+      }
+    ]
+  },
+  "result": {
+    "status": "accepted",
+    "round": 3,
+    "winner": "buyer",
+    "history": [
+      {
+        "agent_id": "buyer",
+        "round": 1,
+        "action": "counter",
+        "offer": {
+          "price": 35800
+        },
+        "reasoning": "Buyer opens with price 35800. As a Collaborative negotiator it moves towards a fair middle ground.",
+        "stance": "flexible"
+      },
+      {
+        "agent_id": "vendor",
+        "round": 2,
+        "action": "counter",
+        "offer": {
+          "price": 36460
+        },
+        "reasoning": "Vendor counters with price 36460. As a Risk-Averse negotiator it makes a reasonable concession to keep the deal alive.",
+        "stance": "flexible"
+      },
+      {
+        "agent_id": "buyer",
+        "round": 3,
+        "action": "accept",
+        "offer": {
+          "price": 36460
+        },
+        "reasoning": "Buyer accepts the offer (price 36460) because it is within its limits and meets its current goal.",
+        "stance": "flexible"
+      }
+    ],
+    "state": {
+      "scenario_id": "vendor_pricing",
+      "agents": [
+        {
+          "id": "buyer",
+          "name": "Buyer",
+          "role": "Procurement Manager",
+          "role_description": "Negotiates the purchase price of products while ensuring the order stays within the company's budget.",
+          "goal": "Purchase the products at a price of no more than 37000 INR while meeting the required order quantity.",
+          "constraints": [
+            "Maximum acceptable purchase price is 40000 INR.",
+            "Prefers a lower price while ensuring the required quantity is supplied."
+          ],
+          "limits": [
+            {
+              "item": "price",
+              "type": "max",
+              "value": 40000,
+              "unit": "INR"
+            }
+          ],
+          "personality": "Collaborative"
+        },
+        {
+          "id": "vendor",
+          "name": "Vendor",
+          "role": "Sales Representative",
+          "role_description": "Negotiates the selling price of products while ensuring the transaction remains commercially profitable.",
+          "goal": "Sell the products at a price of at least 38000 INR while retaining the buyer's interest.",
+          "constraints": [
+            "Minimum acceptable selling price is 35000 INR.",
+            "Prefers a higher selling price while maintaining a successful business agreement."
+          ],
+          "limits": [
+            {
+              "item": "price",
+              "type": "min",
+              "value": 35000,
+              "unit": "INR"
+            }
+          ],
+          "personality": "Risk-Averse"
+        }
+      ],
+      "history": [
+        {
+          "agent_id": "buyer",
+          "round": 1,
+          "action": "counter",
+          "offer": {
+            "price": 35800
+          },
+          "reasoning": "Buyer opens with price 35800. As a Collaborative negotiator it moves towards a fair middle ground.",
+          "stance": "flexible"
+        },
+        {
+          "agent_id": "vendor",
+          "round": 2,
+          "action": "counter",
+          "offer": {
+            "price": 36460
+          },
+          "reasoning": "Vendor counters with price 36460. As a Risk-Averse negotiator it makes a reasonable concession to keep the deal alive.",
+          "stance": "flexible"
+        },
+        {
+          "agent_id": "buyer",
+          "round": 3,
+          "action": "accept",
+          "offer": {
+            "price": 36460
+          },
+          "reasoning": "Buyer accepts the offer (price 36460) because it is within its limits and meets its current goal.",
+          "stance": "flexible"
+        }
+      ],
+      "round": 3,
+      "status": "accepted",
+      "winner": "buyer"
+    }
+  }
 }
