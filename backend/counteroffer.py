@@ -166,6 +166,42 @@ def _extract_target(
 
         candidates = []
 
+        if item == "remote_days":
+            word_numbers = {
+                "zero": 0,
+                "one": 1,
+                "two": 2,
+                "three": 3,
+                "four": 4,
+                "five": 5,
+                "six": 6,
+                "seven": 7,
+                "eight": 8,
+                "nine": 9,
+                "ten": 10,
+            }
+            for alias in aliases:
+                for phrase in re.finditer(
+                    re.escape(alias), goal, re.IGNORECASE
+                ):
+                    for word, value in word_numbers.items():
+                        for match in re.finditer(
+                            rf"\b{re.escape(word)}\b",
+                            goal,
+                            re.IGNORECASE,
+                        ):
+                            distance = min(
+                                abs(match.start() - phrase.end()),
+                                abs(phrase.start() - match.end()),
+                            )
+                            candidates.append(
+                                (
+                                    distance,
+                                    match.start(),
+                                    float(value),
+                                )
+                            )
+
         for alias in aliases:
             for phrase in re.finditer(
                 re.escape(alias), goal, re.IGNORECASE
