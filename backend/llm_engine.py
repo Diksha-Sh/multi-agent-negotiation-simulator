@@ -131,12 +131,10 @@ def _personality_profiles() -> dict[str, dict[str, Any]]:
         return {}
 
 
-def _counteroffer_fn() -> Optional[Callable[[dict, dict], dict]]:
-    """Harini's evaluate_offer(incoming_offer, agent_config), if it is in the repo."""
-    try:
-        from backend.counteroffer import evaluate_offer  # type: ignore
-    except Exception:  # module not merged yet, or fails to import
-        return None
+def _counteroffer_fn() -> Callable[[dict, dict], dict]:
+    """Return Harini's integrated offer evaluator."""
+    from backend.counteroffer import evaluate_offer
+
     return evaluate_offer
 
 
@@ -224,6 +222,64 @@ def _better_for_me(a: float, b: float, l_type: str) -> bool:
 
 def _within(value: float, limit: dict[str, Any]) -> bool:
     return value <= limit["value"] if limit["type"] == "max" else value >= limit["value"]
+
+
+def _feasible_range(
+    state: NegotiationState, item: str
+) -> Optional[tuple[float, float]]:
+    """Return the shared hard-limit interval, or None when no interval exists."""
+    lower = float("-inf")
+    upper = float("inf")
+    found = False
+    for agent in state.agents:
+        limit = _limits(agent).get(item)
+        if not limit:
+            continue
+        found = True
+        if limit["type"] == "min":
+            lower = max(lower, limit["value"])
+        else:
+            upper = min(upper, limit["value"])
+    if not found or lower > upper:
+        return None
+    return lower, upper
+
+
+def _within_all_limits(value: float, item: str, state: NegotiationState) -> bool:
+    """Check a term against every agent's hard limit for that issue."""
+    limits = [_limits(agent).get(item) for agent in state.agents]
+    return all(not limit or _within(value, limit) for limit in limits)
+
+
+def _all_limit_items(state: NegotiationState) -> set[str]:
+    """Return every issue any participant requires in an offer."""
+    return {item for agent in state.agents for item in _limits(agent)}
+
+
+def _constrain_offer(
+    offer: dict[str, Any], state: NegotiationState
+) -> dict[str, Any]:
+    """Keep terms inside the shared hard-limit interval when one exists."""
+    constrained = dict(offer)
+    for item, value in constrained.items():
+        feasible = _feasible_range(state, item)
+        if feasible is not None and _is_number(value):
+            value = min(feasible[1], max(feasible[0], float(value)))
+            limits = [_limits(agent).get(item) for agent in state.agents]
+            present_limits = [entry for entry in limits if entry]
+            integer = any(
+                "day" in str(entry.get("unit", "")).lower()
+                or abs(entry["value"]) >= 1000
+                for entry in present_limits
+            )
+            if integer:
+                value = int(round(value))
+                if value < feasible[0]:
+                    value = math.ceil(feasible[0])
+                if value > feasible[1]:
+                    value = math.floor(feasible[1])
+            constrained[item] = value
+    return constrained
 
 
 def _clamp(value: float, limit: dict[str, Any]) -> float:
@@ -326,6 +382,7 @@ def recommend_move(state: NegotiationState, agent: dict[str, Any], max_rounds: i
         try:
             module_decision = evaluate(dict(incoming), agent)
         except Exception as exc:  # keep the negotiation running
+            logger.warning("Counteroffer evaluation failed for %s: %s", agent_id, exc)
             notes.append(f"Counteroffer module error: {exc}")
     if module_decision and module_decision.get("action") == "counter" and isinstance(module_decision.get("counteroffer"), dict):
         for item, value in module_decision["counteroffer"].items():
@@ -341,12 +398,23 @@ def recommend_move(state: NegotiationState, agent: dict[str, Any], max_rounds: i
             if _is_number(previous.get(item)) and _better_for_me(candidate[item], float(previous[item]), limit["type"]):
                 candidate[item] = float(previous[item])
 
-    candidate = {item: _clamp(v, limits[item]) for item, v in candidate.items()}
+    candidate = {
+        item: _clamp(v, limits[item])
+        for item, v in _constrain_offer(candidate, state).items()
+    }
 
     # Accept when the incoming offer is inside the limits and at least as good as the counter.
-    if incoming and set(limits) <= set(incoming) and all(_is_number(incoming[i]) for i in limits):
-        inside = all(_within(float(incoming[i]), limits[i]) for i in limits)
-        good_enough = all(_better_for_me(float(incoming[i]), candidate[i], limits[i]["type"]) for i in limits)
+    if incoming and _all_limit_items(state) <= set(incoming) and all(
+        _is_number(incoming[i]) for i in _all_limit_items(state)
+    ):
+        inside = all(
+            _within_all_limits(float(incoming[i]), i, state)
+            for i in _all_limit_items(state)
+        )
+        good_enough = all(
+            _better_for_me(float(incoming[i]), candidate[i], limits[i]["type"])
+            for i in limits
+        )
         module_accepts = bool(module_decision and module_decision.get("action") == "accept")
         if inside and (good_enough or module_accepts):
             return {"action": "accept", "offer": dict(incoming), "stance": "flexible",
@@ -354,7 +422,10 @@ def recommend_move(state: NegotiationState, agent: dict[str, Any], max_rounds: i
         if not inside:
             notes.append("Incoming offer breaks a hard limit.")
 
-    offer = {item: _tidy(v, limits[item]) for item, v in candidate.items()}
+    offer = _constrain_offer(
+        {item: _tidy(v, limits[item]) for item, v in candidate.items()},
+        state,
+    )
     if previous:  # rounding must not undo the no-going-back rule
         for item, limit in limits.items():
             if _is_number(previous.get(item)) and _better_for_me(offer[item], float(previous[item]), limit["type"]):
@@ -525,8 +596,10 @@ def apply_guardrails(reply: dict[str, Any], state: NegotiationState, agent: dict
     if stance not in STANCES:
         stance = move["stance"]
 
-    incoming_ok = bool(incoming) and set(limits) <= set(incoming or {}) and all(
-        _is_number(incoming[i]) and _within(float(incoming[i]), limits[i]) for i in limits
+    incoming_items = _all_limit_items(state)
+    incoming_ok = bool(incoming) and incoming_items <= set(incoming or {}) and all(
+        _is_number(incoming[i]) and _within_all_limits(float(incoming[i]), i, state)
+        for i in incoming_items
     )
 
     if action == "accept":
@@ -555,6 +628,7 @@ def apply_guardrails(reply: dict[str, Any], state: NegotiationState, agent: dict
             offer[item] = previous[item]
     if not limits:
         offer = dict(move["offer"])
+    offer = _constrain_offer(offer, state)
     return {"action": "counter", "offer": offer, "stance": stance, "reasoning": reasoning}
 
 

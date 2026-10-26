@@ -18,11 +18,12 @@ backend/
 │   ├── scenarios.py         GET  /api/scenarios, /api/scenarios/{id}
 │   ├── personalities.py     GET  /api/personalities
 │   ├── configuration.py     POST /api/validate, /api/config
-│   └── orchestrator.py      POST /api/orchestrator/run, GET /api/orchestrator/engine
+│   └── orchestrator.py      POST /api/orchestrator/run, /step; GET /api/orchestrator/engine
 ├── scenario_loader.py   loads scenarios and builds the final config
 ├── validation.py        validate_config(config): the six checks before Start
-├── orchestrator.py      Orchestrator: turn order, state, end conditions
-└── llm_engine.py        LLM Reasoning Engine: each agent's move (docs/llm_engine.md)
+├── orchestrator.py      turn order, history, and terminal status
+├── llm_engine.py        rule-based fallback and optional LLM agent
+└── counteroffer.py      scenario-aware offer evaluation and concessions
 ```
 
 Related folders at the repository root:
@@ -30,8 +31,9 @@ Related folders at the repository root:
 | Folder | Contents |
 |---|---|
 | `scenarios/` | Scenario templates and `personalities.json`, the single source of truth for the data |
-| `tests/` | `test_api.py` and `test_validation.py` |
+| `tests/` | API, orchestrator, validation, LLM engine, and counteroffer tests |
 | `docs/backend_api.md` | Endpoint reference with request and response examples |
+| `docs/llm_engine.md` | LLM setup, fallback behavior, and integration details |
 
 ## Setup
 

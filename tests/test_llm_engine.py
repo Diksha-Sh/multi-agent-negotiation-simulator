@@ -129,10 +129,59 @@ def test_every_offer_stays_inside_the_agents_limits(scenario_id):
                 assert respects(turn["offer"][item], limit), turn
 
 
-def test_accepted_deal_is_inside_both_sides_limits():
-    config, state = run("vendor_pricing")
-    price = state.history[-1]["offer"]["price"]
-    assert 35000 <= price <= 40000
+@pytest.mark.parametrize("scenario_id", SCENARIOS)
+@pytest.mark.parametrize("personality", PERSONALITIES)
+def test_every_offer_respects_all_compatible_scenario_limits(scenario_id, personality):
+    choices = {
+        agent["id"]: personality
+        for agent in build_negotiation_config(scenario_id)["agents"]
+    }
+    config, state = run(scenario_id, choices)
+    limits_by_agent = {agent["id"]: limits_of(config, agent["id"]) for agent in config["agents"]}
+
+    for turn in state.history:
+        if turn["action"] != "counter":
+            continue
+        for other in config["agents"]:
+            other_limits = limits_by_agent[other["id"]]
+            if other["id"] == turn["agent_id"]:
+                continue
+            for item, limit in other_limits.items():
+                if item in turn["offer"] and respects(turn["offer"][item], limit):
+                    continue
+                own_limit = limits_by_agent[turn["agent_id"]].get(item)
+                if own_limit is None:
+                    continue
+                lower_bounds = [
+                    value["value"] for agent_limits in limits_by_agent.values()
+                    if (value := agent_limits.get(item)) and value["type"] == "min"
+                ]
+                upper_bounds = [
+                    value["value"] for agent_limits in limits_by_agent.values()
+                    if (value := agent_limits.get(item)) and value["type"] == "max"
+                ]
+                assert lower_bounds and upper_bounds and max(lower_bounds) > min(upper_bounds), turn
+
+
+@pytest.mark.parametrize("scenario_id", SCENARIOS)
+def test_accepted_offer_is_the_incoming_offer_and_fits_all_agents(scenario_id):
+    config, state = run(scenario_id)
+    assert state.status == "accepted"
+    assert len(state.history) >= 2
+    accepted, incoming = state.history[-1], state.history[-2]
+    assert accepted["action"] == "accept"
+    assert accepted["agent_id"] != incoming["agent_id"]
+    assert accepted["offer"] == incoming["offer"]
+    for agent in config["agents"]:
+        for item, limit in limits_of(config, agent["id"]).items():
+            assert respects(accepted["offer"][item], limit), (agent["id"], accepted)
+
+
+def test_job_offer_opening_respects_employer_salary_cap():
+    config, state = run("job_offer")
+    candidate_offer = next(turn for turn in state.history if turn["agent_id"] == "candidate")
+    employer_salary_limit = limits_of(config, "employer")["salary"]
+    assert respects(candidate_offer["offer"]["salary"], employer_salary_limit)
 
 
 def test_agents_never_take_back_a_concession():
@@ -235,6 +284,52 @@ def test_llm_offer_outside_limits_is_clamped(monkeypatch, llm_on):
     config, state = vendor_state()
     turn = make_agent_engine(10)(state, config["agents"][0])
     assert turn["offer"]["price"] == 40000
+
+
+def test_llm_counteroffer_is_clamped_to_both_job_offer_limits(monkeypatch, llm_on):
+    config = build_negotiation_config("job_offer")
+    candidate = config["agents"][0]
+    state = NegotiationState(scenario_id="job_offer", agents=config["agents"])
+    mock_llm(monkeypatch, [{
+        "action": "counter",
+        "offer": {"salary": 15.36, "remote_days": 3},
+        "reasoning": "I propose these terms.",
+        "stance": "firm",
+    }])
+
+    turn = make_agent_engine(10)(state, candidate)
+
+    assert turn["offer"]["salary"] == 15
+    assert respects(turn["offer"]["salary"], limits_of(config, "candidate")["salary"])
+    assert respects(turn["offer"]["salary"], limits_of(config, "employer")["salary"])
+
+
+def test_llm_cannot_accept_terms_that_break_the_offering_agents_limit(monkeypatch, llm_on):
+    config = build_negotiation_config("job_offer")
+    state = NegotiationState(
+        scenario_id="job_offer",
+        agents=config["agents"],
+        history=[{
+            "agent_id": "employer",
+            "round": 1,
+            "action": "counter",
+            "offer": {"salary": 11, "remote_days": 3},
+            "reasoning": "An invalid salary offer.",
+            "stance": "flexible",
+        }],
+        round=1,
+    )
+    mock_llm(monkeypatch, [{
+        "action": "accept",
+        "offer": {"salary": 11, "remote_days": 3},
+        "reasoning": "I accept.",
+        "stance": "flexible",
+    }])
+
+    turn = make_agent_engine(10)(state, config["agents"][0])
+
+    assert turn["action"] == "counter"
+    assert turn["offer"] != state.history[-1]["offer"]
 
 
 def test_llm_cannot_accept_when_nothing_is_on_the_table(monkeypatch, llm_on):
