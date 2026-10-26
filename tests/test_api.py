@@ -322,3 +322,91 @@ def test_cors_rejects_other_sites():
     r = client.options("/api/validate", headers={
         "Origin": "https://evil.example.com", "Access-Control-Request-Method": "POST"})
     assert "access-control-allow-origin" not in r.headers
+
+
+# ----------------------------------------------------------------------------
+# Orchestrator + LLM Reasoning Engine endpoints (Task 2)
+# ----------------------------------------------------------------------------
+
+def _no_llm(monkeypatch):
+    import backend.llm_engine as engine_mod
+    monkeypatch.setenv("LLM_ENABLED", "false")
+    monkeypatch.setattr(engine_mod, "_counteroffer_fn", lambda: None)
+
+
+def test_orchestrator_run_uses_reasoning_engine(monkeypatch):
+    _no_llm(monkeypatch)
+    config = client.post("/api/config", json={"scenario_id": "vendor_pricing"}).json()["config"]
+    res = client.post("/api/orchestrator/run", json=config)
+    assert res.status_code == 200
+    body = res.json()
+    assert body["engine"] == "rule-based"
+    assert body["status"] == "accepted"
+    assert body["history"][0]["agent_id"] == "buyer"
+
+
+def test_orchestrator_run_mock_engine(monkeypatch):
+    _no_llm(monkeypatch)
+    config = client.post("/api/config", json={"scenario_id": "vendor_pricing"}).json()["config"]
+    res = client.post("/api/orchestrator/run?engine=mock", json=config)
+    assert res.status_code == 200
+    assert res.json()["engine"] == "mock"
+
+
+def test_orchestrator_engine_status(monkeypatch):
+    _no_llm(monkeypatch)
+    res = client.get("/api/orchestrator/engine")
+    assert res.status_code == 200
+    assert res.json()["mode"] == "rule-based"
+
+
+def _vendor_config():
+    return client.post("/api/config", json={"scenario_id": "vendor_pricing"}).json()["config"]
+
+
+def test_orchestrator_step_plays_one_turn_at_a_time(monkeypatch):
+    _no_llm(monkeypatch)
+    config, history = _vendor_config(), []
+    for expected in ("buyer", "vendor", "buyer"):
+        res = client.post("/api/orchestrator/step", json={"config": config, "history": history})
+        assert res.status_code == 200
+        body = res.json()
+        assert body["turn"]["agent_id"] == expected
+        assert body["turn"]["round"] == len(history) + 1
+        assert body["engine"] == "rule-based"
+        history.append({**body["turn"], "agent_name": "extra fields are ignored"})
+
+
+def test_orchestrator_step_matches_full_run(monkeypatch):
+    _no_llm(monkeypatch)
+    config, history, status = _vendor_config(), [], "ongoing"
+    while status == "ongoing":
+        body = client.post("/api/orchestrator/step", json={"config": config, "history": history}).json()
+        history.append(body["turn"])
+        status = body["status"]
+    full = client.post("/api/orchestrator/run", json=config).json()
+    assert history == full["history"]
+    assert status == full["status"]
+
+
+def test_orchestrator_step_after_the_end_returns_no_turn(monkeypatch):
+    _no_llm(monkeypatch)
+    full = client.post("/api/orchestrator/run", json=_vendor_config()).json()
+    res = client.post("/api/orchestrator/step", json={"config": _vendor_config(), "history": full["history"]})
+    assert res.status_code == 200
+    assert res.json()["turn"] is None
+    assert res.json()["status"] == full["status"]
+
+
+def test_orchestrator_step_rejects_wrong_turn_order(monkeypatch):
+    _no_llm(monkeypatch)
+    turn = {"agent_id": "vendor", "round": 1, "action": "counter", "offer": {"price": 38000},
+            "reasoning": "", "stance": "firm"}
+    res = client.post("/api/orchestrator/step", json={"config": _vendor_config(), "history": [turn]})
+    assert res.status_code == 422
+
+
+def test_orchestrator_step_rejects_invalid_config(monkeypatch):
+    _no_llm(monkeypatch)
+    res = client.post("/api/orchestrator/step", json={"config": {"scenario_id": ""}, "history": []})
+    assert res.status_code == 400

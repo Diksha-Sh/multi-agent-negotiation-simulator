@@ -18,7 +18,7 @@ backend/
 │   ├── scenarios.py         GET  /api/scenarios, /api/scenarios/{id}
 │   ├── personalities.py     GET  /api/personalities
 │   ├── configuration.py     POST /api/validate, /api/config
-│   └── orchestrator.py      POST /api/orchestrator/run
+│   └── orchestrator.py      POST /api/orchestrator/run, /step; GET /api/orchestrator/engine
 ├── scenario_loader.py   loads scenarios and builds the final config
 ├── validation.py        validate_config(config): the six checks before Start
 ├── orchestrator.py      turn order, history, and terminal status

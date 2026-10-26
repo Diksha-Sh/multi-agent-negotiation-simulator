@@ -59,9 +59,15 @@ Free Groq key: https://console.groq.com, then API Keys. For OpenAI, set `LLM_BAS
 
 ## API integration
 
-`POST /api/orchestrator/run` creates the engine with the scenario's `max_rounds` and passes it to the existing `NegotiationOrchestrator.run_loop()` interface. Its response retains the existing `status`, `round`, `winner`, `history`, and `state` fields; the API does not expose an engine-mode endpoint or an engine badge.
+| Method | URL | Purpose |
+|---|---|---|
+| POST | `/api/orchestrator/run` | Creates the engine with the scenario's `max_rounds` and runs the whole negotiation through `NegotiationOrchestrator.run_loop()` (`?engine=mock` uses the random test agent) |
+| POST | `/api/orchestrator/step` | Plays only the next turn. Body: `{"config": {...}, "history": [turns so far]}`. Used by "Simulate Next Turn" in the arena |
+| GET | `/api/orchestrator/engine` | `{"mode": "llm" or "rule-based", "model", "base_url", "counteroffer_module"}`. Never returns the key |
 
-With no key, the API runs the rule-based engine and counteroffer evaluator without network calls. A configured key enables the LLM path unless `LLM_ENABLED=false`. An LLM provider failure is retried once and then that turn falls back to the rule-based recommendation. A fallback result must not be described as LLM-generated.
+`/run` keeps its existing `status`, `round`, `winner`, `history` and `state` fields and adds `engine`: `llm`, `rule-based`, `mixed` (LLM with some fallback turns) or `mock`, counted from the turns actually played. The arena shows it as a badge next to "Orchestrator Active", so a fallback result is never presented as LLM-generated.
+
+With no key, the API runs the rule-based engine and counteroffer evaluator without network calls. A configured key enables the LLM path unless `LLM_ENABLED=false`. An LLM provider failure is retried once and then that turn falls back to the rule-based recommendation.
 
 If the free Groq tier answers 429 (rate limit), the engine waits up to 5 seconds and retries once, then falls back to the rule-based move for that turn.
 
