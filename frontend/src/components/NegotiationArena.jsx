@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { saveSimulationRecord } from '../services/supabase';
 import {
   FileText,
   Code2,
@@ -16,6 +17,8 @@ import {
   Trophy,
   AlertTriangle,
   XCircle,
+  Database,
+  Check,
 } from 'lucide-react';
 import { AgentAvatar } from './AgentAvatars';
 import { useTheme } from '../context/ThemeContext';
@@ -159,6 +162,14 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
   const [engineMode, setEngineMode] = useState(null);
   const [engineModel, setEngineModel] = useState(null);
 
+  const [hasSaved, setHasSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const scenarioMeta = SCENARIO_META[config?.id] || SCENARIO_META.vendor_pricing;
+  const ScenarioIcon = scenarioMeta.icon;
+  const maxRounds = Number(config?.max_rounds || 10);
+  const agents = config?.agents || [];
+
   useEffect(() => {
     getEngineStatus()
       .then((status) => {
@@ -173,10 +184,32 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     return { ...t, turn_number: i + 1, agent_name: agentObj.name || t.agent_id, role: agentObj.role || '' };
   };
 
-  const scenarioMeta = SCENARIO_META[config?.id] || SCENARIO_META.vendor_pricing;
-  const ScenarioIcon = scenarioMeta.icon;
-  const maxRounds = Number(config?.max_rounds || 10);
-  const agents = config?.agents || [];
+  const saveCurrentSimulation = async (customStatus, customWinner, customTurns) => {
+    const finalTurns = customTurns || turns;
+    const finalStatus = customStatus || orchestratorStatus;
+    const finalWinner = customWinner !== undefined ? customWinner : orchestratorWinner;
+
+    if (hasSaved || isSaving || !finalTurns || finalTurns.length === 0) return;
+    setIsSaving(true);
+    try {
+      await saveSimulationRecord({
+        userId: currentUser?.id || null,
+        scenarioId: config.scenario_id || config.id || 'custom',
+        scenarioTitle: config.title || 'Negotiation Session',
+        status: finalStatus,
+        winner: finalWinner,
+        totalRounds: Math.ceil(finalTurns.length / (agents.length || 2)),
+        totalTurns: finalTurns.length,
+        config,
+        turns: finalTurns,
+      });
+      setHasSaved(true);
+    } catch (err) {
+      console.warn('Simulation save warning:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Print PDF Trigger
   const handleExportPDF = () => {
@@ -276,12 +309,15 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     if (nextTurn.action === 'accept') {
       setOrchestratorStatus('accepted');
       setOrchestratorWinner(nextTurn.agent_id);
+      saveCurrentSimulation('accepted', nextTurn.agent_id, updated);
     } else if (nextTurn.action === 'reject') {
       setOrchestratorStatus('rejected');
       setOrchestratorWinner(null);
-    } else if (updated.length >= maxRounds) {
+      saveCurrentSimulation('rejected', null, updated);
+    } else if (updated.length >= maxRounds * (agents.length || 2)) {
       setOrchestratorStatus('deadlock');
       setOrchestratorWinner(null);
+      saveCurrentSimulation('deadlock', null, updated);
     }
   };
 
@@ -291,10 +327,14 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     try {
       const response = await runOrchestrator(config);
       if (response && response.history) {
-        setTurns(response.history.map(withAgentInfo));
+        const mapped = response.history.map(withAgentInfo);
+        setTurns(mapped);
         if (response.engine) setEngineMode(response.engine);
-        setOrchestratorStatus(response.status || 'deadlock');
-        setOrchestratorWinner(response.winner || null);
+        const st = response.status || 'deadlock';
+        const win = response.winner || null;
+        setOrchestratorStatus(st);
+        setOrchestratorWinner(win);
+        saveCurrentSimulation(st, win, mapped);
       }
     } catch {
       // Graceful client fallback: simulate full orchestrator loop
@@ -323,6 +363,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       setTurns(simulatedTurns);
       setOrchestratorStatus(status);
       setOrchestratorWinner(winner);
+      saveCurrentSimulation(status, winner, simulatedTurns);
     } finally {
       setIsRunningAll(false);
     }
@@ -332,6 +373,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     setTurns([]);
     setOrchestratorStatus('ongoing');
     setOrchestratorWinner(null);
+    setHasSaved(false);
   };
 
   return (
@@ -402,6 +444,23 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
             >
               <FileText className="w-3.5 h-3.5" />
               <span>Export PDF Report</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={saveCurrentSimulation}
+              disabled={hasSaved || isSaving || turns.length === 0}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
+                hasSaved
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : isDark
+                  ? 'border-slate-700/80 bg-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-700'
+                  : 'border-slate-300 bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+              title={hasSaved ? 'Saved to Simulation History' : 'Save Session to History'}
+            >
+              {hasSaved ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Database className="w-3.5 h-3.5 text-indigo-500" />}
+              <span>{hasSaved ? 'Saved to History' : isSaving ? 'Saving...' : 'Save Run'}</span>
             </button>
 
             <button
