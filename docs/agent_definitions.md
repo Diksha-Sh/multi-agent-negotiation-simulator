@@ -40,9 +40,14 @@ A deal is possible: salary 12 to 15 LPA, remote days 2 to 3 per week.
 
 A deal is possible: price 35000 to 40000 INR.
 
-### Project Budget Allocation (`project_budget`)
+### Project Budget Allocation (`project_budget_allocation`)
 
-*To be added by Abirami when `scenarios/project_budget.json` is merged. Use the same columns as above.*
+| Agent | Role | Goal | Constraints | Limits | Default personality |
+|---|---|---|---|---|---|
+| Project Manager | Project Manager | Secure at least 60 lakh INR for project activities while ensuring the total budget does not exceed 100 lakh INR. | At least 60 lakh INR must be allocated to project activities. Total project budget must not exceed 100 lakh INR. | project_allocation ≥ 60 lakh INR; total_budget ≤ 100 lakh INR | Collaborative |
+| Finance Manager | Finance Manager | Limit project activity allocation to at most 80 lakh INR and keep total project spending within 100 lakh INR. | Project allocation must not exceed 80 lakh INR. Total spending must not exceed 100 lakh INR. | project_allocation ≤ 80 lakh INR; total_budget ≤ 100 lakh INR | Risk-Averse |
+
+A deal is possible: project allocation can be 60 to 80 lakh INR. Both agents have a maximum for total budget, with no minimum, so the current validator does not calculate a range for that item.
 
 ## 3. Validation rules
 

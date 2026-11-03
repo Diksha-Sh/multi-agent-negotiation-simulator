@@ -1,0 +1,179 @@
+{
+  "generated_at_utc": "2026-10-25T09:08:23.134769Z",
+  "endpoint": "POST /api/orchestrator/run",
+  "execution_mode": "rule-based fallback (LLM_ENABLED=false)",
+  "scenario_id": "project_budget_allocation",
+  "configuration": {
+    "scenario_id": "project_budget_allocation",
+    "title": "Project Budget Allocation",
+    "description": "A project manager and a finance manager negotiate the allocation of a limited project budget while balancing project requirements and financial constraints.",
+    "max_rounds": 10,
+    "agents": [
+      {
+        "id": "project_manager",
+        "name": "Project Manager",
+        "role": "Project Manager",
+        "role_description": "Responsible for planning project activities and securing sufficient funding to complete essential deliverables successfully.",
+        "goal": "Secure at least 60 lakh INR for project activities while ensuring the total budget does not exceed 100 lakh INR.",
+        "constraints": [
+          "At least 60 lakh INR must be allocated to project activities.",
+          "The total project budget must not exceed 100 lakh INR."
+        ],
+        "limits": [
+          {
+            "item": "project_allocation",
+            "type": "min",
+            "value": 60,
+            "unit": "lakh INR"
+          },
+          {
+            "item": "total_budget",
+            "type": "max",
+            "value": 100,
+            "unit": "lakh INR"
+          }
+        ],
+        "personality": "Collaborative"
+      },
+      {
+        "id": "finance_manager",
+        "name": "Finance Manager",
+        "role": "Finance Manager",
+        "role_description": "Responsible for managing project expenditure, controlling financial risks, and ensuring that the proposed allocation remains within the approved budget.",
+        "goal": "Limit the allocation for project activities to a maximum of 80 lakh INR and keep total project spending within 100 lakh INR.",
+        "constraints": [
+          "The allocation for project activities must not exceed 80 lakh INR.",
+          "Total project spending must not exceed 100 lakh INR."
+        ],
+        "limits": [
+          {
+            "item": "project_allocation",
+            "type": "max",
+            "value": 80,
+            "unit": "lakh INR"
+          },
+          {
+            "item": "total_budget",
+            "type": "max",
+            "value": 100,
+            "unit": "lakh INR"
+          }
+        ],
+        "personality": "Risk-Averse"
+      }
+    ]
+  },
+  "result": {
+    "status": "accepted",
+    "round": 2,
+    "winner": "finance_manager",
+    "history": [
+      {
+        "agent_id": "project_manager",
+        "round": 1,
+        "action": "counter",
+        "offer": {
+          "project_allocation": 76.8,
+          "total_budget": 100.0
+        },
+        "reasoning": "Project Manager opens with project_allocation 76.8, total_budget 100.0. As a Collaborative negotiator it moves towards a fair middle ground.",
+        "stance": "flexible"
+      },
+      {
+        "agent_id": "finance_manager",
+        "round": 2,
+        "action": "accept",
+        "offer": {
+          "project_allocation": 76.8,
+          "total_budget": 100.0
+        },
+        "reasoning": "Finance Manager accepts the offer (project_allocation 76.8, total_budget 100.0) because it is within its limits and meets its current goal.",
+        "stance": "flexible"
+      }
+    ],
+    "state": {
+      "scenario_id": "project_budget_allocation",
+      "agents": [
+        {
+          "id": "project_manager",
+          "name": "Project Manager",
+          "role": "Project Manager",
+          "role_description": "Responsible for planning project activities and securing sufficient funding to complete essential deliverables successfully.",
+          "goal": "Secure at least 60 lakh INR for project activities while ensuring the total budget does not exceed 100 lakh INR.",
+          "constraints": [
+            "At least 60 lakh INR must be allocated to project activities.",
+            "The total project budget must not exceed 100 lakh INR."
+          ],
+          "limits": [
+            {
+              "item": "project_allocation",
+              "type": "min",
+              "value": 60,
+              "unit": "lakh INR"
+            },
+            {
+              "item": "total_budget",
+              "type": "max",
+              "value": 100,
+              "unit": "lakh INR"
+            }
+          ],
+          "personality": "Collaborative"
+        },
+        {
+          "id": "finance_manager",
+          "name": "Finance Manager",
+          "role": "Finance Manager",
+          "role_description": "Responsible for managing project expenditure, controlling financial risks, and ensuring that the proposed allocation remains within the approved budget.",
+          "goal": "Limit the allocation for project activities to a maximum of 80 lakh INR and keep total project spending within 100 lakh INR.",
+          "constraints": [
+            "The allocation for project activities must not exceed 80 lakh INR.",
+            "Total project spending must not exceed 100 lakh INR."
+          ],
+          "limits": [
+            {
+              "item": "project_allocation",
+              "type": "max",
+              "value": 80,
+              "unit": "lakh INR"
+            },
+            {
+              "item": "total_budget",
+              "type": "max",
+              "value": 100,
+              "unit": "lakh INR"
+            }
+          ],
+          "personality": "Risk-Averse"
+        }
+      ],
+      "history": [
+        {
+          "agent_id": "project_manager",
+          "round": 1,
+          "action": "counter",
+          "offer": {
+            "project_allocation": 76.8,
+            "total_budget": 100.0
+          },
+          "reasoning": "Project Manager opens with project_allocation 76.8, total_budget 100.0. As a Collaborative negotiator it moves towards a fair middle ground.",
+          "stance": "flexible"
+        },
+        {
+          "agent_id": "finance_manager",
+          "round": 2,
+          "action": "accept",
+          "offer": {
+            "project_allocation": 76.8,
+            "total_budget": 100.0
+          },
+          "reasoning": "Finance Manager accepts the offer (project_allocation 76.8, total_budget 100.0) because it is within its limits and meets its current goal.",
+          "stance": "flexible"
+        }
+      ],
+      "round": 2,
+      "status": "accepted",
+      "winner": "finance_manager"
+    }
+  }
+}

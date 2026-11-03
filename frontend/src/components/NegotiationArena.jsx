@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { saveSimulationRecord } from '../services/supabase';
 import {
   FileText,
@@ -24,7 +24,10 @@ import NegotiationTranscript from './NegotiationTranscript';
 import NegotiationMetricsPanel from './NegotiationMetricsPanel';
 import DeadlockBanner from './DeadlockBanner';
 import { useTheme } from '../context/ThemeContext';
-import { runOrchestrator } from '../services/api';
+import { getEngineStatus, runOrchestrator, stepOrchestrator } from '../services/api';
+
+// Offline fallback only: kept outside the component so renders stay pure.
+const randomChance = () => Math.random();
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');
@@ -157,8 +160,32 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
   const [orchestratorWinner, setOrchestratorWinner] = useState(null);
   const [deadlockEvent, setDeadlockEvent] = useState(null);
   const [isRunningAll, setIsRunningAll] = useState(false);
+  const [isStepping, setIsStepping] = useState(false);
+  // Which engine produced the turns: 'llm' | 'rule-based' | 'mixed' | 'mock' | 'offline'
+  const [engineMode, setEngineMode] = useState(null);
+  const [engineModel, setEngineModel] = useState(null);
+
   const [hasSaved, setHasSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const scenarioMeta = SCENARIO_META[config?.id] || SCENARIO_META.vendor_pricing;
+  const ScenarioIcon = scenarioMeta.icon;
+  const maxRounds = Number(config?.max_rounds || 10);
+  const agents = config?.agents || [];
+
+  useEffect(() => {
+    getEngineStatus()
+      .then((status) => {
+        setEngineMode(status.mode);
+        setEngineModel(status.model);
+      })
+      .catch(() => setEngineMode('offline'));
+  }, []);
+
+  const withAgentInfo = (t, i) => {
+    const agentObj = agents.find((a) => a.id === t.agent_id) || {};
+    return { ...t, turn_number: i + 1, agent_name: agentObj.name || t.agent_id, role: agentObj.role || '' };
+  };
 
   const saveCurrentSimulation = async (customStatus, customWinner, customTurns) => {
     const finalTurns = customTurns || turns;
@@ -187,11 +214,6 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     }
   };
 
-  const scenarioMeta = SCENARIO_META[config?.id] || SCENARIO_META.vendor_pricing;
-  const ScenarioIcon = scenarioMeta.icon;
-  const maxRounds = Number(config?.max_rounds || 10);
-  const agents = config?.agents || [];
-
   // Print PDF Trigger
   const handleExportPDF = () => {
     window.print();
@@ -204,7 +226,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       orchestration_result: {
         status: orchestratorStatus,
         total_turns: turns.length,
-        rounds: Math.ceil(turns.length / (agents.length || 2)),
+        rounds: turns.length,
         winner: orchestratorWinner,
         history: turns,
       },
@@ -221,7 +243,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
   // Generate a mock turn locally if offline or step-by-step
   const generateLocalTurn = (currentTurnIndex) => {
     const activeAgent = agents[currentTurnIndex % agents.length];
-    const currentRound = Math.floor(currentTurnIndex / agents.length) + 1;
+    const currentRound = currentTurnIndex + 1;
     const limits = activeAgent?.limits || [];
 
     const offer = {};
@@ -242,10 +264,9 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       offer.price = 37500;
     }
 
-    const isLastTurn = currentTurnIndex + 1 >= maxRounds * agents.length;
+    const isLastTurn = currentTurnIndex + 1 >= maxRounds;
     let action = 'counter';
-    // eslint-disable-next-line react-hooks/purity
-    if (currentRound >= 3 && Math.random() < 0.25) {
+    if (currentRound >= 3 && randomChance() < 0.25) {
       action = 'accept';
     } else if (isLastTurn) {
       action = 'counter'; // reaches max rounds -> deadlock
@@ -264,9 +285,26 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     };
   };
 
-  // Step 1 Turn at a time through Orchestrator
-  const handleSimulateNextTurn = () => {
-    if (orchestratorStatus !== 'ongoing') return;
+  // Step 1 Turn at a time through the backend Orchestrator + LLM Reasoning Engine
+  const handleSimulateNextTurn = async () => {
+    if (orchestratorStatus !== 'ongoing' || isStepping) return;
+    setIsStepping(true);
+    try {
+      const response = await stepOrchestrator(config, turns);
+      if (response.turn) {
+        setTurns([...turns, withAgentInfo(response.turn, turns.length)]);
+      }
+      setOrchestratorStatus(response.status || 'ongoing');
+      setOrchestratorWinner(response.winner || null);
+      if (response.engine) setEngineMode(response.engine);
+      return;
+    } catch {
+      setEngineMode('offline');
+    } finally {
+      setIsStepping(false);
+    }
+
+    // Backend not reachable: local simulation
     const nextTurn = generateLocalTurn(turns.length);
     const updated = [...turns, nextTurn];
     setTurns(updated);
@@ -281,7 +319,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       setOrchestratorWinner(null);
       setDeadlockEvent(null);
       saveCurrentSimulation('rejected', null, updated);
-    } else if (updated.length >= maxRounds * agents.length) {
+    } else if (updated.length >= maxRounds * (agents.length || 2)) {
       setOrchestratorStatus('deadlock');
       setOrchestratorWinner(null);
       setDeadlockEvent({
@@ -300,16 +338,9 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     try {
       const response = await runOrchestrator(config);
       if (response && response.history) {
-        const mapped = response.history.map((t, i) => {
-          const agentObj = agents.find((a) => a.id === t.agent_id) || {};
-          return {
-            ...t,
-            turn_number: i + 1,
-            agent_name: agentObj.name || t.agent_id,
-            role: agentObj.role || '',
-          };
-        });
+        const mapped = response.history.map(withAgentInfo);
         setTurns(mapped);
+        if (response.engine) setEngineMode(response.engine);
         const st = response.status || 'deadlock';
         const win = response.winner || null;
         const dl = response.deadlock_event || response.deadlock || (st === 'deadlock' ? { type: 'max_rounds', round_triggered: Math.ceil(mapped.length / (agents.length || 2)), resolution_attempt: null, resolution_outcome: null } : null);
@@ -320,11 +351,12 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       }
     } catch {
       // Graceful client fallback: simulate full orchestrator loop
+      setEngineMode('offline');
       let simulatedTurns = [];
       let status = 'ongoing';
       let winner = null;
 
-      for (let i = 0; i < maxRounds * agents.length; i += 1) {
+      for (let i = 0; i < maxRounds; i += 1) {
         const turn = generateLocalTurn(i);
         simulatedTurns.push(turn);
         if (turn.action === 'accept') {
@@ -367,11 +399,12 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
   };
 
   return (
-    <div
-      className={`w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-left transition-colors duration-200 ${
-        isDark ? 'text-slate-100' : 'text-slate-900'
-      }`}
-    >
+    <>
+      <div
+        className={`screen-content w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-left transition-colors duration-200 ${
+          isDark ? 'text-slate-100' : 'text-slate-900'
+        }`}
+      >
       {/* ── Main Arena Header ── */}
       <header
         className={`border rounded-2xl p-6 sm:p-7 mb-8 shadow-xl transition-all backdrop-blur-xl ${
@@ -389,6 +422,30 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 Orchestrator Active
               </span>
+              {engineMode && (
+                <span
+                  title={engineMode === 'offline' ? 'Backend not reachable: turns are simulated in the browser' : 'Reasoning engine used for the turns'}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold',
+                    engineMode === 'llm'
+                      ? 'bg-violet-500/10 text-violet-500 border-violet-500/30'
+                      : engineMode === 'offline'
+                      ? 'bg-rose-500/10 text-rose-500 border-rose-500/30'
+                      : 'bg-amber-500/10 text-amber-500 border-amber-500/30',
+                  )}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {engineMode === 'llm'
+                    ? `LLM Engine${engineModel ? ` · ${engineModel}` : ''}`
+                    : engineMode === 'mixed'
+                    ? 'LLM + Rule-based Fallback'
+                    : engineMode === 'offline'
+                    ? 'Offline Simulation'
+                    : engineMode === 'mock'
+                    ? 'Mock Engine'
+                    : 'Rule-based Engine'}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center shrink-0">
@@ -534,17 +591,17 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
 
             <button
               type="button"
-              disabled={orchestratorStatus !== 'ongoing'}
+              disabled={orchestratorStatus !== 'ongoing' || isStepping || isRunningAll}
               onClick={handleSimulateNextTurn}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-md shadow-indigo-600/20 transition-all cursor-pointer shrink-0"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
-              <span>Simulate Next Turn</span>
+              <span>{isStepping ? 'Thinking...' : 'Simulate Next Turn'}</span>
             </button>
 
             <button
               type="button"
-              disabled={orchestratorStatus !== 'ongoing' || isRunningAll}
+              disabled={orchestratorStatus !== 'ongoing' || isRunningAll || isStepping}
               onClick={handleRunFullOrchestrator}
               className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-md shadow-emerald-600/20 transition-all cursor-pointer shrink-0"
             >
@@ -653,7 +710,76 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
             </p>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+      <section id="print-area">
+        <header className="print-header">
+          <h1>{config.title || 'Negotiation Report'}</h1>
+          <p>{config.description}</p>
+        </header>
+
+        <div className="print-meta-grid">
+          <div className="print-meta-item">
+            <span>Outcome</span>
+            <strong>{orchestratorStatus}</strong>
+          </div>
+          <div className="print-meta-item">
+            <span>Turns</span>
+            <strong>{turns.length}</strong>
+          </div>
+          <div className="print-meta-item">
+            <span>Maximum rounds</span>
+            <strong>{maxRounds}</strong>
+          </div>
+          <div className="print-meta-item">
+            <span>Outcome agent</span>
+            <strong>{agents.find((agent) => agent.id === orchestratorWinner)?.name || 'Not applicable'}</strong>
+          </div>
+        </div>
+
+        <h2 className="print-section-title">Agents and constraints</h2>
+        <div className="print-agents-grid">
+          {agents.map((agent) => (
+            <article className="print-agent-card" key={agent.id}>
+              <h2>{agent.name}</h2>
+              <span className="print-agent-role">{agent.role}</span>
+              <div className="print-section-title">Objective</div>
+              <div className="print-box">{agent.goal}</div>
+              <div className="print-section-title">Limits</div>
+              <table className="print-limits-table">
+                <tbody>
+                  {(agent.limits || []).map((limit) => (
+                    <tr key={`${agent.id}-${limit.item}`}>
+                      <td>{limit.item}</td>
+                      <td>{limit.type} {limit.value} {limit.unit}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </article>
+          ))}
+        </div>
+
+        <h2 className="print-section-title">Negotiation transcript</h2>
+        {turns.length === 0 ? (
+          <p>No turns have been recorded.</p>
+        ) : (
+          turns.map((turn, index) => (
+            <article className="print-box" key={`${turn.agent_id}-${index}`}>
+              <strong>Turn {turn.turn_number || index + 1}: {turn.agent_name || turn.agent_id}</strong>
+              <div>Action: {turn.action} · Stance: {turn.stance || 'not specified'}</div>
+              <div>
+                Offer: {Object.entries(turn.offer || {}).map(([key, value]) => `${key}: ${value}`).join(', ') || 'None'}
+              </div>
+              <div>{turn.reasoning}</div>
+            </article>
+          ))
+        )}
+        <footer className="print-footer">
+          <span>Generated by NegotiationAI</span>
+          <span>{config.title || 'Negotiation report'}</span>
+        </footer>
+      </section>
+    </>
   );
 }

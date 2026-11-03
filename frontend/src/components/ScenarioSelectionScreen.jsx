@@ -34,7 +34,7 @@ export default function ScenarioSelectionScreen({
   onContinue,
 }) {
   const { isDark } = useTheme();
-  const currentScenario = selectedScenario || scenarios[0];
+  const currentScenario = scenarios.find((scenario) => scenario.id === selectedScenario?.id) || scenarios[0];
   const currentId = currentScenario?.id || 'vendor_pricing';
   const roles = SCENARIO_ROLES[currentId] || SCENARIO_ROLES.vendor_pricing;
 

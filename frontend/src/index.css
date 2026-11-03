@@ -229,7 +229,11 @@ html.light ::-webkit-scrollbar-thumb:hover {
   }
 
   /* Hide regular UI elements when printing */
-  nav, footer, button, .no-print, header button {
+  nav, .screen-content footer, button, .no-print, header button {
+    display: none !important;
+  }
+
+  .screen-content {
     display: none !important;
   }
 

@@ -1,4 +1,4 @@
-"""Root entry point for orchestrator.py.
+"""Root entry point for orchestrator.py (Tasks 2 & 4).
 
 Imports and exposes the entire Orchestrator engine from backend.orchestrator.
 Allows running directly as:
@@ -6,17 +6,23 @@ Allows running directly as:
 """
 
 from backend.orchestrator import (
+    DeadlockEvent,
+    HumanTurn,
     NegotiationOrchestrator,
     NegotiationState,
     Turn,
     _find_scenario_path,
+    create_human_turn,
     mock_agent_fn,
 )
 
 __all__ = [
     "Turn",
+    "HumanTurn",
+    "DeadlockEvent",
     "NegotiationState",
     "NegotiationOrchestrator",
+    "create_human_turn",
     "mock_agent_fn",
 ]
 
@@ -35,6 +41,7 @@ if __name__ == "__main__":
         "description": scenario_data.get("description", ""),
         "max_rounds": scenario_data.get("max_rounds", 10),
         "agents": scenario_data.get("agents", []),
+        "mode": "simulation",
     }
 
     orchestrator = NegotiationOrchestrator(config)
@@ -60,4 +67,3 @@ if __name__ == "__main__":
     print(f"Total Turns:  {len(final_state.history)}")
     print(f"Winner:       {final_state.winner if final_state.winner else 'None (Deadlock / Impasse)'}")
     print("=" * 70)
-
