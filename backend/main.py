@@ -1,6 +1,8 @@
 """FastAPI application: entry point of the backend.
 
 Start the server from the repository root with:
+    python -m backend.main
+    or
     python -m backend.server
 
 Interactive docs: http://127.0.0.1:8000/docs
@@ -10,7 +12,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.config import API_TITLE, API_VERSION, FRONTEND_ORIGIN_REGEX
+from backend.config import API_TITLE, API_VERSION, FRONTEND_ORIGIN_REGEX, HOST, PORT, RELOAD
 from backend.routers import configuration, health, orchestrator, personalities, scenarios
 from backend.scenario_loader import ScenarioFileError
 
@@ -40,3 +42,10 @@ app.include_router(scenarios.router)
 app.include_router(personalities.router)
 app.include_router(configuration.router)
 app.include_router(orchestrator.router)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    print(f"Backend running at http://{HOST}:{PORT}  (API docs: http://{HOST}:{PORT}/docs)")
+    uvicorn.run("backend.main:app", host=HOST, port=PORT, reload=RELOAD)

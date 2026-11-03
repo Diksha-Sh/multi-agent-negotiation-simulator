@@ -18,6 +18,9 @@ import {
   Shield,
   X,
   Scale,
+  Bot,
+  Gamepad2,
+  UserCheck,
 } from 'lucide-react';
 import vendorPricing from '../data/vendor_pricing.json';
 import { AgentAvatar } from './AgentAvatars';
@@ -140,6 +143,8 @@ export default function AgentConfigScreen({
   const agents = useMemo(() => scenario?.agents || [], [scenario]);
 
   const [maxRounds, setMaxRounds] = useState(() => scenario?.max_rounds ?? 10);
+  const [mode, setMode] = useState(() => selectedScenario?.mode || 'simulation');
+  const [humanAgentId, setHumanAgentId] = useState(() => selectedScenario?.human_agent_id || selectedScenario?.human_seat || agents[0]?.id || 'buyer');
   const [showPayloadModal, setShowPayloadModal] = useState(false);
   const [showRadarModal, setShowRadarModal] = useState(false);
   const [chaosToast, setChaosToast] = useState(null);
@@ -165,6 +170,8 @@ export default function AgentConfigScreen({
   if (scenario?.id !== prevScenarioId) {
     setPrevScenarioId(scenario?.id);
     setMaxRounds(scenario?.max_rounds ?? 10);
+    setMode(scenario?.mode || 'simulation');
+    setHumanAgentId(scenario?.human_agent_id || scenario?.human_seat || scenario?.agents?.[0]?.id || 'buyer');
     setBackendErrors([]);
     const initial = {};
     for (const agent of scenario?.agents || []) {
@@ -237,6 +244,9 @@ export default function AgentConfigScreen({
       title: scenario.title,
       description: scenario.description,
       max_rounds: Number(maxRounds) || 10,
+      mode: mode,
+      human_agent_id: mode === 'practice' ? humanAgentId : null,
+      human_seat: mode === 'practice' ? humanAgentId : null,
       validation_status: agreement.valid ? 'VALID' : 'INVALID',
       agents: agents.map((agent) => {
         const cfg = agentConfigs[agent.id] || {};
@@ -261,7 +271,7 @@ export default function AgentConfigScreen({
         };
       }),
     };
-  }, [scenario, maxRounds, agreement, agents, agentConfigs]);
+  }, [scenario, maxRounds, mode, humanAgentId, agreement, agents, agentConfigs]);
 
   const p1 = agentConfigs[agents[0]?.id]?.personality || 'Collaborative';
   const p2 = agentConfigs[agents[1]?.id]?.personality || 'Collaborative';
@@ -385,6 +395,141 @@ export default function AgentConfigScreen({
         </div>
       )}
 
+      {/* ── MODE SELECTION: SIMULATION VS PRACTICE ── */}
+      <div className={`rounded-2xl backdrop-blur-xl border p-5 sm:p-6 mb-8 transition-all shadow-xl ${
+        isDark ? 'bg-slate-900/60 border-slate-800/80' : 'bg-white border-slate-200/90 shadow-slate-200/50'
+      }`}>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-indigo-500">
+                Execution Mode
+              </span>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                mode === 'practice'
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
+              }`}>
+                {mode === 'practice' ? 'Interactive Human Participant' : 'Autonomous AI vs AI'}
+              </span>
+            </div>
+            <h2 className={`text-base sm:text-lg font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+              Choose Negotiation Format
+            </h2>
+            <p className={`text-xs mt-0.5 max-w-xl ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              {mode === 'practice'
+                ? 'Practice Mode: Take a seat as one of the stakeholders and negotiate live turn-by-turn against the autonomous AI.'
+                : 'Simulation Mode: Both agents negotiate autonomously using their configured behavioral styles and bounds.'}
+            </p>
+          </div>
+
+          {/* Mode Switcher Buttons */}
+          <div className={`p-1.5 rounded-xl border flex items-center gap-1.5 shrink-0 self-start lg:self-center ${
+            isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-100 border-slate-200'
+          }`}>
+            <button
+              type="button"
+              onClick={() => setMode('simulation')}
+              className={cn(
+                'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer',
+                mode === 'simulation'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  : isDark
+                  ? 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
+              )}
+            >
+              <Bot className="w-4 h-4" />
+              <span>Simulation (AI vs AI)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMode('practice')}
+              className={cn(
+                'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer',
+                mode === 'practice'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : isDark
+                  ? 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
+              )}
+            >
+              <Gamepad2 className="w-4 h-4" />
+              <span>Practice (Human vs AI)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Seat Selection (Visible when Practice Mode is active) */}
+        {mode === 'practice' && (
+          <div className={`pt-5 mt-5 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'} animate-fade-in`}>
+            <div className="flex items-center gap-2 mb-3">
+              <UserCheck className="w-4 h-4 text-emerald-400" />
+              <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                You are playing as:
+              </span>
+              <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Select which agent seat you will pilot
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {agents.map((agent) => {
+                const isSelected = humanAgentId === agent.id;
+                return (
+                  <button
+                    key={agent.id}
+                    type="button"
+                    onClick={() => setHumanAgentId(agent.id)}
+                    className={cn(
+                      'p-4 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3',
+                      isSelected
+                        ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/60'
+                        : isDark
+                        ? 'border-slate-800 bg-slate-950/40 hover:border-slate-700 hover:bg-slate-900/60'
+                        : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100'
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <AgentAvatar role={agent.role || agent.id} size="sm" />
+                      <div>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className={`text-sm font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                            {agent.name}
+                          </span>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                            isSelected
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold'
+                              : isDark
+                              ? 'bg-slate-800 text-slate-400 border-slate-700'
+                              : 'bg-white text-slate-600 border-slate-200'
+                          }`}>
+                            {isSelected ? '👤 You (Human)' : '🤖 AI Opponent'}
+                          </span>
+                        </div>
+                        <span className={`text-xs block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {agent.role}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      <span className={`text-xs font-bold block ${isSelected ? 'text-emerald-400' : isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {isSelected ? 'Active Player' : 'AI Controlled'}
+                      </span>
+                      <span className="text-[10px] opacity-75">
+                        {isSelected ? 'Your Seat' : 'Opponent'}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* ── CENTRAL TELEMETRY: HIGH-TECH ZOPA OVERLAP GAUGE ── */}
       <div className={`rounded-2xl backdrop-blur-xl border p-5 sm:p-6 mb-8 transition-all relative overflow-hidden shadow-2xl ${
         isDark ? 'bg-slate-900/60 border-slate-800/80' : 'bg-white border-slate-200/90 shadow-slate-200/50'
@@ -470,12 +615,15 @@ export default function AgentConfigScreen({
         {agents.map((agent, aIdx) => {
           const cfg = agentConfigs[agent.id] || {};
           const currentP = cfg.personality || agent.default_personality || 'Collaborative';
+          const isHuman = mode === 'practice' && humanAgentId === agent.id;
 
           return (
             <div
               key={agent.id}
-              className={`rounded-2xl backdrop-blur-xl border p-6 flex flex-col justify-between space-y-6 transition-all duration-200 shadow-2xl ${
-                isDark
+              className={`rounded-2xl backdrop-blur-xl border p-6 flex flex-col justify-between space-y-6 transition-all duration-200 shadow-2xl relative ${
+                isHuman
+                  ? 'border-emerald-500/80 ring-2 ring-emerald-500/30 bg-emerald-950/10'
+                  : isDark
                   ? 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700/80'
                   : 'bg-white border-slate-200/90 shadow-slate-200/50 hover:border-slate-300'
               }`}
@@ -487,7 +635,7 @@ export default function AgentConfigScreen({
                 <div className="flex items-center gap-3.5">
                   <AgentAvatar role={agent.role || agent.id} size="md" />
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h2 className={`text-lg sm:text-xl font-bold tracking-tight ${
                         isDark ? 'text-slate-100' : 'text-slate-900'
                       }`}>
@@ -498,6 +646,15 @@ export default function AgentConfigScreen({
                       }`}>
                         Agent {aIdx === 0 ? 'A' : 'B'}
                       </span>
+                      {mode === 'practice' && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase border flex items-center gap-1 ${
+                          isHuman
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                            : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                        }`}>
+                          {isHuman ? '👤 You (Human)' : '🤖 AI Opponent'}
+                        </span>
+                      )}
                     </div>
                     <p className={`text-xs font-medium mt-0.5 ${
                       isDark ? 'text-slate-400' : 'text-slate-500'
@@ -768,7 +925,13 @@ export default function AgentConfigScreen({
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/30 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0"
           >
             <Play className="w-4 h-4 fill-current" />
-            <span>{isValidating ? 'Validating API...' : 'Start Simulation Arena'}</span>
+            <span>
+              {isValidating
+                ? 'Validating API...'
+                : mode === 'practice'
+                ? 'Start Practice Arena'
+                : 'Start Simulation Arena'}
+            </span>
           </button>
         </div>
       </div>

@@ -18,13 +18,16 @@ import {
   XCircle,
   Database,
   Check,
+  User,
+  Gamepad2,
 } from 'lucide-react';
 import { AgentAvatar } from './AgentAvatars';
 import NegotiationTranscript from './NegotiationTranscript';
 import NegotiationMetricsPanel from './NegotiationMetricsPanel';
 import DeadlockBanner from './DeadlockBanner';
+import HumanInputPanel from './HumanInputPanel';
 import { useTheme } from '../context/ThemeContext';
-import { getEngineStatus, runOrchestrator, stepOrchestrator } from '../services/api';
+import { getEngineStatus, runOrchestrator, stepOrchestrator, submitHumanTurn } from '../services/api';
 
 // Offline fallback only: kept outside the component so renders stay pure.
 const randomChance = () => Math.random();
@@ -51,7 +54,7 @@ const SCENARIO_META = {
   project_budget_allocation: { icon: Wallet },
 };
 
-function AgentCard({ agent }) {
+function AgentCard({ agent, isHuman = false }) {
   const { isDark } = useTheme();
   const personality = agent.personality || agent.default_personality || 'Collaborative';
   const meta = PERSONALITY_META[personality] || PERSONALITY_META.Collaborative;
@@ -59,13 +62,21 @@ function AgentCard({ agent }) {
   return (
     <div
       className={`flex flex-col rounded-2xl border overflow-hidden shadow-xl transition-all ${
-        isDark ? 'border-slate-800/80 bg-slate-900/60 backdrop-blur-xl' : 'border-slate-200/90 bg-white shadow-slate-200/50'
+        isHuman
+          ? 'border-emerald-500/80 ring-2 ring-emerald-500/30 bg-emerald-950/10'
+          : isDark
+          ? 'border-slate-800/80 bg-slate-900/60 backdrop-blur-xl'
+          : 'border-slate-200/90 bg-white shadow-slate-200/50'
       }`}
     >
       {/* card header */}
       <div
         className={`px-5 py-3.5 border-b flex items-center justify-between gap-3 ${
-          isDark ? 'border-slate-800/80 bg-slate-950/40' : 'border-slate-100 bg-slate-50'
+          isHuman
+            ? 'border-emerald-500/20 bg-emerald-500/10'
+            : isDark
+            ? 'border-slate-800/80 bg-slate-950/40'
+            : 'border-slate-100 bg-slate-50'
         }`}
       >
         <div className="flex items-center gap-3">
@@ -75,9 +86,16 @@ function AgentCard({ agent }) {
             <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{agent.role}</span>
           </div>
         </div>
-        <span className={cn('inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border shrink-0', meta.badge)}>
-          {personality}
-        </span>
+        <div className="flex items-center gap-2">
+          {isHuman && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+              👤 You (Human)
+            </span>
+          )}
+          <span className={cn('inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border shrink-0', meta.badge)}>
+            {personality}
+          </span>
+        </div>
       </div>
 
       <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
@@ -156,11 +174,23 @@ function AgentCard({ agent }) {
 export default function NegotiationArena({ config, onReset, currentUser }) {
   const { isDark } = useTheme();
   const [turns, setTurns] = useState([]);
-  const [orchestratorStatus, setOrchestratorStatus] = useState('ongoing'); // 'ongoing' | 'accepted' | 'rejected' | 'deadlock'
+  const isPracticeMode = (config?.mode || '').toLowerCase() === 'practice';
+  const humanAgentId = config?.human_agent_id || config?.human_seat || (isPracticeMode ? config?.agents?.[0]?.id : null);
+
+  const [orchestratorStatus, setOrchestratorStatus] = useState(() => {
+    const isPractice = (config?.mode || '').toLowerCase() === 'practice';
+    const humanId = config?.human_agent_id || config?.human_seat || (isPractice ? config?.agents?.[0]?.id : null);
+    const firstAgentId = config?.agents?.[0]?.id;
+    if (isPractice && humanId && humanId === firstAgentId) {
+      return 'waiting_for_human';
+    }
+    return 'ongoing';
+  });
   const [orchestratorWinner, setOrchestratorWinner] = useState(null);
   const [deadlockEvent, setDeadlockEvent] = useState(null);
   const [isRunningAll, setIsRunningAll] = useState(false);
   const [isStepping, setIsStepping] = useState(false);
+  const [isSubmittingHumanTurn, setIsSubmittingHumanTurn] = useState(false);
   // Which engine produced the turns: 'llm' | 'rule-based' | 'mixed' | 'mock' | 'offline'
   const [engineMode, setEngineMode] = useState(null);
   const [engineModel, setEngineModel] = useState(null);
@@ -211,6 +241,100 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       console.warn('Simulation save warning:', err);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Submit human participant turn in Practice Mode
+  const handleSubmitHumanTurn = async (turnPayload) => {
+    if (isSubmittingHumanTurn) return;
+    setIsSubmittingHumanTurn(true);
+
+    try {
+      const response = await submitHumanTurn(config, turnPayload, turns, true);
+      if (response && response.history) {
+        const mapped = response.history.map(withAgentInfo);
+        setTurns(mapped);
+        if (response.engine) setEngineMode(response.engine);
+        const st = response.status || 'waiting_for_human';
+        const win = response.winner || null;
+        const dl = response.deadlock_event || null;
+        setOrchestratorStatus(st);
+        setOrchestratorWinner(win);
+        setDeadlockEvent(dl);
+
+        if (st === 'accepted' || st === 'rejected' || st === 'deadlock') {
+          saveCurrentSimulation(st, win, mapped);
+        }
+      }
+    } catch (err) {
+      console.warn('Backend human turn failed, using local simulation fallback:', err);
+      setEngineMode('offline');
+
+      // Local fallback: add human turn
+      const currentHumanTurn = {
+        ...turnPayload,
+        round: turns.length + 1,
+        turn_number: turns.length + 1,
+        agent_name: agents.find((a) => a.id === turnPayload.agent_id)?.name || turnPayload.agent_id,
+        role: agents.find((a) => a.id === turnPayload.agent_id)?.role || '',
+      };
+      const afterHumanTurns = [...turns, currentHumanTurn];
+
+      if (turnPayload.action === 'accept') {
+        setTurns(afterHumanTurns);
+        setOrchestratorStatus('accepted');
+        setOrchestratorWinner(turnPayload.agent_id);
+        setDeadlockEvent(null);
+        saveCurrentSimulation('accepted', turnPayload.agent_id, afterHumanTurns);
+      } else if (turnPayload.action === 'reject') {
+        setTurns(afterHumanTurns);
+        setOrchestratorStatus('rejected');
+        setOrchestratorWinner(null);
+        setDeadlockEvent(null);
+        saveCurrentSimulation('rejected', null, afterHumanTurns);
+      } else if (afterHumanTurns.length >= maxRounds * (agents.length || 2)) {
+        setTurns(afterHumanTurns);
+        setOrchestratorStatus('deadlock');
+        setOrchestratorWinner(null);
+        setDeadlockEvent({
+          type: 'max_rounds',
+          round_triggered: maxRounds,
+          resolution_attempt: null,
+          resolution_outcome: null,
+        });
+        saveCurrentSimulation('deadlock', null, afterHumanTurns);
+      } else {
+        // AI opponent makes counter-turn
+        const aiTurn = generateLocalTurn(afterHumanTurns.length);
+        const fullTurns = [...afterHumanTurns, aiTurn];
+        setTurns(fullTurns);
+
+        if (aiTurn.action === 'accept') {
+          setOrchestratorStatus('accepted');
+          setOrchestratorWinner(aiTurn.agent_id);
+          setDeadlockEvent(null);
+          saveCurrentSimulation('accepted', aiTurn.agent_id, fullTurns);
+        } else if (aiTurn.action === 'reject') {
+          setOrchestratorStatus('rejected');
+          setOrchestratorWinner(null);
+          setDeadlockEvent(null);
+          saveCurrentSimulation('rejected', null, fullTurns);
+        } else if (fullTurns.length >= maxRounds * (agents.length || 2)) {
+          setOrchestratorStatus('deadlock');
+          setOrchestratorWinner(null);
+          setDeadlockEvent({
+            type: 'max_rounds',
+            round_triggered: maxRounds,
+            resolution_attempt: null,
+            resolution_outcome: null,
+          });
+          saveCurrentSimulation('deadlock', null, fullTurns);
+        } else {
+          setOrchestratorStatus('waiting_for_human');
+        }
+      }
+    } finally {
+      setIsSubmittingHumanTurn(false);
     }
   };
 
@@ -287,7 +411,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
 
   // Step 1 Turn at a time through the backend Orchestrator + LLM Reasoning Engine
   const handleSimulateNextTurn = async () => {
-    if (orchestratorStatus !== 'ongoing' || isStepping) return;
+    if ((orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || isStepping) return;
     setIsStepping(true);
     try {
       const response = await stepOrchestrator(config, turns);
@@ -329,6 +453,11 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         resolution_outcome: null,
       });
       saveCurrentSimulation('deadlock', null, updated);
+    } else if (isPracticeMode) {
+      const nextAgentIndex = updated.length % (agents.length || 2);
+      if (agents[nextAgentIndex]?.id === humanAgentId) {
+        setOrchestratorStatus('waiting_for_human');
+      }
     }
   };
 
@@ -347,16 +476,25 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         setOrchestratorStatus(st);
         setOrchestratorWinner(win);
         setDeadlockEvent(dl);
-        saveCurrentSimulation(st, win, mapped);
+        if (st === 'accepted' || st === 'rejected' || st === 'deadlock') {
+          saveCurrentSimulation(st, win, mapped);
+        }
       }
     } catch {
-      // Graceful client fallback: simulate full orchestrator loop
+      // Graceful client fallback: simulate orchestrator loop
       setEngineMode('offline');
       let simulatedTurns = [];
       let status = 'ongoing';
       let winner = null;
 
-      for (let i = 0; i < maxRounds; i += 1) {
+      for (let i = turns.length; i < maxRounds * (agents.length || 2); i += 1) {
+        if (isPracticeMode) {
+          const activeAgentIndex = i % (agents.length || 2);
+          if (agents[activeAgentIndex]?.id === humanAgentId && i > turns.length) {
+            status = 'waiting_for_human';
+            break;
+          }
+        }
         const turn = generateLocalTurn(i);
         simulatedTurns.push(turn);
         if (turn.action === 'accept') {
@@ -380,11 +518,14 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         };
       }
 
-      setTurns(simulatedTurns);
+      const fullHistory = [...turns, ...simulatedTurns];
+      setTurns(fullHistory);
       setOrchestratorStatus(status);
       setOrchestratorWinner(winner);
       setDeadlockEvent(dl);
-      saveCurrentSimulation(status, winner, simulatedTurns);
+      if (status === 'accepted' || status === 'rejected' || status === 'deadlock') {
+        saveCurrentSimulation(status, winner, fullHistory);
+      }
     } finally {
       setIsRunningAll(false);
     }
@@ -392,7 +533,12 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
 
   const handleResetArena = () => {
     setTurns([]);
-    setOrchestratorStatus('ongoing');
+    const firstAgentId = agents[0]?.id;
+    if (isPracticeMode && humanAgentId && humanAgentId === firstAgentId) {
+      setOrchestratorStatus('waiting_for_human');
+    } else {
+      setOrchestratorStatus('ongoing');
+    }
     setOrchestratorWinner(null);
     setDeadlockEvent(null);
     setHasSaved(false);
@@ -415,13 +561,19 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold uppercase tracking-wider bg-indigo-500/10 text-indigo-500 border-indigo-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                Step 3 of 3 · Simulation Arena
+                {isPracticeMode ? <Gamepad2 className="w-3.5 h-3.5 text-emerald-400" /> : <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+                Step 3 of 3 · {isPracticeMode ? 'Practice Arena' : 'Simulation Arena'}
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Orchestrator Active
+                {isPracticeMode ? 'Practice Mode Active' : 'Orchestrator Active'}
               </span>
+              {isPracticeMode && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold bg-indigo-500/10 text-indigo-400 border-indigo-500/30">
+                  <User className="w-3.5 h-3.5" />
+                  Playing as: {agents.find((a) => a.id === humanAgentId)?.name || humanAgentId}
+                </span>
+              )}
               {engineMode && (
                 <span
                   title={engineMode === 'offline' ? 'Backend not reachable: turns are simulated in the browser' : 'Reasoning engine used for the turns'}
@@ -542,7 +694,11 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       {/* ── Agents Face-off Grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
         {agents.map((agent) => (
-          <AgentCard key={agent.id} agent={agent} />
+          <AgentCard
+            key={agent.id}
+            agent={agent}
+            isHuman={isPracticeMode && agent.id === humanAgentId}
+          />
         ))}
       </div>
 
@@ -560,6 +716,20 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         currentRound={Math.ceil(turns.length / (agents.length || 2))}
       />
 
+      {/* ── Practice Mode: Interactive Human Input Console ── */}
+      {isPracticeMode && orchestratorStatus === 'waiting_for_human' && (
+        <div className="mb-8">
+          <HumanInputPanel
+            config={config}
+            humanAgentId={humanAgentId}
+            currentRound={Math.floor(turns.length / (agents.length || 2)) + 1}
+            latestTurn={turns.length > 0 ? turns[turns.length - 1] : null}
+            onSubmitTurn={handleSubmitHumanTurn}
+            isSubmitting={isSubmittingHumanTurn}
+          />
+        </div>
+      )}
+
       {/* ── Live Orchestrator Simulation Console ── */}
       <div className={`rounded-2xl border p-6 sm:p-7 mb-8 shadow-xl transition-all backdrop-blur-xl ${
         isDark ? 'border-slate-800/80 bg-slate-900/60' : 'border-slate-200/90 bg-white shadow-slate-200/50'
@@ -568,10 +738,12 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
           <div>
             <div className={`flex items-center gap-2 text-base font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
               <Zap className="w-4 h-4 text-indigo-500" />
-              <span>Orchestrator Execution Console</span>
+              <span>{isPracticeMode ? 'Practice Session Controller' : 'Orchestrator Execution Console'}</span>
             </div>
             <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              Executes turn sequence index 0 → 1 → 0 → 1, checks end conditions, and captures full structured Turns.
+              {isPracticeMode
+                ? `You are piloting seat '${agents.find((a) => a.id === humanAgentId)?.name || humanAgentId}'. The referee enforces turn order and boundary invariants.`
+                : 'Executes turn sequence index 0 → 1 → 0 → 1, checks end conditions, and captures full structured Turns.'}
             </p>
           </div>
 
@@ -591,28 +763,53 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
 
             <button
               type="button"
-              disabled={orchestratorStatus !== 'ongoing' || isStepping || isRunningAll}
+              disabled={(orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || isStepping || isRunningAll}
               onClick={handleSimulateNextTurn}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-md shadow-indigo-600/20 transition-all cursor-pointer shrink-0"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
-              <span>{isStepping ? 'Thinking...' : 'Simulate Next Turn'}</span>
+              <span>
+                {isStepping
+                  ? 'Thinking...'
+                  : isPracticeMode
+                  ? 'Advance / AI Move'
+                  : 'Simulate Next Turn'}
+              </span>
             </button>
 
             <button
               type="button"
-              disabled={orchestratorStatus !== 'ongoing' || isRunningAll || isStepping}
+              disabled={(orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || isRunningAll || isStepping}
               onClick={handleRunFullOrchestrator}
               className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-md shadow-emerald-600/20 transition-all cursor-pointer shrink-0"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>{isRunningAll ? 'Running Orchestrator...' : 'Run Full Loop'}</span>
+              <span>
+                {isRunningAll
+                  ? 'Running...'
+                  : isPracticeMode
+                  ? 'Run Until Your Turn'
+                  : 'Run Full Loop'}
+              </span>
             </button>
           </div>
         </div>
 
+        {/* ── Waiting for Human Notice inside Console ── */}
+        {isPracticeMode && orchestratorStatus === 'waiting_for_human' && (
+          <div className="p-3.5 mb-6 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold flex items-center justify-between gap-3 animate-pulse">
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-indigo-400 shrink-0" />
+              <span>Your move is required! Formulate your offer in the <strong>Interactive Human Input Console</strong> above.</span>
+            </div>
+            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              Active Turn
+            </span>
+          </div>
+        )}
+
         {/* ── Terminal Outcome Banner if Finished ── */}
-        {orchestratorStatus !== 'ongoing' && (
+        {(orchestratorStatus === 'accepted' || orchestratorStatus === 'deadlock' || orchestratorStatus === 'rejected') && (
           <div
             className={`p-4 mb-6 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in ${
               orchestratorStatus === 'accepted'

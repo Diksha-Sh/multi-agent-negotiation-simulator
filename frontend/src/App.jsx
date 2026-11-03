@@ -214,7 +214,9 @@ function AppNav({
                   >
                     {status === 'completed' ? <Check className="w-3 h-3 stroke-[2.5]" /> : step.number}
                   </span>
-                  <span className="hidden sm:inline">{step.label}</span>
+                  <span className="hidden sm:inline">
+                    {step.number === 3 && negotiationConfig?.mode === 'practice' ? 'Practice Arena' : step.label}
+                  </span>
                 </button>
 
                 {index < STEPS.length - 1 && (
@@ -411,12 +413,24 @@ function MainApp() {
         console.debug('Failed to cache scenario:', err);
       }
     }
+    setNegotiationConfig(null);
+    try {
+      localStorage.removeItem('negotiation_config');
+    } catch (err) {
+      console.debug('Failed to clear negotiation config:', err);
+    }
     handleSetStep(1); // Proceed to Step 1: Select Arena
   };
 
   // Scenario selection
   const handleSelectScenario = (scenario) => {
     setSelectedScenario(scenario);
+    setNegotiationConfig(null);
+    try {
+      localStorage.removeItem('negotiation_config');
+    } catch (err) {
+      console.debug('Failed to clear negotiation config:', err);
+    }
     try {
       localStorage.setItem('negotiation_scenario', JSON.stringify(scenario));
     } catch (err) {
@@ -519,7 +533,7 @@ function MainApp() {
 
         {activeStep === 2 && (
           <AgentConfigScreen
-            selectedScenario={selectedScenario || scenarios[0]}
+            selectedScenario={negotiationConfig || selectedScenario || scenarios[0]}
             onBack={() => handleSetStep(1)}
             onStartNegotiation={handleStartNegotiation}
           />
