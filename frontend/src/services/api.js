@@ -75,6 +75,22 @@ export function stepOrchestrator(config, history = []) {
   });
 }
 
+/** POST /api/orchestrator/human-turn -> submit human participant move in Practice Mode */
+export function submitHumanTurn(config, turn, history = [], autoRespond = true) {
+  return request('/api/orchestrator/human-turn', {
+    method: 'POST',
+    body: { config, turn, history, auto_respond: autoRespond },
+  });
+}
+
+/** POST /api/orchestrator/check-deadlock -> evaluate if negotiation has stalled */
+export function checkDeadlockStatus(config, history = []) {
+  return request('/api/orchestrator/check-deadlock', {
+    method: 'POST',
+    body: { config, history },
+  });
+}
+
 /** GET /api/orchestrator/engine -> { mode: "llm" | "rule-based", model, base_url, counteroffer_module } */
 export function getEngineStatus() {
   return request('/api/orchestrator/engine');
