@@ -11,7 +11,6 @@ import {
   ShoppingBag,
   Briefcase,
   Wallet,
-  Users,
   Radio,
   Sparkles,
   Trophy,
@@ -21,6 +20,9 @@ import {
   Check,
 } from 'lucide-react';
 import { AgentAvatar } from './AgentAvatars';
+import NegotiationTranscript from './NegotiationTranscript';
+import NegotiationMetricsPanel from './NegotiationMetricsPanel';
+import DeadlockBanner from './DeadlockBanner';
 import { useTheme } from '../context/ThemeContext';
 import { runOrchestrator } from '../services/api';
 
@@ -153,6 +155,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
   const [turns, setTurns] = useState([]);
   const [orchestratorStatus, setOrchestratorStatus] = useState('ongoing'); // 'ongoing' | 'accepted' | 'rejected' | 'deadlock'
   const [orchestratorWinner, setOrchestratorWinner] = useState(null);
+  const [deadlockEvent, setDeadlockEvent] = useState(null);
   const [isRunningAll, setIsRunningAll] = useState(false);
   const [hasSaved, setHasSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -271,14 +274,22 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     if (nextTurn.action === 'accept') {
       setOrchestratorStatus('accepted');
       setOrchestratorWinner(nextTurn.agent_id);
+      setDeadlockEvent(null);
       saveCurrentSimulation('accepted', nextTurn.agent_id, updated);
     } else if (nextTurn.action === 'reject') {
       setOrchestratorStatus('rejected');
       setOrchestratorWinner(null);
+      setDeadlockEvent(null);
       saveCurrentSimulation('rejected', null, updated);
     } else if (updated.length >= maxRounds * agents.length) {
       setOrchestratorStatus('deadlock');
       setOrchestratorWinner(null);
+      setDeadlockEvent({
+        type: 'max_rounds',
+        round_triggered: maxRounds,
+        resolution_attempt: null,
+        resolution_outcome: null,
+      });
       saveCurrentSimulation('deadlock', null, updated);
     }
   };
@@ -301,8 +312,10 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         setTurns(mapped);
         const st = response.status || 'deadlock';
         const win = response.winner || null;
+        const dl = response.deadlock_event || response.deadlock || (st === 'deadlock' ? { type: 'max_rounds', round_triggered: Math.ceil(mapped.length / (agents.length || 2)), resolution_attempt: null, resolution_outcome: null } : null);
         setOrchestratorStatus(st);
         setOrchestratorWinner(win);
+        setDeadlockEvent(dl);
         saveCurrentSimulation(st, win, mapped);
       }
     } catch {
@@ -324,13 +337,21 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         }
       }
 
+      let dl = null;
       if (status === 'ongoing') {
         status = 'deadlock';
+        dl = {
+          type: 'max_rounds',
+          round_triggered: maxRounds,
+          resolution_attempt: null,
+          resolution_outcome: null,
+        };
       }
 
       setTurns(simulatedTurns);
       setOrchestratorStatus(status);
       setOrchestratorWinner(winner);
+      setDeadlockEvent(dl);
       saveCurrentSimulation(status, winner, simulatedTurns);
     } finally {
       setIsRunningAll(false);
@@ -341,6 +362,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     setTurns([]);
     setOrchestratorStatus('ongoing');
     setOrchestratorWinner(null);
+    setDeadlockEvent(null);
     setHasSaved(false);
   };
 
@@ -467,6 +489,20 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         ))}
       </div>
 
+      {/* ── Step 2: Live Metrics & ZOPA Telemetry Panel ── */}
+      <NegotiationMetricsPanel
+        turns={turns}
+        agents={agents}
+        maxRounds={maxRounds}
+      />
+
+      {/* ── Step 3: Dedicated Deadlock Event Banner ── */}
+      <DeadlockBanner
+        deadlockEvent={deadlockEvent}
+        status={orchestratorStatus}
+        currentRound={Math.ceil(turns.length / (agents.length || 2))}
+      />
+
       {/* ── Live Orchestrator Simulation Console ── */}
       <div className={`rounded-2xl border p-6 sm:p-7 mb-8 shadow-xl transition-all backdrop-blur-xl ${
         isDark ? 'border-slate-800/80 bg-slate-900/60' : 'border-slate-200/90 bg-white shadow-slate-200/50'
@@ -561,90 +597,10 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
           </div>
         )}
 
-        {/* ── Turn by Turn List ── */}
-        {turns.length === 0 ? (
-          <div
-            className={`text-center py-10 rounded-xl border ${
-              isDark ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50'
-            }`}
-          >
-            <Users className="w-8 h-8 text-indigo-500/50 mx-auto mb-2" />
-            <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              Click <strong className="text-indigo-500 font-semibold">Simulate Next Turn</strong> or{' '}
-              <strong className="text-emerald-500 font-semibold">Run Full Loop</strong> to execute the Orchestrator.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3.5 max-h-[550px] overflow-y-auto pr-1">
-            {turns.map((turn, tIdx) => {
-              const action = String(turn.action || 'counter').toLowerCase();
-              return (
-                <div
-                  key={tIdx}
-                  className={`rounded-xl border p-4 transition-all ${
-                    isDark ? 'border-slate-800/90 bg-slate-950/60' : 'border-slate-200 bg-slate-50/80 shadow-sm'
-                  }`}
-                >
-                  <div className="flex items-center justify-between border-b border-slate-800/40 pb-2.5 mb-2.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono font-bold text-indigo-400">
-                        Turn #{turn.turn_number || tIdx + 1}
-                      </span>
-                      <span className={`text-[11px] font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                        {turn.agent_name || turn.agent_id}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {/* Action Pill */}
-                      <span
-                        className={cn(
-                          'text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border',
-                          action === 'accept'
-                            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                            : action === 'reject'
-                            ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                            : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                        )}
-                      >
-                        {action}
-                      </span>
-
-                      {/* Stance Pill */}
-                      {turn.stance && (
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800/60 text-slate-400 border border-slate-700/50">
-                          {turn.stance}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Offer Terms */}
-                  {turn.offer && Object.keys(turn.offer).length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <span className={`text-[10px] uppercase font-bold tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                        Proposed Offer:
-                      </span>
-                      {Object.entries(turn.offer).map(([key, val]) => (
-                        <span
-                          key={key}
-                          className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
-                        >
-                          {key}: {val}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Reasoning */}
-                  <p className={`text-xs leading-relaxed italic ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                    "{turn.reasoning}"
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {/* ── Negotiation Dialogue Transcript ── */}
+        <div className="pt-2">
+          <NegotiationTranscript turns={turns} agents={agents} />
+        </div>
       </div>
 
       {/* ── Downstream Orchestrator Integration Cards ── */}
