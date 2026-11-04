@@ -159,13 +159,14 @@ def test_config_to_orchestrator_runs_rule_based_negotiation(scenario_id, monkeyp
     assert response.status_code == 200
     result = response.json()
     assert result["status"] == "accepted"
-    assert result["round"] < config["max_rounds"]
+    assert result["round"] <= config["max_rounds"]
     assert [turn["agent_id"] for turn in result["history"]] == [
         config["agents"][index % len(config["agents"])]["id"]
-        for index in range(result["round"])
+        for index in range(len(result["history"]))
     ]
     assert [turn["round"] for turn in result["history"]] == list(
-        range(1, result["round"] + 1)
+        index // len(config["agents"]) + 1
+        for index in range(len(result["history"]))
     )
     assert result["state"]["history"] == result["history"]
     limits_by_agent = {
@@ -372,7 +373,7 @@ def test_orchestrator_step_plays_one_turn_at_a_time(monkeypatch):
         assert res.status_code == 200
         body = res.json()
         assert body["turn"]["agent_id"] == expected
-        assert body["turn"]["round"] == len(history) + 1
+        assert body["turn"]["round"] == len(history) // len(config["agents"]) + 1
         assert body["engine"] == "rule-based"
         history.append({**body["turn"], "agent_name": "extra fields are ignored"})
 
@@ -410,3 +411,350 @@ def test_orchestrator_step_rejects_invalid_config(monkeypatch):
     _no_llm(monkeypatch)
     res = client.post("/api/orchestrator/step", json={"config": {"scenario_id": ""}, "history": []})
     assert res.status_code == 400
+
+
+def _practice_config(human_agent_id):
+    config = _vendor_config()
+    config["mode"] = "practice"
+    config["human_agent_id"] = human_agent_id
+    config["human_seat"] = human_agent_id
+    return config
+
+
+def _boundary_offer(agent):
+    return {limit["item"]: limit["value"] for limit in agent["limits"]}
+
+
+def test_human_turn_valid_counter_auto_responds_and_pauses_again(monkeypatch):
+    _no_llm(monkeypatch)
+    config = _practice_config("buyer")
+    human = next(agent for agent in config["agents"] if agent["id"] == "buyer")
+    response = client.post(
+        "/api/orchestrator/human-turn?engine=mock",
+        json={
+            "config": config,
+            "history": [],
+            "turn": {
+                "agent_id": "buyer",
+                "action": "counter",
+                "offer": _boundary_offer(human),
+                "reasoning": "A reasonable opening.",
+                "stance": "firm",
+            },
+            "auto_respond": True,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "waiting_for_human"
+    assert body["human_agent_id"] == "buyer"
+    assert body["mode"] == "practice"
+    assert body["round"] == 1
+    assert [turn["agent_id"] for turn in body["history"]] == ["buyer", "vendor"]
+    assert [turn["round"] for turn in body["history"]] == [1, 1]
+    assert body["latest_turn"] == body["history"][-1]
+    assert [turn["actor"] for turn in body["history"]] == ["human", "ai"]
+
+
+def test_human_seat_alias_and_human_first_move(monkeypatch):
+    _no_llm(monkeypatch)
+    config = _vendor_config()
+    config["mode"] = "practice"
+    config.pop("human_agent_id", None)
+    config["human_seat"] = "vendor"
+    ai_step = client.post(
+        "/api/orchestrator/step?engine=mock",
+        json={"config": config, "history": []},
+    )
+    assert ai_step.status_code == 200
+    assert ai_step.json()["human_agent_id"] == "vendor"
+    assert ai_step.json()["status"] == "waiting_for_human"
+    assert ai_step.json()["turn"]["agent_id"] == "buyer"
+
+    human = next(agent for agent in config["agents"] if agent["id"] == "vendor")
+    response = client.post(
+        "/api/orchestrator/human-turn?engine=mock",
+        json={
+            "config": config,
+            "history": [ai_step.json()["turn"]],
+            "turn": {
+                "agent_id": "vendor",
+                "action": "counter",
+                "offer": _boundary_offer(human),
+            },
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "waiting_for_human"
+    assert response.json()["history"][-1]["agent_id"] == "buyer"
+
+
+@pytest.mark.parametrize("limit_type", ["min", "max"])
+def test_human_counteroffer_enforces_reservation_limits(monkeypatch, limit_type):
+    _no_llm(monkeypatch)
+    config = _vendor_config()
+    human = next(
+        agent for agent in config["agents"]
+        if any(limit["type"] == limit_type for limit in agent["limits"])
+    )
+    config = _practice_config(human["id"])
+    human = next(agent for agent in config["agents"] if agent["id"] == human["id"])
+    offer = _boundary_offer(human)
+    boundary = next(limit for limit in human["limits"] if limit["type"] == limit_type)
+    offer[boundary["item"]] += -1 if limit_type == "min" else 1
+    history = []
+    if human["id"] != config["agents"][0]["id"]:
+        first_turn = client.post(
+            "/api/orchestrator/step?engine=mock",
+            json={"config": config, "history": []},
+        ).json()["turn"]
+        history.append(first_turn)
+
+    response = client.post(
+        "/api/orchestrator/human-turn",
+        json={
+            "config": config,
+            "history": history,
+            "turn": {"agent_id": human["id"], "action": "counter", "offer": offer},
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["message"] == "Invalid counteroffer"
+    assert boundary["item"] in " ".join(detail["errors"])
+
+
+@pytest.mark.parametrize("offer", [{}, {"price": None}, {"price": "not-a-number"}])
+def test_human_counteroffer_rejects_missing_or_non_numeric_values(monkeypatch, offer):
+    _no_llm(monkeypatch)
+    config = _practice_config("buyer")
+    response = client.post(
+        "/api/orchestrator/human-turn",
+        json={
+            "config": config,
+            "history": [],
+            "turn": {"agent_id": "buyer", "action": "counter", "offer": offer},
+        },
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"]["message"] == "Invalid counteroffer"
+
+
+def test_accept_and_reject_do_not_apply_counteroffer_boundaries(monkeypatch):
+    _no_llm(monkeypatch)
+    config = _practice_config("buyer")
+    reject = client.post(
+        "/api/orchestrator/human-turn?engine=mock",
+        json={
+            "config": config,
+            "history": [],
+            "turn": {"agent_id": "buyer", "action": "reject", "offer": {"price": -1}},
+        },
+    )
+    assert reject.status_code == 200
+    assert reject.json()["status"] == "rejected"
+
+    config["human_agent_id"] = "vendor"
+    config["human_seat"] = "vendor"
+    first_ai_turn = client.post(
+        "/api/orchestrator/step?engine=mock",
+        json={"config": config, "history": []},
+    ).json()["turn"]
+    accept = client.post(
+        "/api/orchestrator/human-turn?engine=mock",
+        json={
+            "config": config,
+            "history": [first_ai_turn],
+            "turn": {"agent_id": "vendor", "action": "accept", "offer": {"price": -1}},
+        },
+    )
+    assert accept.status_code == 200
+    assert accept.json()["status"] == "accepted"
+    assert accept.json()["history"][-1]["offer"] == first_ai_turn["offer"]
+
+
+def test_human_turn_rejects_submission_when_ai_is_expected(monkeypatch):
+    _no_llm(monkeypatch)
+    config = _practice_config("vendor")
+    response = client.post(
+        "/api/orchestrator/human-turn",
+        json={
+            "config": config,
+            "history": [],
+            "turn": {"agent_id": "vendor", "action": "reject", "offer": {}},
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_config_rejects_conflicting_human_seat_aliases():
+    config = _practice_config("buyer")
+    config["human_seat"] = "vendor"
+    response = client.post("/api/orchestrator/run", json=config)
+    assert response.status_code == 400
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("human_agent_id", 2), ("human_seat", 2), ("human_agent_id", "missing-agent")],
+)
+def test_invalid_human_agent_selection_is_rejected(field, value):
+    config = _practice_config("buyer")
+    config[field] = value
+    response = client.post("/api/orchestrator/run", json=config)
+    assert response.status_code == 400
+
+
+def _counter_history_turn(agent, *, actor=None, action="counter", offer=None):
+    turn = {
+        "agent_id": agent["id"],
+        "round": 1,
+        "action": action,
+        "offer": _boundary_offer(agent) if offer is None else offer,
+        "reasoning": "Existing history entry.",
+        "stance": "flexible",
+    }
+    if actor is not None:
+        turn["actor"] = actor
+    return turn
+
+
+def test_history_replay_accepts_valid_simulation_and_practice_histories(monkeypatch):
+    _no_llm(monkeypatch)
+    config = _vendor_config()
+    agents = config["agents"]
+    simulation_history = [
+        _counter_history_turn(agents[0]),
+        _counter_history_turn(agents[1]),
+    ]
+    simulation = client.post(
+        "/api/orchestrator/step?engine=mock",
+        json={"config": config, "history": simulation_history},
+    )
+    assert simulation.status_code == 200
+    assert simulation.json()["turn"]["agent_id"] == agents[0]["id"]
+
+    practice = _practice_config(agents[0]["id"])
+    practice_history = [
+        _counter_history_turn(agents[0], actor="human"),
+        _counter_history_turn(agents[1], actor="ai"),
+    ]
+    replay = client.post(
+        "/api/orchestrator/step?engine=mock",
+        json={"config": practice, "history": practice_history},
+    )
+    assert replay.status_code == 200
+    assert replay.json()["status"] == "waiting_for_human"
+
+
+def test_history_replay_rejects_incorrect_order_and_incomplete_turn(monkeypatch):
+    _no_llm(monkeypatch)
+    config = _vendor_config()
+    agents = config["agents"]
+    wrong_order = client.post(
+        "/api/orchestrator/step",
+        json={"config": config, "history": [_counter_history_turn(agents[1])]},
+    )
+    assert wrong_order.status_code == 422
+
+    incomplete = _counter_history_turn(agents[0])
+    del incomplete["offer"]
+    incomplete_result = client.post(
+        "/api/orchestrator/step",
+        json={"config": config, "history": [incomplete]},
+    )
+    assert incomplete_result.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("agent_index", "actor"),
+    [(0, "ai"), (1, "human")],
+)
+def test_practice_history_rejects_actor_impersonation(monkeypatch, agent_index, actor):
+    _no_llm(monkeypatch)
+    config = _practice_config("buyer")
+    agents = config["agents"]
+    history = [
+        _counter_history_turn(agents[0], actor="human"),
+        _counter_history_turn(agents[1], actor="ai"),
+    ]
+    history[agent_index]["actor"] = actor
+    response = client.post(
+        "/api/orchestrator/step",
+        json={"config": config, "history": history},
+    )
+    assert response.status_code == 422
+
+
+def test_practice_history_rejects_partial_actor_metadata(monkeypatch):
+    _no_llm(monkeypatch)
+    config = _practice_config("buyer")
+    agents = config["agents"]
+    history = [
+        _counter_history_turn(agents[0], actor="human"),
+        _counter_history_turn(agents[1]),
+    ]
+    response = client.post(
+        "/api/orchestrator/step",
+        json={"config": config, "history": history},
+    )
+    assert response.status_code == 422
+
+
+def test_practice_human_turn_rejects_human_claim_at_an_ai_seat(monkeypatch):
+    _no_llm(monkeypatch)
+    config = _practice_config("buyer")
+    ai = config["agents"][1]
+    response = client.post(
+        "/api/orchestrator/human-turn",
+        json={
+            "config": config,
+            "history": [],
+            "turn": {
+                "agent_id": ai["id"],
+                "actor": "human",
+                "action": "counter",
+                "offer": _boundary_offer(ai),
+            },
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_history_replay_rejects_invalid_action_and_counteroffer(monkeypatch):
+    _no_llm(monkeypatch)
+    config = _vendor_config()
+    buyer = config["agents"][0]
+
+    invalid_action = _counter_history_turn(buyer, action="bargain")
+    action_result = client.post(
+        "/api/orchestrator/step",
+        json={"config": config, "history": [invalid_action]},
+    )
+    assert action_result.status_code == 422
+
+    invalid_offer = _boundary_offer(buyer)
+    invalid_offer["price"] += 1
+    offer_result = client.post(
+        "/api/orchestrator/step",
+        json={"config": config, "history": [_counter_history_turn(buyer, offer=invalid_offer)]},
+    )
+    assert offer_result.status_code == 422
+
+
+def test_human_endpoint_rejects_history_ai_impersonating_human(monkeypatch):
+    _no_llm(monkeypatch)
+    config = _practice_config("buyer")
+    buyer = config["agents"][0]
+    history = [_counter_history_turn(buyer, actor="ai")]
+    response = client.post(
+        "/api/orchestrator/human-turn",
+        json={
+            "config": config,
+            "history": history,
+            "turn": {"agent_id": "buyer", "action": "reject", "offer": {}},
+        },
+    )
+    assert response.status_code == 422

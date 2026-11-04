@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional, TypedDict
 
+from backend.validation import resolve_human_agent_id
 
 # ============================================================================
 # 1. Turn, HumanTurn & DeadlockEvent Types
@@ -176,7 +177,11 @@ class NegotiationOrchestrator:
         # Mode configuration: "simulation" (AI vs AI) or "practice" (Human vs AI)
         raw_mode = str(config.get("mode") or "simulation").strip().lower()
         self.mode: str = "practice" if raw_mode == "practice" else "simulation"
-        self.human_agent_id: Optional[str] = config.get("human_agent_id")
+        self.human_agent_id = resolve_human_agent_id(config)
+        if self.human_agent_id is not None and self.human_agent_id not in {
+            str(agent.get("id")) for agent in self.agents
+        }:
+            raise ValueError(f"Selected human agent '{self.human_agent_id}' is not a participating agent.")
         if self.mode == "practice" and not self.human_agent_id and self.agents:
             self.human_agent_id = str(self.agents[0].get("id"))
 
@@ -328,11 +333,12 @@ class NegotiationOrchestrator:
         if state.status not in ("ongoing", "waiting_for_human"):
             return state
 
-        # 1. Append the turn to cumulative history (every turn is preserved)
+        # A turn's round is determined by its position in the complete agent cycle.
+        turn["round"] = len(state.history) // len(state.agents) + 1
         state.history.append(turn)
 
-        # 2. Advance the round counter
-        state.round += 1
+        # Count only complete cycles; a partial final round does not exhaust max_rounds.
+        state.round = len(state.history) // len(state.agents)
 
         # 3. Check for end conditions (accept, reject, or max_rounds deadlock)
         return self._check_end(state, turn)

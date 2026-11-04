@@ -117,6 +117,8 @@ def test_alternating_turn_order(sample_config):
     }
     state = orch.step(state, turn2)
     assert orch._get_current_agent(state)["id"] == "buyer"
+    assert state.history[0]["round"] == state.history[1]["round"] == 1
+    assert state.round == 1
 
 
 def test_history_grows_every_step(sample_config):
@@ -124,10 +126,10 @@ def test_history_grows_every_step(sample_config):
     orch = NegotiationOrchestrator(sample_config)
     state = orch.start()
 
-    for r in range(1, 4):
+    for r in range(1, 7):
         turn: Turn = {
             "agent_id": "buyer" if r % 2 != 0 else "seller",
-            "round": r,
+            "round": (r - 1) // 2 + 1,
             "action": "counter",
             "offer": {"price": 85},
             "reasoning": f"Round {r} step",
@@ -135,7 +137,7 @@ def test_history_grows_every_step(sample_config):
         }
         state = orch.step(state, turn)
         assert len(state.history) == r
-        assert state.history[-1] == turn
+        assert state.history[-1]["round"] == (r - 1) // len(state.agents) + 1
 
 
 # ============================================================================
@@ -186,10 +188,10 @@ def test_deadlock_fires_at_max_rounds(sample_config):
     orch = NegotiationOrchestrator(sample_config)
     state = orch.start()
 
-    for r in range(1, 4):
+    for r in range(1, 7):
         turn: Turn = {
             "agent_id": "buyer" if r % 2 != 0 else "seller",
-            "round": r,
+            "round": (r - 1) // 2 + 1,
             "action": "counter",
             "offer": {"price": 80 + r},
             "reasoning": "Continuing negotiation",
@@ -200,6 +202,8 @@ def test_deadlock_fires_at_max_rounds(sample_config):
     assert state.round == 3
     assert state.status == "deadlock"
     assert state.winner is None
+    assert len(state.history) == 6
+    assert [turn["round"] for turn in state.history] == [1, 1, 2, 2, 3, 3]
 
 
 def test_step_ignores_further_turns_if_already_terminated(sample_config):
@@ -227,7 +231,7 @@ def test_step_ignores_further_turns_if_already_terminated(sample_config):
         "reasoning": "Should be ignored",
         "stance": "firm",
     })
-    assert state.round == 1
+    assert state.round == 0
     assert len(state.history) == 1
     assert state.status == "accepted"
 
@@ -245,7 +249,7 @@ def test_run_loop_with_mock_agent(sample_config):
 
     assert final_state.status == "deadlock"  # mock_agent_fn only counters
     assert final_state.round == 4
-    assert len(final_state.history) == 4
+    assert len(final_state.history) == 8
     for t in final_state.history:
         assert t["action"] == "counter"
         assert "price" in t["offer"]
@@ -256,7 +260,7 @@ def test_run_loop_early_acceptance(sample_config):
     orch = NegotiationOrchestrator(sample_config)
 
     def accepting_agent(state: NegotiationState, agent: dict) -> Turn:
-        if state.round == 1:
+        if len(state.history) == 1:
             return {
                 "agent_id": agent["id"],
                 "round": state.round + 1,
@@ -270,7 +274,7 @@ def test_run_loop_early_acceptance(sample_config):
     final_state = orch.run_loop(accepting_agent)
 
     assert final_state.status == "accepted"
-    assert final_state.round == 2
+    assert final_state.round == 1
     assert len(final_state.history) == 2
     assert final_state.winner == "seller"
 
@@ -306,4 +310,4 @@ def test_all_scenarios_run_in_orchestrator(filename):
 
     assert final_state.round == config["max_rounds"]
     assert final_state.status == "deadlock"
-    assert len(final_state.history) == config["max_rounds"]
+    assert len(final_state.history) == config["max_rounds"] * len(config["agents"])

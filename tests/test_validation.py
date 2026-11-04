@@ -12,7 +12,12 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from backend.validation import ALLOWED_PERSONALITIES, validate_config  # noqa: E402
+from backend.validation import (  # noqa: E402
+    ALLOWED_PERSONALITIES,
+    _is_number,
+    validate_config,
+    validate_counteroffer,
+)
 
 SCENARIOS = ROOT / "scenarios"
 
@@ -182,3 +187,55 @@ def test_non_finite_limit_value_is_rejected(config, bad):
     config["agents"][0]["limits"][0]["value"] = bad
     errors = validate_config(config)["errors"]
     assert "Agent 'buyer': limit #1 value must be a number." in errors
+
+
+@pytest.mark.parametrize("value", [0, -3, 1.25])
+def test_is_number_accepts_finite_integer_and_float_values(value):
+    assert _is_number(value)
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf"), True, False, "3.5", None])
+def test_is_number_rejects_non_numeric_or_unsafe_values(value):
+    assert not _is_number(value)
+
+
+def test_counteroffer_checks_multiple_bounds_for_same_item(config):
+    buyer = config["agents"][0]
+    buyer["limits"] = [
+        {"item": " price ", "type": "min", "value": 20},
+        {"item": "price", "type": "max", "value": 40},
+    ]
+
+    assert validate_counteroffer(buyer, {" price ": 30}) == []
+    assert any("below the minimum" in error for error in validate_counteroffer(buyer, {"price": 19}))
+    assert any("exceeds the maximum" in error for error in validate_counteroffer(buyer, {"price": 41}))
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf"), True, False, "30", None])
+def test_counteroffer_rejects_non_numeric_values(config, value):
+    assert validate_counteroffer(config["agents"][0], {"price": value})
+
+
+def test_counteroffer_normalizes_known_item_names_and_rejects_unknown_items(config):
+    buyer = config["agents"][0]
+    assert validate_counteroffer(buyer, {" price ": 30}) == []
+    assert any("no reservation limit" in error for error in validate_counteroffer(buyer, {"other": 30}))
+
+
+@pytest.mark.parametrize(
+    ("fields", "expected_error"),
+    [
+        ({"human_agent_id": "vendor"}, None),
+        ({"human_seat": "vendor"}, None),
+        ({"human_seat": 2}, "human_seat must be a participating agent ID"),
+        ({"human_agent_id": "buyer", "human_seat": "vendor"}, "must select the same agent"),
+        ({"human_agent_id": "unknown"}, "not a participating agent"),
+    ],
+)
+def test_human_agent_selection_validation(config, fields, expected_error):
+    config.update(fields)
+    errors = validate_config(config)["errors"]
+    if expected_error is None:
+        assert errors == []
+    else:
+        assert any(expected_error in error for error in errors)

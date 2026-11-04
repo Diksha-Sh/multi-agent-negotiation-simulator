@@ -42,6 +42,22 @@ DEFAULT_PERSONALITIES: tuple[str, ...] = ("Aggressive", "Collaborative", "Risk-A
 LIMIT_TYPES: tuple[str, ...] = ("min", "max")
 
 
+def resolve_human_agent_id(config: dict[str, Any]) -> str | None:
+    """Resolve the agent-ID alias fields; numeric seat positions are not supported."""
+    selected: list[str] = []
+    for field in ("human_agent_id", "human_seat"):
+        value = config.get(field)
+        if value is None:
+            continue
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{field} must be a participating agent ID.")
+        selected.append(value.strip())
+
+    if len(set(selected)) > 1:
+        raise ValueError("human_agent_id and human_seat must select the same agent.")
+    return selected[0] if selected else None
+
+
 def load_allowed_personalities() -> tuple[str, ...]:
     """Return the personality names defined in scenarios/personalities.json."""
     try:
@@ -133,6 +149,14 @@ def validate_config(config: Any) -> dict[str, Any]:
             for n, limit in enumerate(limits, start=1):
                 errors.extend(_check_limit(limit, label, n))
 
+    try:
+        selected_human = resolve_human_agent_id(config)
+    except ValueError as exc:
+        errors.append(str(exc))
+        selected_human = None
+    if selected_human is not None and selected_human not in seen_ids:
+        errors.append(f"Selected human agent '{selected_human}' is not a participating agent.")
+
     # 6. Deal possible (only meaningful once the limits themselves are valid)
     errors.extend(_check_deal_possible(agents))
 
@@ -154,11 +178,11 @@ def _filled(value: Any) -> bool:
 
 def _is_number(value: Any) -> bool:
     """True for a real, finite number (not a bool, NaN or infinity)."""
-    return (
-        isinstance(value, (int, float))
-        and not isinstance(value, bool)
-        and math.isfinite(value)
-    )
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, int):
+        return True
+    return isinstance(value, float) and math.isfinite(value)
 
 
 def _agent_label(agent: dict[str, Any], index: int) -> str:
@@ -182,6 +206,62 @@ def _check_limit(limit: Any, label: str, n: int) -> list[str]:
     return errors
 
 
+def validate_counteroffer(agent: dict[str, Any], offer: Any) -> list[str]:
+    """Validate a counteroffer against every reservation limit for its agent."""
+    label = _agent_label(agent, 1)
+    if not isinstance(offer, dict):
+        return [f"Counteroffer for agent {label} must be an object."]
+
+    limits_by_item: dict[str, list[dict[str, Any]]] = {}
+    for limit in agent.get("limits", []):
+        if isinstance(limit, dict) and _filled(limit.get("item")):
+            limits_by_item.setdefault(limit["item"].strip(), []).append(limit)
+
+    errors: list[str] = []
+    normalized_offer: dict[str, Any] = {}
+    for item, value in offer.items():
+        if not isinstance(item, str) or not item.strip():
+            errors.append("Counteroffer item names must be non-empty strings.")
+            continue
+        normalized_item = item.strip()
+        if normalized_item in normalized_offer:
+            errors.append(f"Counteroffer contains duplicate item '{normalized_item}'.")
+            continue
+        normalized_offer[normalized_item] = value
+
+    for item in limits_by_item:
+        if item not in normalized_offer:
+            errors.append(f"Counteroffer is missing required value for '{item}'.")
+    for item in normalized_offer:
+        if item not in limits_by_item:
+            errors.append(f"Counteroffer includes '{item}', which has no reservation limit for agent {label}.")
+
+    for item, value in normalized_offer.items():
+        limits = limits_by_item.get(item)
+        if not limits:
+            continue
+        if not _is_number(value):
+            errors.append(f"Counteroffer value for '{item}' must be a finite number.")
+            continue
+        for limit in limits:
+            bound = limit["value"]
+            if not _is_number(bound) or limit.get("type") not in LIMIT_TYPES:
+                errors.append(f"Reservation limit for '{item}' is not safely comparable.")
+                continue
+            unit = f" {limit.get('unit')}" if limit.get("unit") else ""
+            if limit["type"] == "min" and value < bound:
+                errors.append(
+                    f"Counteroffer value for '{item}' ({value}{unit}) is below the minimum "
+                    f"reservation limit ({bound}{unit})."
+                )
+            elif limit["type"] == "max" and value > bound:
+                errors.append(
+                    f"Counteroffer value for '{item}' ({value}{unit}) exceeds the maximum "
+                    f"reservation limit ({bound}{unit})."
+                )
+    return errors
+
+
 def _check_deal_possible(agents: list[Any]) -> list[str]:
     """For every item, the lowest max must be >= the highest min.
 
@@ -190,7 +270,7 @@ def _check_deal_possible(agents: list[Any]) -> list[str]:
     Items that only have max limits (or only min limits) are skipped.
     """
     # item -> {"min": [(value, label)], "max": [(value, label)]}
-    bounds: dict[str, dict[str, list[tuple[float, str]]]] = {}
+    bounds: dict[str, dict[str, list[tuple[int | float, str]]]] = {}
     for index, agent in enumerate(agents, start=1):
         if not isinstance(agent, dict) or not isinstance(agent.get("limits"), list):
             continue
@@ -203,7 +283,7 @@ def _check_deal_possible(agents: list[Any]) -> list[str]:
                 and _is_number(limit.get("value"))
             ):
                 entry = bounds.setdefault(limit["item"].strip(), {"min": [], "max": []})
-                entry[limit["type"]].append((float(limit["value"]), label))
+                entry[limit["type"]].append((limit["value"], label))
 
     errors: list[str] = []
     for item, entry in bounds.items():

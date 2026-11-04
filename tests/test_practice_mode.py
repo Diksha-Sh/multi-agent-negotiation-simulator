@@ -59,6 +59,18 @@ def test_practice_mode_initialization(practice_config):
     assert state.history == []
 
 
+def test_human_seat_alias_selects_configured_agent(practice_config):
+    practice_config.pop("human_agent_id")
+    practice_config["human_seat"] = "vendor"
+    orch = NegotiationOrchestrator(practice_config)
+
+    assert orch.human_agent_id == "vendor"
+    state = orch.run_loop(mock_agent_fn)
+    assert state.status == "waiting_for_human"
+    assert [turn["agent_id"] for turn in state.history] == ["buyer"]
+    assert state.round == 0
+
+
 def test_practice_mode_pauses_when_human_is_first(practice_config):
     """When human is Agent 0, run_loop should immediately pause with status 'waiting_for_human'."""
     orch = NegotiationOrchestrator(practice_config)
@@ -78,7 +90,8 @@ def test_practice_mode_pauses_when_human_is_second(practice_config):
     assert state.status == "waiting_for_human"
     assert len(state.history) == 1
     assert state.history[0]["agent_id"] == "buyer"
-    assert state.round == 1
+    assert state.round == 0
+    assert state.history[0]["round"] == 1
 
 
 def test_create_human_turn_valid():
@@ -150,12 +163,15 @@ def test_practice_mode_turn_cycle(practice_config):
     state = orch.step(state, human_turn_1)
     assert state.status == "ongoing"
     assert len(state.history) == 1
+    assert state.round == 0
 
     # Resume loop -> AI (Vendor) takes Turn 2, then pauses for Human (Buyer) again
     state = orch.run_loop(mock_agent_fn, initial_state=state)
     assert state.status == "waiting_for_human"
     assert len(state.history) == 2
     assert state.history[1]["agent_id"] == "vendor"
+    assert state.history[1]["round"] == 1
+    assert state.round == 1
 
     # Turn 3: Human (Buyer) accepts AI vendor's counteroffer
     human_turn_2 = create_human_turn(
@@ -182,6 +198,14 @@ def test_deadlock_detection_at_max_rounds(practice_config):
 
     turn2 = create_human_turn("vendor", "counter", {"price": 39000}, 2)
     state = orch.step(state, turn2)
+
+    assert state.status == "ongoing"
+    assert state.round == 1
+    turn3 = create_human_turn("buyer", "counter", {"price": 37000}, 2)
+    state = orch.step(state, turn3)
+    assert state.status == "ongoing"
+    turn4 = create_human_turn("vendor", "counter", {"price": 38000}, 2)
+    state = orch.step(state, turn4)
 
     assert state.status == "deadlock"
     assert state.winner is None

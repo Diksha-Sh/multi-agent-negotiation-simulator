@@ -85,9 +85,9 @@ def vendor_state(history=None, round_=None):
 @pytest.mark.parametrize("scenario_id", SCENARIOS)
 def test_turns_match_the_locked_contract(scenario_id):
     _, state = run(scenario_id)
-    for i, turn in enumerate(state.history, start=1):
+    for i, turn in enumerate(state.history):
         assert set(turn) == TURN_KEYS
-        assert turn["round"] == i
+        assert turn["round"] == i // len(state.agents) + 1
         assert turn["action"] in ("accept", "counter", "reject")
         assert turn["stance"] in ("firm", "flexible", "urgent")
         assert isinstance(turn["offer"], dict) and turn["offer"]
