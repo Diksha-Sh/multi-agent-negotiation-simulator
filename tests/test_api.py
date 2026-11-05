@@ -410,3 +410,11 @@ def test_orchestrator_step_rejects_invalid_config(monkeypatch):
     _no_llm(monkeypatch)
     res = client.post("/api/orchestrator/step", json={"config": {"scenario_id": ""}, "history": []})
     assert res.status_code == 400
+
+
+def test_run_rejects_bad_max_rounds_with_400():
+    for bad in (-3, 0, "abc"):
+        config = _frontend_config("vendor_pricing")
+        config["max_rounds"] = bad
+        res = client.post("/api/orchestrator/run?engine=mock", json={"config": config})
+        assert res.status_code == 400, (bad, res.status_code)

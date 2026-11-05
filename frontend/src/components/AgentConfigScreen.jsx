@@ -34,6 +34,13 @@ function cn(...classes) {
   return classes.filter(Boolean).join(' ');
 }
 
+// Max rounds: a whole number from 2 to 50 (empty or invalid -> default 10).
+function clampRounds(value) {
+  const n = Number(value);
+  if (value === '' || value === null || !Number.isFinite(n)) return 10;
+  return Math.min(50, Math.max(2, Math.round(n)));
+}
+
 /* ────────────────────────── Rich Personality Archetypes with Traits ────────────────────────── */
 const PERSONALITIES = [
   {
@@ -243,7 +250,7 @@ export default function AgentConfigScreen({
       id: scenario.id || scenario.scenario_id,
       title: scenario.title,
       description: scenario.description,
-      max_rounds: Number(maxRounds) || 10,
+      max_rounds: clampRounds(maxRounds),
       mode: mode,
       human_agent_id: mode === 'practice' ? humanAgentId : null,
       human_seat: mode === 'practice' ? humanAgentId : null,
@@ -373,10 +380,12 @@ export default function AgentConfigScreen({
             <span>Rounds:</span>
             <input
               type="number"
-              min="1"
+              min="2"
               max="50"
+              step="1"
               value={maxRounds}
               onChange={(e) => setMaxRounds(e.target.value)}
+              onBlur={() => setMaxRounds(clampRounds(maxRounds))}
               className={`w-12 text-center font-bold rounded-lg py-0.5 outline-none border text-xs ${
                 isDark
                   ? 'bg-slate-950/80 border-slate-800 focus:border-indigo-500 text-indigo-300'

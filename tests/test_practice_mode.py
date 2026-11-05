@@ -191,6 +191,7 @@ def test_deadlock_detection_at_max_rounds(practice_config):
 
 def test_deadlock_detection_same_position(practice_config):
     """Verify deadlock detection triggers when an agent repeatedly holds identical offers."""
+    practice_config["max_rounds"] = 10  # leave room so the round limit is not what stops it
     orch = NegotiationOrchestrator(practice_config)
     state = orch.start()
 

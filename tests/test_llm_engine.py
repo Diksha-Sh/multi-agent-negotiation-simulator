@@ -443,6 +443,7 @@ def test_guardrails_keep_every_item():
 
 def test_settings_need_a_key_to_enable_llm(monkeypatch):
     monkeypatch.undo()
+    monkeypatch.delenv("LLM_ENABLED", raising=False)  # result must not depend on the machine's env
     for name in ("LLM_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY"):
         monkeypatch.setenv(name, "")
     monkeypatch.setattr(engine_mod, "_load_dotenv", lambda: None)

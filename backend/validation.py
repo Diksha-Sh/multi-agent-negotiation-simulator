@@ -41,6 +41,17 @@ DEFAULT_PERSONALITIES: tuple[str, ...] = ("Aggressive", "Collaborative", "Risk-A
 
 LIMIT_TYPES: tuple[str, ...] = ("min", "max")
 
+# Allowed range for max_rounds (one round = one turn; a deal needs at least 2).
+MIN_ROUNDS = 2
+MAX_ROUNDS = 50
+
+# Optional deadlock settings (Task 4): name -> (lowest, highest, whole number?)
+DEADLOCK_SETTINGS: dict[str, tuple[float, float, bool]] = {
+    "stall_rounds": (1, 10, True),
+    "rejection_limit": (2, 10, True),
+    "min_move_pct": (0.01, 50, False),
+}
+
 
 def load_allowed_personalities() -> tuple[str, ...]:
     """Return the personality names defined in scenarios/personalities.json."""
@@ -70,6 +81,8 @@ def validate_config(config: Any) -> dict[str, Any]:
         5. Every agent has at least 1 limit (and each limit is well formed).
         6. A deal is possible: for each item, the lowest "max" is at least
            the highest "min" (e.g. buyer max 40 >= vendor min 35).
+        7. ``max_rounds``, when given, is a whole number from 2 to 50.
+        8. ``deadlock`` settings, when given, are in range (see DEADLOCK_SETTINGS).
 
     Args:
         config: The final config dict produced by ``build_negotiation_config``.
@@ -85,6 +98,14 @@ def validate_config(config: Any) -> dict[str, Any]:
     # 1. Scenario selected
     if not _filled(config.get("scenario_id")):
         errors.append("No scenario selected.")
+
+    # 7. Round limit (optional; the orchestrator defaults to 10)
+    if "max_rounds" in config:
+        errors.extend(_check_max_rounds(config["max_rounds"]))
+
+    # 8. Deadlock settings (optional; the deadlock module has defaults)
+    if config.get("deadlock") is not None:
+        errors.extend(_check_deadlock_settings(config["deadlock"]))
 
     # 2. At least 2 agents
     agents = config.get("agents")
@@ -167,6 +188,30 @@ def _agent_label(agent: dict[str, Any], index: int) -> str:
         if _filled(agent.get(key)):
             return f"'{agent[key]}'"
     return f"#{index}"
+
+
+def _check_max_rounds(value: Any) -> list[str]:
+    """max_rounds must be a whole number between MIN_ROUNDS and MAX_ROUNDS."""
+    whole = _is_number(value) and float(value).is_integer()
+    if not whole or not MIN_ROUNDS <= value <= MAX_ROUNDS:
+        return [f"Max rounds must be a whole number from {MIN_ROUNDS} to {MAX_ROUNDS}, got {value!r}."]
+    return []
+
+
+def _check_deadlock_settings(settings: Any) -> list[str]:
+    """Each known deadlock setting must be a number inside its range."""
+    if not isinstance(settings, dict):
+        return ["Deadlock settings must be an object, e.g. {\"stall_rounds\": 2}."]
+    errors: list[str] = []
+    for name, (low, high, whole) in DEADLOCK_SETTINGS.items():
+        if name not in settings:
+            continue
+        value = settings[name]
+        ok = _is_number(value) and low <= value <= high and (not whole or float(value).is_integer())
+        if not ok:
+            kind = "a whole number" if whole else "a number"
+            errors.append(f"Deadlock setting '{name}' must be {kind} from {low:g} to {high:g}, got {value!r}.")
+    return errors
 
 
 def _check_limit(limit: Any, label: str, n: int) -> list[str]:

@@ -403,6 +403,12 @@ def recommend_move(state: NegotiationState, agent: dict[str, Any], max_rounds: i
         for item, v in _constrain_offer(candidate, state).items()
     }
 
+    # Deadlock resolution (Task 4): follow the mediator's step while it is active.
+    mediator = _mediator(state)
+    if mediator:
+        candidate = _apply_mediator(mediator, candidate, incoming, limits, shared)
+        notes.append(f"Deadlock resolution active: {mediator['attempt']}.")
+
     # Accept when the incoming offer is inside the limits and at least as good as the counter.
     if incoming and _all_limit_items(state) <= set(incoming) and all(
         _is_number(incoming[i]) for i in _all_limit_items(state)
@@ -430,7 +436,60 @@ def recommend_move(state: NegotiationState, agent: dict[str, Any], max_rounds: i
         for item, limit in limits.items():
             if _is_number(previous.get(item)) and _better_for_me(offer[item], float(previous[item]), limit["type"]):
                 offer[item] = previous[item]
-    return {"action": "counter", "offer": offer, "stance": _stance(personality, progress, "counter"), "notes": notes}
+    stance = _stance(personality, progress, "counter")
+    if mediator:
+        stance = "urgent" if mediator["attempt"] == "trigger_final_round" else "flexible"
+    return {"action": "counter", "offer": offer, "stance": stance, "notes": notes, "shared_items": sorted(shared)}
+
+
+def _mediator(state: NegotiationState) -> Optional[dict[str, Any]]:
+    """The active deadlock-resolution step for this turn, if any."""
+    try:
+        from backend.deadlock import active_resolution
+    except ImportError:
+        return None
+    try:
+        return active_resolution(state)
+    except Exception as exc:  # never let the deadlock module stop a turn
+        logger.warning("Deadlock module failed: %s", exc)
+        return None
+
+
+def _apply_mediator(mediator: dict[str, Any], candidate: dict[str, float],
+                    incoming: Optional[dict[str, Any]], limits: dict[str, dict[str, Any]],
+                    shared: dict[str, float]) -> dict[str, float]:
+    """Move the planned offer according to the resolution step.
+
+    suggest_compromise  -> offer the mediator's midpoint (only if it is a concession)
+    modify_stance       -> close half of the remaining gap to the other side
+    trigger_final_round -> make the best final offer allowed by the hard limits
+    The result never crosses this agent's hard limits and never asks for less than
+    the other side already offers.
+    """
+    adjusted = dict(candidate)
+    for item, limit in limits.items():
+        if item in shared or item not in adjusted:
+            continue
+        current = adjusted[item]
+        other = float(incoming[item]) if incoming and _is_number(incoming.get(item)) else None
+        attempt = mediator["attempt"]
+        if attempt == "suggest_compromise":
+            target = mediator.get("compromise_offer", {}).get(item)
+            if not _is_number(target):
+                continue
+            target = float(target)
+        elif attempt == "modify_stance":
+            if other is None:
+                continue
+            target = current + (other - current) / 2
+        else:  # trigger_final_round
+            target = limit["value"]
+        target = _clamp(target, limit)
+        if other is not None and _within(other, limit) and _better_for_me(other, target, limit["type"]):
+            target = other  # the other side already offers more than this
+        if _better_for_me(current, target, limit["type"]):
+            adjusted[item] = target  # only ever move towards the other side
+    return adjusted
 
 
 def _template_reasoning(agent: dict[str, Any], move: dict[str, Any], incoming: Optional[dict[str, Any]]) -> str:
@@ -447,6 +506,8 @@ def _template_reasoning(agent: dict[str, Any], move: dict[str, Any], incoming: O
         "Risk-Averse": "makes a reasonable concession to keep the deal alive",
     }[personality]
     opener = "opens with" if not incoming else "counters with"
+    if any(str(n).startswith("Deadlock resolution active") for n in move.get("notes", [])):
+        return f"{name} {opener} {terms}, following the mediator's step to break the deadlock."
     return f"{name} {opener} {terms}. As a {personality} negotiator it {style}."
 
 
@@ -463,6 +524,7 @@ def build_prompt(state: NegotiationState, agent: dict[str, Any], move: dict[str,
     limits = _limits(agent)
     previous = _last_offer(state, agent_id, mine=True)
     incoming = _last_offer(state, agent_id, mine=False)
+    mediator = _mediator(state)
 
     limit_lines = [
         f"- {item}: {'at most' if l['type'] == 'max' else 'at least'} {l['value']:g} {l['unit']}".rstrip()
@@ -515,6 +577,7 @@ def build_prompt(state: NegotiationState, agent: dict[str, Any], move: dict[str,
         "",
         f"The other side's latest offer: {json.dumps(incoming) if incoming else 'none yet'}",
         f"Your previous offer: {json.dumps(previous) if previous else 'none yet'}",
+        *([f"Mediator: {mediator['message']}"] if mediator else []),
         f"Your strategy advisor recommends: {move['action']} {json.dumps(move['offer'])} (stance: {move['stance']}).",
         "If you counter, keep each item in this range:",
         *(ranges or ["- (no numeric items)"]),
@@ -606,6 +669,13 @@ def apply_guardrails(reply: dict[str, Any], state: NegotiationState, agent: dict
         if incoming_ok:
             return {"action": "accept", "offer": dict(incoming), "stance": stance, "reasoning": reasoning}
         action = "counter"  # nothing acceptable on the table
+
+    # A deadlock resolution is active: the LLM may not do less than the mediator's step.
+    mediator = _mediator(state)
+    if mediator and move["action"] == "accept" and incoming_ok:
+        note = "Accepted to resolve the deadlock, as the mediator advised."
+        return {"action": "accept", "offer": dict(incoming), "stance": move["stance"],
+                "reasoning": f"{reasoning} {note}".strip()}
     if action == "reject":
         if incoming and not incoming_ok:
             return {"action": "reject", "offer": dict(incoming), "stance": stance, "reasoning": reasoning}
@@ -628,8 +698,24 @@ def apply_guardrails(reply: dict[str, Any], state: NegotiationState, agent: dict
             offer[item] = previous[item]
     if not limits:
         offer = dict(move["offer"])
+    if mediator and move["action"] == "counter":
+        offer, stance = _enforce_mediator(offer, move, limits), move["stance"]
     offer = _constrain_offer(offer, state)
     return {"action": "counter", "offer": offer, "stance": stance, "reasoning": reasoning}
+
+
+def _enforce_mediator(offer: dict[str, Any], move: dict[str, Any],
+                      limits: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Raise each item to at least the concession the strategy recommended."""
+    shared = set(move.get("shared_items") or [])
+    enforced = dict(offer)
+    for item, limit in limits.items():
+        target = move["offer"].get(item)
+        if item in shared or not _is_number(target) or not _is_number(enforced.get(item)):
+            continue
+        if _better_for_me(float(enforced[item]), float(target), limit["type"]):
+            enforced[item] = target  # LLM conceded less than the mediator's step
+    return enforced
 
 
 # ============================================================================

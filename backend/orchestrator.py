@@ -251,6 +251,32 @@ class NegotiationOrchestrator:
 
     # ------------------------------------------------------------------------
     # Plain-English Explanation:
+    # _finalize_deadlock() closes an open resolution attempt when the negotiation
+    # ends by accept (the attempt worked) or reject (breakdown).
+    # _max_rounds_event() builds the "round limit reached" deadlock event.
+    # ------------------------------------------------------------------------
+    def _finalize_deadlock(self, state: NegotiationState) -> None:
+        try:
+            from backend.deadlock import finalize_deadlock_event
+            finalize_deadlock_event(state)
+        except (ImportError, AttributeError):
+            pass
+
+    def _max_rounds_event(self, state: NegotiationState) -> dict[str, Any]:
+        try:
+            from backend.deadlock import max_rounds_event
+            return dict(max_rounds_event(state, self.max_rounds))
+        except (ImportError, AttributeError):
+            return {
+                "type": "max_rounds",
+                "round_triggered": state.round,
+                "resolution_attempt": "declare_breakdown",
+                "resolution_outcome": "breakdown",
+                "details": f"Reached maximum allowed rounds ({self.max_rounds}).",
+            }
+
+    # ------------------------------------------------------------------------
+    # Plain-English Explanation:
     # _check_end() inspects the latest action, round count, and deadlock checks:
     # - "accept" -> Deal reached! status becomes "accepted", winner is recorded.
     # - "reject" -> Negotiation collapsed! status becomes "rejected", winner is None.
@@ -273,25 +299,20 @@ class NegotiationOrchestrator:
         if action == "accept":
             state.status = "accepted"
             state.winner = turn.get("agent_id")
+            self._finalize_deadlock(state)
             return state
 
         if action == "reject":
             state.status = "rejected"
             state.winner = None
+            self._finalize_deadlock(state)
             return state
 
         # Check round limits
         if state.round >= self.max_rounds:
             state.status = "deadlock"
             state.winner = None
-            if not state.deadlock_event:
-                state.deadlock_event = {
-                    "type": "max_rounds",
-                    "round_triggered": state.round,
-                    "resolution_attempt": "declare_breakdown",
-                    "resolution_outcome": "breakdown",
-                    "details": f"Reached maximum allowed rounds ({self.max_rounds}).",
-                }
+            state.deadlock_event = self._max_rounds_event(state)
             return state
 
         # Check for deadlock / stall patterns via deadlock hook

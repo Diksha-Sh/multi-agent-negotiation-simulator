@@ -1,13 +1,12 @@
 """Orchestrator API router: endpoints to run, step, or play in Practice Mode."""
 
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 from fastapi import APIRouter, Body, HTTPException, Query
 
 from backend.deadlock import check_deadlock, resolve_deadlock
 from backend.llm_engine import engine_mode, engine_status, make_agent_engine
 from backend.orchestrator import (
     NegotiationOrchestrator,
-    NegotiationState,
     Turn,
     create_human_turn,
     mock_agent_fn,
@@ -253,27 +252,122 @@ def submit_human_turn(
     }
 
 
-@router.post("/check-deadlock", summary="Evaluate if ongoing negotiation has stalled or deadlocked")
-def check_negotiation_deadlock(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
-    """Inspect current negotiation history and check for stall or deadlock patterns."""
+_DEADLOCK_EXAMPLE = {
+    "config": {
+        "scenario_id": "vendor_pricing",
+        "title": "Vendor Pricing",
+        "description": "Buyer and vendor agree a unit price.",
+        "max_rounds": 10,
+        "deadlock": {"stall_rounds": 2, "min_move_pct": 1, "rejection_limit": 3},
+        "agents": [
+            {"id": "buyer", "name": "Buyer", "role": "Procurement Manager", "goal": "Pay as little as possible",
+             "constraints": ["Budget at most 40000"], "personality": "Collaborative",
+             "limits": [{"item": "price", "type": "max", "value": 40000, "unit": "INR"}]},
+            {"id": "vendor", "name": "Vendor", "role": "Sales Head", "goal": "Sell as high as possible",
+             "constraints": ["Price at least 35000"], "personality": "Aggressive",
+             "limits": [{"item": "price", "type": "min", "value": 35000, "unit": "INR"}]},
+        ],
+    },
+    "history": [
+        {"agent_id": "buyer", "round": 1, "action": "counter", "offer": {"price": 36000}, "reasoning": "", "stance": "firm"},
+        {"agent_id": "vendor", "round": 2, "action": "counter", "offer": {"price": 39000}, "reasoning": "", "stance": "firm"},
+        {"agent_id": "buyer", "round": 3, "action": "counter", "offer": {"price": 36000}, "reasoning": "", "stance": "firm"},
+        {"agent_id": "vendor", "round": 4, "action": "counter", "offer": {"price": 39000}, "reasoning": "", "stance": "firm"},
+        {"agent_id": "buyer", "round": 5, "action": "counter", "offer": {"price": 36000}, "reasoning": "", "stance": "firm"},
+        {"agent_id": "vendor", "round": 6, "action": "counter", "offer": {"price": 39000}, "reasoning": "", "stance": "firm"},
+    ],
+}
+
+_DEADLOCK_RESPONSES = {
+    200: {
+        "description": "Deadlock check result",
+        "content": {"application/json": {"example": {
+            "deadlock_detected": True,
+            "active": True,
+            "deadlock_event": {
+                "type": "same_position",
+                "round_triggered": 6,
+                "resolution_attempt": "suggest_compromise",
+                "resolution_outcome": None,
+                "details": "Both sides repeated the same offers for 2 rounds in a row.",
+                "message": "Mediator suggests meeting in the middle: price 37,500.",
+                "compromise_offer": {"price": 37500},
+                "level": 1,
+                "attempts": [],
+            },
+            "resolution": {
+                "action": "suggest_compromise",
+                "status": "ongoing",
+                "message": "Mediator suggests meeting in the middle: price 37,500.",
+                "compromise_offer": {"price": 37500},
+                "recommended_stance": "flexible",
+            },
+            "status": "ongoing",
+            "round": 6,
+        }}},
+    },
+    400: {"description": "Invalid negotiation config (validation errors listed)"},
+    422: {"description": "history is not a list of turns, or the turn order is wrong"},
+}
+
+
+@router.post(
+    "/check-deadlock",
+    summary="Check whether a negotiation is stuck, and what to do about it",
+    responses=_DEADLOCK_RESPONSES,
+)
+def check_negotiation_deadlock(
+    payload: dict[str, Any] = Body(..., examples=[_DEADLOCK_EXAMPLE]),
+) -> dict[str, Any]:
+    """Replay the history and return the deadlock state after the last turn.
+
+    You normally do **not** need to call this: `/run`, `/step` and `/human-turn`
+    run the same check automatically after every turn and return `deadlock_event`.
+    This endpoint is for testing and for inspecting a history.
+
+    **Detection** (thresholds in optional `config.deadlock`):
+    - `same_position`: both sides repeated their offer for `stall_rounds` turns (default 2)
+    - `repeated_rejection`: one side proposed the same terms `rejection_limit` times (default 3)
+      while the other side kept moving
+    - `stall`: both sides moved less than `min_move_pct` % per offer (default 1) for `stall_rounds` turns
+    - `max_rounds`: the round limit was reached
+
+    **Resolution ladder** (next step each time it gets stuck again):
+    `suggest_compromise` → `modify_stance` → `trigger_final_round` → `declare_breakdown`.
+
+    `resolution_outcome` is `null` while an attempt is in progress, then
+    `compromise` / `stance_change` / `final_round` when it worked, or `breakdown`.
+    """
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=422, detail="Body must be an object with 'config' and 'history'.")
     config = _validated_config(payload.get("config"))
     history = payload.get("history") or []
+    if not isinstance(history, list) or not all(isinstance(t, dict) for t in history):
+        raise HTTPException(status_code=422, detail="history must be a list of turn objects.")
 
     orchestrator = NegotiationOrchestrator(config)
+    agent_ids = [str(a.get("id")) for a in orchestrator.agents]
     state = orchestrator.start()
-    for raw in history:
+    for index, raw in enumerate(history):
+        expected = agent_ids[index % len(agent_ids)]
+        if str(raw.get("agent_id")) != expected:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Turn {index + 1} should be by '{expected}', got '{raw.get('agent_id')}'.",
+            )
         turn = Turn(**{key: raw.get(key) for key in TURN_KEYS})
         turn["offer"] = turn["offer"] if isinstance(turn["offer"], dict) else {}
         state = orchestrator.step(state, turn)
         if state.status not in ("ongoing", "waiting_for_human"):
             break
 
-    deadlock_event = check_deadlock(state, config)
-    resolution = resolve_deadlock(state, deadlock_event, config) if deadlock_event else None
-
+    event = state.deadlock_event or check_deadlock(state, config)
+    resolution = resolve_deadlock(state, event, config) if event else None
+    active = bool(event) and event.get("resolution_outcome") is None  # attempt still in progress
     return {
-        "deadlock_detected": deadlock_event is not None,
-        "deadlock_event": deadlock_event,
+        "deadlock_detected": event is not None,
+        "active": active,
+        "deadlock_event": event,
         "resolution": resolution,
         "status": state.status,
         "round": state.round,
