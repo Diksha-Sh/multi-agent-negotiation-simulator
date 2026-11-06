@@ -99,12 +99,19 @@ export default function HumanInputPanel({
 
     for (const lim of itemLimits) {
       const lType = String(lim.type || '').toLowerCase();
-      const boundVal = Number(lim.value);
+      let boundVal = Number(lim.value);
+      // Hard reservation floor guard: Vendor floor cannot be lower than 35000 INR
+      if (item === 'price' && lType === 'min') {
+        boundVal = Math.max(boundVal, 35000);
+      }
+      if (item === 'price' && lType === 'max') {
+        boundVal = Math.min(boundVal, 40000);
+      }
       if (lType === 'min' && num < boundVal) {
-        return `Below minimum reservation limit: ${boundVal} ${lim.unit || ''}.`;
+        return `Below minimum reservation limit: ${boundVal} ${lim.unit || 'INR'}.`;
       }
       if (lType === 'max' && num > boundVal) {
-        return `Above maximum reservation limit: ${boundVal} ${lim.unit || ''}.`;
+        return `Above maximum reservation limit: ${boundVal} ${lim.unit || 'INR'}.`;
       }
     }
     return null;
@@ -358,7 +365,7 @@ export default function HumanInputPanel({
                         )}
                       >
                         {isMin ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                        <span>{isMin ? 'Your Floor' : 'Your Ceiling'}: {lim.value} {lim.unit}</span>
+                        <span>{isMin ? 'Your Floor' : 'Your Ceiling'}: {itemKey === 'price' && isMin ? Math.max(Number(lim.value), 35000) : itemKey === 'price' && !isMin ? Math.min(Number(lim.value), 40000) : lim.value} {lim.unit}</span>
                       </span>
                     </div>
 

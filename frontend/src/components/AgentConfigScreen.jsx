@@ -99,6 +99,26 @@ function computeAgreementZone(scenario, agentConfigs) {
       } else {
         const itemKey = String(l.item || 'price').trim();
         const type = String(l.type || 'min').toLowerCase();
+
+        // Check if value violates agent's baseline reservation constraints
+        const baselineAgent = (scenario?.agents || []).find((a) => a.id === agent.id);
+        const baselineLimit = (baselineAgent?.limits || []).find(
+          (bl) => String(bl.item || 'price').trim() === itemKey && String(bl.type || '').toLowerCase() === type
+        );
+        if (baselineLimit) {
+          const baseVal = Number(baselineLimit.value);
+          if (type === 'min' && val < baseVal) {
+            errors.push(
+              `${agent.name} floor for ${itemKey.replace(/_/g, ' ')} (${val} ${l.unit || 'INR'}) violates constraint: cannot be below minimum acceptable of ${baseVal} ${l.unit || 'INR'}.`
+            );
+          }
+          if (type === 'max' && val > baseVal) {
+            errors.push(
+              `${agent.name} ceiling for ${itemKey.replace(/_/g, ' ')} (${val} ${l.unit || 'INR'}) violates constraint: cannot exceed maximum acceptable of ${baseVal} ${l.unit || 'INR'}.`
+            );
+          }
+        }
+
         if (!bounds[itemKey]) {
           bounds[itemKey] = { min: null, max: null, minAgent: '', maxAgent: '', unit: l.unit || '' };
         }
@@ -787,52 +807,79 @@ export default function AgentConfigScreen({
                 <div className="space-y-2.5">
                   {(cfg.limits || []).map((l, idx) => {
                     const isMin = String(l.type).toLowerCase() === 'min';
+                    const val = Number(l.value);
+                    const itemKey = String(l.item || 'price').trim();
+                    const baselineAgent = (scenario?.agents || []).find((a) => a.id === agent.id);
+                    const baselineLimit = (baselineAgent?.limits || []).find(
+                      (bl) => String(bl.item || 'price').trim() === itemKey && String(bl.type || '').toLowerCase() === String(l.type || '').toLowerCase()
+                    );
+                    const baseVal = baselineLimit ? Number(baselineLimit.value) : null;
+                    const isViolated = baseVal !== null && Number.isFinite(val) && (
+                      (isMin && val < baseVal) || (!isMin && val > baseVal)
+                    );
+
                     return (
-                      <div
-                        key={idx}
-                        className={`flex items-center justify-between p-3 rounded-xl border text-xs ${
-                          isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={cn(
-                              'inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider border',
-                              isMin
-                                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                                : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                            )}
-                          >
-                            {isMin ? (
-                              <>
-                                <TrendingUp className="w-3 h-3" />
-                                <span>MIN (Floor)</span>
-                              </>
-                            ) : (
-                              <>
-                                <TrendingDown className="w-3 h-3" />
-                                <span>MAX (Ceiling)</span>
-                              </>
-                            )}
-                          </span>
-                          <span className={`font-semibold capitalize truncate ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                            {(l.item || '').replace(/_/g, ' ')}
-                          </span>
+                      <div key={idx} className="space-y-1">
+                        <div
+                          className={`flex items-center justify-between p-3 rounded-xl border text-xs transition-colors ${
+                            isViolated
+                              ? 'border-rose-500 bg-rose-500/10 ring-1 ring-rose-500/30'
+                              : isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={cn(
+                                'inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider border',
+                                isMin
+                                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                  : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                              )}
+                            >
+                              {isMin ? (
+                                <>
+                                  <TrendingUp className="w-3 h-3" />
+                                  <span>MIN (Floor)</span>
+                                </>
+                              ) : (
+                                <>
+                                  <TrendingDown className="w-3 h-3" />
+                                  <span>MAX (Ceiling)</span>
+                                </>
+                              )}
+                            </span>
+                            <span className={`font-semibold capitalize truncate ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                              {(l.item || '').replace(/_/g, ' ')}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              value={l.value ?? ''}
+                              onChange={(e) => handleLimitChange(agent.id, idx, e.target.value)}
+                              className={`w-28 border rounded-lg px-2.5 py-1 text-right font-mono font-bold text-xs sm:text-sm outline-none transition-colors ${
+                                isViolated
+                                  ? 'border-rose-500 bg-rose-950/40 text-rose-300 focus:ring-1 focus:ring-rose-500'
+                                  : isDark
+                                  ? 'bg-slate-950/80 border-slate-800 text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                                  : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                              }`}
+                            />
+                            <span className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                              {l.unit}
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            value={l.value ?? ''}
-                            onChange={(e) => handleLimitChange(agent.id, idx, e.target.value)}
-                            className={`w-28 border focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-2.5 py-1 text-right font-mono font-bold text-xs sm:text-sm outline-none transition-colors ${
-                              isDark ? 'bg-slate-950/80 border-slate-800 text-slate-100' : 'bg-white border-slate-300 text-slate-900'
-                            }`}
-                          />
-                          <span className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {l.unit}
-                          </span>
-                        </div>
+                        {isViolated && (
+                          <p className="text-[11px] text-rose-500 font-semibold px-1 flex items-center gap-1.5 animate-pulse">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                            <span>
+                              Violates hard constraint: {isMin ? `minimum acceptable is ${baseVal} ${l.unit}` : `maximum acceptable is ${baseVal} ${l.unit}`}
+                            </span>
+                          </p>
+                        )}
                       </div>
                     );
                   })}
@@ -865,7 +912,7 @@ export default function AgentConfigScreen({
         <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 mb-8 text-xs sm:text-sm text-rose-500 space-y-1.5">
           <div className="font-bold flex items-center gap-2 text-sm text-rose-500">
             <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
-            <span>Mathematical Impasse Detected in Reservation Boundaries:</span>
+            <span>Boundary or Constraint Violation Detected:</span>
           </div>
           {agreement.errors.map((err, i) => (
             <p key={i} className="pl-6 font-medium">• {err}</p>

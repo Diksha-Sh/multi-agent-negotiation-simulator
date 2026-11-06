@@ -345,7 +345,23 @@ function MainApp() {
   const [negotiationConfig, setNegotiationConfig] = useState(() => {
     try {
       const saved = localStorage.getItem('negotiation_config');
-      return saved ? JSON.parse(saved) : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.agents) {
+          parsed.agents = parsed.agents.map((a) => {
+            if (a.id === 'vendor' && Array.isArray(a.limits)) {
+              a.limits = a.limits.map((l) =>
+                l.item === 'price' && String(l.type).toLowerCase() === 'min' && Number(l.value) < 35000
+                  ? { ...l, value: 35000 }
+                  : l
+              );
+            }
+            return a;
+          });
+        }
+        return parsed;
+      }
+      return null;
     } catch {
       return null;
     }
@@ -533,7 +549,7 @@ function MainApp() {
 
         {activeStep === 2 && (
           <AgentConfigScreen
-            selectedScenario={negotiationConfig || selectedScenario || scenarios[0]}
+            selectedScenario={selectedScenario || scenarios[0]}
             onBack={() => handleSetStep(1)}
             onStartNegotiation={handleStartNegotiation}
           />
