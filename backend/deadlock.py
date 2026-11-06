@@ -136,7 +136,7 @@ def check_deadlock(
         return None
 
     settings = deadlock_settings(config, consecutive_stall_limit)
-    current_round = int(getattr(state, "round", len(history)) or len(history))
+    current_round = len(history)
     previous = getattr(state, "deadlock_event", None)
     previous = previous if isinstance(previous, dict) else None
 
@@ -144,13 +144,17 @@ def check_deadlock(
     if previous and previous.get("round_triggered") == current_round:
         return previous
 
-    # 1. Round limit
+    agent_ids = _agent_ids(state, config, history)
+    num_agents = len(agent_ids) or 2
+
+    # 1. Round limit (max_rounds is the number of agent cycles; max_turns = max_rounds * num_agents)
     max_rounds = _max_rounds(config)
-    if current_round >= max_rounds:
+    max_turns = max_rounds * num_agents
+    state_round = getattr(state, "round", None)
+    if (isinstance(state_round, int) and state_round >= max_rounds) or current_round >= max_turns:
         return max_rounds_event(state, max_rounds)
 
     window_start = int(previous.get("round_triggered", 0)) if previous else 0
-    agent_ids = _agent_ids(state, config, history)
     moves = _moves_by_agent(history, agent_ids, window_start)
 
     if previous and previous.get("resolution_outcome") is None:
@@ -264,7 +268,7 @@ def max_rounds_event(state: Any, max_rounds: int) -> DeadlockEvent:
         return previous  # type: ignore[return-value]
     return {
         "type": "max_rounds",
-        "round_triggered": int(getattr(state, "round", 0)),
+        "round_triggered": len(getattr(state, "history", [])) or int(getattr(state, "round", 0)),
         "resolution_attempt": "declare_breakdown",
         "resolution_outcome": "breakdown",
         "details": f"Reached the maximum of {max_rounds} rounds without a deal.",
@@ -368,7 +372,7 @@ def _escalate(
         attempt, level = "modify_stance", 2
     event: DeadlockEvent = {
         "type": dtype if dtype in DEADLOCK_TYPES else "stall",
-        "round_triggered": int(getattr(state, "round", 0)),
+        "round_triggered": len(getattr(state, "history", [])) or int(getattr(state, "round", 0)),
         "resolution_attempt": attempt,
         "resolution_outcome": "breakdown" if attempt == "declare_breakdown" else None,
         "details": details,

@@ -7,6 +7,7 @@ from backend.deadlock import check_deadlock, resolve_deadlock
 from backend.llm_engine import engine_mode, engine_status, make_agent_engine
 from backend.orchestrator import (
     NegotiationOrchestrator,
+    NegotiationState,
     Turn,
     create_human_turn,
     mock_agent_fn,

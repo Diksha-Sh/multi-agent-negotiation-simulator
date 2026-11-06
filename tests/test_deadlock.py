@@ -123,7 +123,8 @@ def test_stall_when_moves_are_tiny(config):
 
 
 def test_max_rounds_event_replaces_open_attempt(config):
-    config["max_rounds"] = 8
+    # 4 complete rounds with 2 agents = 8 turns total
+    config["max_rounds"] = 4
     _, state = _play(config, [36000, 39000, 36000, 39000, 36000, 39000, 36000, 39000])
     assert state.status == "deadlock"
     event = state.deadlock_event
