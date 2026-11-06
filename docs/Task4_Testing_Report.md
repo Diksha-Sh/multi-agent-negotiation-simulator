@@ -53,3 +53,22 @@ Manual UI testing is not reported as complete in this document.
 ## 7. Conclusion
 
 Based on the supplied results, all 167 reported automated tests passed. The reported deprecation warning did not affect the API test outcome. Manual UI testing remains outside the results documented here.
+
+## Application Screenshots
+
+The following screenshots provide visual evidence of Task 4 application functionality.
+
+### 1. Scenario Selection
+![Scenario Selection](screenshots/scenario_selection.png)
+
+### 2. Simulation Mode
+![Simulation Mode](screenshots/simulation_mode.png)
+
+### 3. Practice Mode
+![Practice Mode](screenshots/practice_mode.png)
+
+### 4. Final Negotiation Result
+![Final Result](screenshots/final_result.png)
+
+### 5. Negotiation Metrics
+![Round Metrics](screenshots/round_metrics.png)
