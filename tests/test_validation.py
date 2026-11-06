@@ -182,3 +182,24 @@ def test_non_finite_limit_value_is_rejected(config, bad):
     config["agents"][0]["limits"][0]["value"] = bad
     errors = validate_config(config)["errors"]
     assert "Agent 'buyer': limit #1 value must be a number." in errors
+
+
+# --- max_rounds (check 7) ---------------------------------------------------
+
+@pytest.mark.parametrize("rounds", [2, 10, 50, 10.0])
+def test_max_rounds_in_range_is_valid(config, rounds):
+    config["max_rounds"] = rounds
+    assert validate_config(config)["valid"] is True
+
+
+@pytest.mark.parametrize("rounds", [-3, 0, 1, 51, 2.5, "abc", "", None, True])
+def test_bad_max_rounds_is_rejected(config, rounds):
+    config["max_rounds"] = rounds
+    result = validate_config(config)
+    assert result["valid"] is False
+    assert any("Max rounds" in e for e in result["errors"])
+
+
+def test_missing_max_rounds_is_still_valid(config):
+    del config["max_rounds"]
+    assert validate_config(config)["valid"] is True

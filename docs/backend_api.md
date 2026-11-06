@@ -59,6 +59,10 @@ python -m pytest -v
 | POST | `/api/validate` | `{"valid": true/false, "errors": [...]}` for the config sent in the body |
 | POST | `/api/config` | Builds the final config from a scenario id and personality choices, and validates it |
 | POST | `/api/orchestrator/run` | Runs a complete negotiation using the LLM reasoning engine, with rule-based fallback, and returns status, round count, winner and full turn history |
+| POST | `/api/orchestrator/step` | Plays the next turn for a given history; returns the turn, status and `deadlock_event` |
+| POST | `/api/orchestrator/human-turn` | Practice Mode: submits the human's turn and returns the AI's reply and `deadlock_event` |
+| POST | `/api/orchestrator/check-deadlock` | Deadlock event and resolution for a given history (see `docs/deadlock.md`) |
+| GET | `/api/orchestrator/engine` | Which reasoning engine is active (LLM or rule-based) |
 
 ### POST /api/validate
 
