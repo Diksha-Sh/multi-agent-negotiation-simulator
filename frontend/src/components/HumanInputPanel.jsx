@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   User,
   Send,
@@ -26,12 +26,15 @@ export default function HumanInputPanel({
   latestTurn = null,
   onSubmitTurn,
   isSubmitting = false,
+  isInitializing = false,
+  submissionError = '',
 }) {
   const { isDark } = useTheme();
+  const controlsDisabled = isSubmitting || isInitializing;
 
   // Find human agent configuration from scenario
   const humanAgent = useMemo(() => {
-    return (config?.agents || []).find((a) => a.id === humanAgentId) || config?.agents?.[0] || {};
+    return (config?.agents || []).find((a) => a.id === humanAgentId) || {};
   }, [config, humanAgentId]);
 
   // Find AI opponent agent configuration
@@ -54,51 +57,65 @@ export default function HumanInputPanel({
     const initial = {};
     for (const lim of limits) {
       const itemKey = lim.item || 'price';
-      // If there's an incoming opponent offer, default close to it or halfway
       if (latestTurn?.offer?.[itemKey] !== undefined) {
         initial[itemKey] = latestTurn.offer[itemKey];
       } else {
-        initial[itemKey] = lim.value ?? 0;
+        initial[itemKey] = lim.value ?? '';
       }
     }
     return initial;
   });
 
-  // Re-sync offer defaults if latestTurn changes
-  const [prevTurnKey, setPrevTurnKey] = useState(latestTurn?.turn_number ?? null);
-  if ((latestTurn?.turn_number ?? null) !== prevTurnKey) {
-    setPrevTurnKey(latestTurn?.turn_number ?? null);
-    if (latestTurn?.offer) {
-      const next = {};
-      for (const lim of limits) {
-        const itemKey = lim.item || 'price';
-        if (latestTurn.offer[itemKey] !== undefined) {
-          next[itemKey] = latestTurn.offer[itemKey];
-        } else {
-          next[itemKey] = lim.value ?? 0;
-        }
-      }
-      setOfferValues(next);
+  useEffect(() => {
+    const next = {};
+    for (const lim of limits) {
+      const itemKey = lim.item || 'price';
+      next[itemKey] = latestTurn?.offer?.[itemKey] !== undefined
+        ? latestTurn.offer[itemKey]
+        : lim.value ?? '';
     }
-  }
+    // Keep editable form state aligned only when the scenario, seat, or proposal changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOfferValues(next);
+  }, [
+    config?.id,
+    config?.scenario_id,
+    humanAgentId,
+    latestTurn?.turn_number,
+    latestTurn?.round,
+    latestTurn?.agent_id,
+    latestTurn?.action,
+    latestTurn?.offer,
+    limits,
+  ]);
 
   // Check if an offer value violates the human's reservation boundary
   const getBoundaryViolation = (item, val) => {
-    const lim = limits.find((l) => (l.item || 'price') === item);
-    if (!lim) return null;
+    const itemLimits = limits.filter((lim) => (lim.item || 'price') === item);
+    if (itemLimits.length === 0) return `No reservation limit is configured for ${item}.`;
+    if (val === '' || val === null || val === undefined) return 'A value is required.';
     const num = Number(val);
-    if (Number.isNaN(num)) return 'Value must be a valid number.';
-    const lType = String(lim.type || 'min').toLowerCase();
-    const boundVal = Number(lim.value);
+    if (!Number.isFinite(num)) return 'Value must be a valid finite number.';
 
-    if (lType === 'min' && num < boundVal) {
-      return `Breaches floor: Minimum acceptable is ${boundVal} ${lim.unit || ''}.`;
-    }
-    if (lType === 'max' && num > boundVal) {
-      return `Breaches ceiling: Maximum budget limit is ${boundVal} ${lim.unit || ''}.`;
+    for (const lim of itemLimits) {
+      const lType = String(lim.type || '').toLowerCase();
+      const boundVal = Number(lim.value);
+      if (lType === 'min' && num < boundVal) {
+        return `Below minimum reservation limit: ${boundVal} ${lim.unit || ''}.`;
+      }
+      if (lType === 'max' && num > boundVal) {
+        return `Above maximum reservation limit: ${boundVal} ${lim.unit || ''}.`;
+      }
     }
     return null;
   };
+  const counterofferErrors = limits
+    .map((lim) => {
+      const itemKey = lim.item || 'price';
+      const violation = getBoundaryViolation(itemKey, offerValues[itemKey] ?? '');
+      return violation ? { item: itemKey, message: violation } : null;
+    })
+    .filter(Boolean);
 
   const handleValueChange = (item, newVal) => {
     setOfferValues((prev) => ({
@@ -113,7 +130,8 @@ export default function HumanInputPanel({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (isSubmitting) return;
+    if (controlsDisabled) return;
+    if (action === 'counter' && counterofferErrors.length > 0) return;
 
     let finalOffer = {};
     if (action === 'accept') {
@@ -172,14 +190,14 @@ export default function HumanInputPanel({
                 <span>Your Move · Round #{currentRound}</span>
               </span>
               <span className="text-[10px] font-mono text-emerald-400 font-bold">
-                Seat: {humanAgent.name}
+                Seat: {humanAgent.name || humanAgentId || 'Human Agent'}
               </span>
             </div>
             <h2 className={`text-lg sm:text-xl font-black tracking-tight ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
               Interactive Human Input Console
             </h2>
             <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              Playing live as <strong className="text-indigo-400 font-semibold">{humanAgent.name}</strong> ({humanAgent.role}) against <span className="font-semibold">{opponentAgent.name || 'AI Opponent'}</span>.
+              Playing live as <strong className="text-indigo-400 font-semibold">{humanAgent.name || humanAgentId || 'Human Agent'}</strong> ({humanAgent.role || 'Human'}) against <span className="font-semibold">{opponentAgent.name || 'AI Opponent'}</span>.
             </p>
           </div>
         </div>
@@ -235,6 +253,7 @@ export default function HumanInputPanel({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <button
               type="button"
+              disabled={controlsDisabled}
               onClick={() => setAction('counter')}
               className={cn(
                 'p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3',
@@ -256,7 +275,7 @@ export default function HumanInputPanel({
 
             <button
               type="button"
-              disabled={!canAccept}
+              disabled={!canAccept || controlsDisabled}
               onClick={() => setAction('accept')}
               className={cn(
                 'p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed',
@@ -279,6 +298,7 @@ export default function HumanInputPanel({
 
             <button
               type="button"
+              disabled={controlsDisabled}
               onClick={() => setAction('reject')}
               className={cn(
                 'p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3',
@@ -346,6 +366,7 @@ export default function HumanInputPanel({
                       <input
                         type="number"
                         step="any"
+                        disabled={controlsDisabled}
                         value={val}
                         onChange={(e) => handleValueChange(itemKey, e.target.value)}
                         className={`w-full font-mono font-bold text-sm px-3 py-2 rounded-lg border outline-none transition-colors ${
@@ -373,6 +394,24 @@ export default function HumanInputPanel({
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {action === 'counter' && counterofferErrors.length > 0 && (
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs" role="alert">
+            <p className="font-bold mb-1">Review your counteroffer values:</p>
+            <ul className="list-disc pl-5 space-y-0.5">
+              {counterofferErrors.map((error, index) => (
+                <li key={`${error.item}-${index}`}>{error.item.replace(/_/g, ' ')}: {error.message}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {submissionError && (
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs" role="alert">
+            <p className="font-bold mb-1">The backend rejected the turn</p>
+            <p>{submissionError}</p>
           </div>
         )}
 
@@ -417,6 +456,7 @@ export default function HumanInputPanel({
             <textarea
               rows={2}
               value={reasoning}
+              disabled={controlsDisabled}
               onChange={(e) => setReasoning(e.target.value)}
               className={`w-full rounded-xl p-3 text-xs sm:text-sm font-medium border outline-none transition-all resize-none ${
                 isDark
@@ -437,6 +477,7 @@ export default function HumanInputPanel({
                 <button
                   key={cIdx}
                   type="button"
+                  disabled={controlsDisabled}
                   onClick={() => handleQuickReason(chip)}
                   className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
                     isDark
@@ -466,6 +507,7 @@ export default function HumanInputPanel({
                 <button
                   key={s.id}
                   type="button"
+                  disabled={controlsDisabled}
                   onClick={() => setStance(s.id)}
                   className={cn(
                     'w-full px-3 py-2 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between text-xs',
@@ -492,7 +534,7 @@ export default function HumanInputPanel({
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={controlsDisabled || (action === 'counter' && counterofferErrors.length > 0)}
             className={cn(
               'w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl font-bold text-xs sm:text-sm text-white transition-all shadow-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0',
               action === 'accept'
@@ -504,7 +546,9 @@ export default function HumanInputPanel({
           >
             <Send className="w-4 h-4" />
             <span>
-              {isSubmitting
+              {isInitializing
+                ? 'Preparing Negotiation...'
+                : isSubmitting
                 ? 'Submitting Move...'
                 : action === 'accept'
                 ? 'Accept & Finalize Agreement'

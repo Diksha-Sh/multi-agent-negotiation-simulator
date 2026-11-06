@@ -59,9 +59,9 @@ python -m pytest -v
 | POST | `/api/validate` | `{"valid": true/false, "errors": [...]}` for the config sent in the body |
 | POST | `/api/config` | Builds the final config from a scenario id and personality choices, and validates it |
 | POST | `/api/orchestrator/run` | Runs a complete negotiation using the LLM reasoning engine, with rule-based fallback, and returns status, round count, winner and full turn history |
-| POST | `/api/orchestrator/step` | Plays the next turn for a given history; returns the turn, status and `deadlock_event` |
-| POST | `/api/orchestrator/human-turn` | Practice Mode: submits the human's turn and returns the AI's reply and `deadlock_event` |
-| POST | `/api/orchestrator/check-deadlock` | Deadlock event and resolution for a given history (see `docs/deadlock.md`) |
+| POST | `/api/orchestrator/step` | Plays next AI turn for a given history (or reports `waiting_for_human` if human is next); returns turn, status and `deadlock_event` |
+| POST | `/api/orchestrator/human-turn` | Practice Mode: submits and validates the human's turn, records it, and returns the AI reply and `deadlock_event` |
+| POST | `/api/orchestrator/check-deadlock` | Replays history and evaluates deadlock conditions (see `docs/deadlock.md`) |
 | GET | `/api/orchestrator/engine` | Which reasoning engine is active (LLM or rule-based) |
 
 ### POST /api/validate
@@ -133,6 +133,16 @@ Send the final config returned by `POST /api/config` as the request body. The ro
 ```
 
 The response contains `status`, `round`, `winner`, `history`, and the complete final `state`. The route passes `make_agent_engine(max_rounds=...)` to the orchestrator's `run_loop()`. Without an API key (or with `LLM_ENABLED=false`), the engine uses its rule-based strategy and counteroffer evaluator. With a configured key and `LLM_ENABLED=true`, it attempts the configured OpenAI-compatible provider and falls back to the rule-based strategy if the call fails. The response shape is unchanged.
+
+Negotiation history numbers every individual turn with `turn_number` in the frontend. The `round` on a turn is shared by all agents in that complete cycle; `max_rounds` is reached only after each participating agent has taken a turn in that round. In Practice Mode, `human_agent_id` and the legacy `human_seat` alias must select the same configured agent when both are supplied.
+
+`human_seat` is an agent-ID alias, not a numeric position. Numeric values are rejected; select an agent by its configured `id`. New Practice Mode history entries include `actor: "human"` or `actor: "ai"` and replay validates that attribution against the turn order. Legacy histories without actor metadata remain accepted and are attributed by their position and configured human agent.
+
+### POST `/api/orchestrator/human-turn`
+
+Send `{ "config": ..., "history": [...], "turn": {...}, "auto_respond": true }`. A counteroffer must include a finite numeric value for every item limited by the configured human agent and may not cross any of that agent's `min` or `max` reservation boundaries. Validation failures return HTTP 422 with a readable detail; they do not append the turn. `accept` and `reject` retain their separate meanings and are not subject to counteroffer-boundary checks. The route only accepts the configured human agent when that agent is next in turn order.
+
+With `auto_respond: true` (the default), AI turns are generated until the negotiation ends or the next turn belongs to the human. The response includes the updated `history`, `latest_turn`, `status`, `round`, `winner`, `human_agent_id`, and `deadlock_event`.
 
 To configure a provider, copy the root `.env.example` to `.env` and set `LLM_API_KEY` locally. The root `.env` is ignored by Git; never commit or share it. `httpx`, already listed in `backend/requirements.txt`, is used for provider requests. A successful fallback run does not establish that an external LLM call succeeded.
 

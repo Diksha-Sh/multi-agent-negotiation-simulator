@@ -11,7 +11,7 @@ from backend.orchestrator import (
     create_human_turn,
     mock_agent_fn,
 )
-from backend.validation import validate_config
+from backend.validation import validate_config, validate_counteroffer
 
 router = APIRouter(prefix="/api/orchestrator", tags=["orchestrator"])
 
@@ -27,6 +27,86 @@ def _validated_config(payload: Any) -> dict[str, Any]:
             detail={"message": "Invalid negotiation configuration", "errors": val.get("errors", [])},
         )
     return config
+
+
+def _normalized_offer(offer: dict[str, Any]) -> dict[str, Any]:
+    return {item.strip(): value for item, value in offer.items()}
+
+
+def _replay_history(
+    orchestrator: NegotiationOrchestrator,
+    history: list[dict[str, Any]],
+) -> NegotiationState:
+    agent_ids = [str(agent.get("id")) for agent in orchestrator.agents]
+    has_actor_metadata = any("actor" in turn for turn in history)
+    if orchestrator.mode == "practice" and has_actor_metadata and any(
+        "actor" not in turn for turn in history
+    ):
+        raise HTTPException(status_code=422, detail="Practice history has incomplete actor metadata.")
+
+    state = orchestrator.start()
+    for index, raw in enumerate(history):
+        if state.status not in ("ongoing", "waiting_for_human"):
+            raise HTTPException(status_code=422, detail="History contains turns after the negotiation ended.")
+
+        expected = agent_ids[index % len(agent_ids)]
+        if str(raw.get("agent_id")) != expected:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Turn {index + 1} should be by '{expected}', got '{raw.get('agent_id')}'.",
+            )
+        required = TURN_KEYS
+        missing = [key for key in required if key not in raw]
+        if missing:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Turn {index + 1} is missing required fields: {', '.join(missing)}.",
+            )
+        round_number = raw.get("round")
+        if isinstance(round_number, bool) or not isinstance(round_number, int) or round_number < 1:
+            raise HTTPException(status_code=422, detail=f"Turn {index + 1} has an invalid round number.")
+
+        action = raw.get("action")
+        if not isinstance(action, str) or action.strip().lower() not in ("accept", "counter", "reject"):
+            raise HTTPException(status_code=422, detail=f"Turn {index + 1} has an invalid action.")
+        action = action.strip().lower()
+        if not isinstance(raw.get("offer"), dict):
+            raise HTTPException(status_code=422, detail=f"Turn {index + 1} offer must be an object.")
+        if not isinstance(raw.get("reasoning"), str):
+            raise HTTPException(status_code=422, detail=f"Turn {index + 1} reasoning must be text.")
+        if raw.get("stance") not in ("firm", "flexible", "urgent"):
+            raise HTTPException(status_code=422, detail=f"Turn {index + 1} has an invalid stance.")
+
+        if orchestrator.mode == "practice":
+            expected_actor = "human" if expected == orchestrator.human_agent_id else "ai"
+            supplied_actor = raw.get("actor")
+            if supplied_actor is not None and supplied_actor != expected_actor:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Turn {index + 1} must be attributed to the {expected_actor} participant.",
+                )
+
+        if action == "counter":
+            agent = orchestrator.agents[index % len(agent_ids)]
+            errors = validate_counteroffer(agent, raw.get("offer"))
+            if errors:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"message": f"Invalid counteroffer in turn {index + 1}", "errors": errors},
+                )
+            normalized_offer = _normalized_offer(raw["offer"])
+        else:
+            normalized_offer = raw["offer"]
+
+        turn = Turn(**{key: raw.get(key) for key in TURN_KEYS})
+        turn["action"] = action
+        turn["offer"] = normalized_offer
+        turn["reasoning"] = raw["reasoning"]
+        turn["stance"] = raw["stance"]
+        if orchestrator.mode == "practice":
+            turn["actor"] = expected_actor
+        state = orchestrator.step(state, turn)
+    return state
 
 
 @router.post("/run", summary="Run a full negotiation loop using the Orchestrator")
@@ -49,6 +129,9 @@ def run_negotiation(
         orchestrator = NegotiationOrchestrator(config)
         agent_fn = mock_agent_fn if engine == "mock" else make_agent_engine(orchestrator.max_rounds)
         final_state = orchestrator.run_loop(agent_fn)
+        if final_state.mode == "practice":
+            for turn in final_state.history:
+                turn["actor"] = "ai"
         return {
             "status": final_state.status,
             "round": final_state.round,
@@ -82,20 +165,7 @@ def step_negotiation(
         raise HTTPException(status_code=422, detail="history must be a list of turn objects.")
 
     orchestrator = NegotiationOrchestrator(config)
-    agent_ids = [str(a.get("id")) for a in orchestrator.agents]
-    state = orchestrator.start()
-    for index, raw in enumerate(history):
-        expected = agent_ids[index % len(agent_ids)]
-        if str(raw.get("agent_id")) != expected:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Turn {index + 1} should be by '{expected}', got '{raw.get('agent_id')}'.",
-            )
-        turn = Turn(**{key: raw.get(key) for key in TURN_KEYS})
-        turn["offer"] = turn["offer"] if isinstance(turn["offer"], dict) else {}
-        state = orchestrator.step(state, turn)
-        if state.status not in ("ongoing", "waiting_for_human"):
-            break
+    state = _replay_history(orchestrator, history)
 
     if state.status not in ("ongoing", "waiting_for_human"):
         return {
@@ -104,6 +174,10 @@ def step_negotiation(
             "round": state.round,
             "winner": state.winner,
             "engine": None,
+            "mode": state.mode,
+            "human_agent_id": state.human_agent_id,
+            "history": state.history,
+            "latest_turn": state.history[-1] if state.history else None,
             "deadlock_event": state.deadlock_event,
         }
 
@@ -119,13 +193,23 @@ def step_negotiation(
             "engine": None,
             "mode": state.mode,
             "human_agent_id": state.human_agent_id,
+            "history": state.history,
+            "latest_turn": state.history[-1] if state.history else None,
             "deadlock_event": state.deadlock_event,
         }
 
     try:
         agent_fn = mock_agent_fn if engine == "mock" else make_agent_engine(orchestrator.max_rounds)
         turn = agent_fn(state, current_agent)
+        if orchestrator.mode == "practice":
+            turn["actor"] = "ai"
         state = orchestrator.step(state, turn)
+        if (
+            state.status == "ongoing"
+            and orchestrator.mode == "practice"
+            and orchestrator._get_current_agent(state).get("id") == orchestrator.human_agent_id
+        ):
+            state.status = "waiting_for_human"
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Orchestration failure: {exc}") from exc
 
@@ -134,6 +218,8 @@ def step_negotiation(
         "status": state.status,
         "round": state.round,
         "winner": state.winner,
+        "history": state.history,
+        "latest_turn": state.history[-1] if state.history else None,
         "mode": state.mode,
         "human_agent_id": state.human_agent_id,
         "deadlock_event": state.deadlock_event,
@@ -176,22 +262,8 @@ def submit_human_turn(
         raise HTTPException(status_code=422, detail="Missing or invalid 'turn' object in payload.")
 
     orchestrator = NegotiationOrchestrator(config)
-    agent_ids = [str(a.get("id")) for a in orchestrator.agents]
-    state = orchestrator.start()
-
     # 1. Replay history
-    for index, raw in enumerate(history):
-        expected = agent_ids[index % len(agent_ids)]
-        if str(raw.get("agent_id")) != expected:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Turn {index + 1} should be by '{expected}', got '{raw.get('agent_id')}'.",
-            )
-        turn = Turn(**{key: raw.get(key) for key in TURN_KEYS})
-        turn["offer"] = turn["offer"] if isinstance(turn["offer"], dict) else {}
-        state = orchestrator.step(state, turn)
-        if state.status not in ("ongoing", "waiting_for_human"):
-            break
+    state = _replay_history(orchestrator, history)
 
     if state.status not in ("ongoing", "waiting_for_human"):
         return {
@@ -201,25 +273,46 @@ def submit_human_turn(
             "history": state.history,
             "state": state.to_dict(),
             "latest_turn": state.history[-1] if state.history else None,
+            "mode": state.mode,
+            "human_agent_id": state.human_agent_id,
             "deadlock_event": state.deadlock_event,
             "message": "Negotiation has already concluded.",
         }
 
     # 2. Verify active agent matches human agent
     current_agent = orchestrator._get_current_agent(state)
-    target_human_id = str(turn_payload.get("agent_id") or orchestrator.human_agent_id or current_agent.get("id"))
-    if target_human_id != str(current_agent.get("id")):
+    target_human_id = str(turn_payload.get("agent_id") or "")
+    if turn_payload.get("actor", "human") != "human":
+        raise HTTPException(status_code=422, detail="Submitted turns must be attributed to the human participant.")
+    if str(current_agent.get("id")) != orchestrator.human_agent_id:
         raise HTTPException(
             status_code=422,
-            detail=f"It is turn for '{current_agent.get('id')}', but human submitted move for '{target_human_id}'.",
+            detail=f"It is turn for AI agent '{current_agent.get('id')}', not the configured human agent.",
+        )
+    if target_human_id != orchestrator.human_agent_id:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Human turns may only be submitted for '{orchestrator.human_agent_id}'.",
         )
 
     # 3. Create canonical human turn
+    action = str(turn_payload.get("action") or "counter").strip().lower()
+    offer = turn_payload.get("offer") or {}
+    if action == "counter":
+        errors = validate_counteroffer(current_agent, offer)
+        if errors:
+            raise HTTPException(status_code=422, detail={"message": "Invalid counteroffer", "errors": errors})
+        offer = _normalized_offer(offer)
+    elif action == "accept":
+        if not state.history or state.history[-1].get("agent_id") == orchestrator.human_agent_id:
+            raise HTTPException(status_code=422, detail="There is no opponent proposal to accept.")
+        offer = dict(state.history[-1].get("offer") or {})
+
     try:
         human_turn = create_human_turn(
             agent_id=target_human_id,
-            action=turn_payload.get("action", "counter"),
-            offer=turn_payload.get("offer") or {},
+            action=action,
+            offer=offer,
             round_num=state.round + 1,
             reasoning=turn_payload.get("reasoning"),
             stance=turn_payload.get("stance"),
@@ -229,13 +322,17 @@ def submit_human_turn(
 
     # 4. Step state with human turn
     state = orchestrator.step(state, human_turn)
+    human_turn["actor"] = "human"
 
     # 5. Auto-respond with AI if requested and state is ongoing
     auto_respond = bool(payload.get("auto_respond", True))
     agent_fn = mock_agent_fn if engine == "mock" else make_agent_engine(orchestrator.max_rounds)
 
     if auto_respond and state.status == "ongoing":
+        first_ai_turn_index = len(state.history)
         state = orchestrator.run_loop(agent_fn, initial_state=state)
+        for ai_turn in state.history[first_ai_turn_index:]:
+            ai_turn["actor"] = "ai"
 
     return {
         "status": state.status,
@@ -342,24 +439,11 @@ def check_negotiation_deadlock(
         raise HTTPException(status_code=422, detail="Body must be an object with 'config' and 'history'.")
     config = _validated_config(payload.get("config"))
     history = payload.get("history") or []
-    if not isinstance(history, list) or not all(isinstance(t, dict) for t in history):
+    if not isinstance(history, list) or not all(isinstance(turn, dict) for turn in history):
         raise HTTPException(status_code=422, detail="history must be a list of turn objects.")
 
     orchestrator = NegotiationOrchestrator(config)
-    agent_ids = [str(a.get("id")) for a in orchestrator.agents]
-    state = orchestrator.start()
-    for index, raw in enumerate(history):
-        expected = agent_ids[index % len(agent_ids)]
-        if str(raw.get("agent_id")) != expected:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Turn {index + 1} should be by '{expected}', got '{raw.get('agent_id')}'.",
-            )
-        turn = Turn(**{key: raw.get(key) for key in TURN_KEYS})
-        turn["offer"] = turn["offer"] if isinstance(turn["offer"], dict) else {}
-        state = orchestrator.step(state, turn)
-        if state.status not in ("ongoing", "waiting_for_human"):
-            break
+    state = _replay_history(orchestrator, history)
 
     event = state.deadlock_event or check_deadlock(state, config)
     resolution = resolve_deadlock(state, event, config) if event else None

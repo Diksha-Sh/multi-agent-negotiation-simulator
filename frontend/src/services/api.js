@@ -3,6 +3,15 @@
 
 export const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
+function formatErrorDetail(detail) {
+  if (typeof detail === 'string') return detail;
+  if (detail && typeof detail === 'object') {
+    const errors = Array.isArray(detail.errors) ? detail.errors.join(' ') : '';
+    return [detail.message, errors].filter(Boolean).join(': ') || JSON.stringify(detail);
+  }
+  return 'The backend returned an unexpected response.';
+}
+
 async function request(path, { method = 'GET', body } = {}) {
   const options = { method };
   if (body !== undefined) {
@@ -13,15 +22,20 @@ async function request(path, { method = 'GET', body } = {}) {
   let response;
   try {
     response = await fetch(`${API_BASE}${path}`, options);
-  } catch {
-    throw new Error(
+  } catch (cause) {
+    const error = new Error(
       `Cannot reach the backend at ${API_BASE}. Start it with: python -m backend.server`,
     );
+    error.isNetworkError = true;
+    error.cause = cause;
+    throw error;
   }
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    const detail = data && data.detail ? data.detail : response.statusText;
-    throw new Error(`Backend error ${response.status}: ${detail}`);
+    const detail = data && data.detail ? formatErrorDetail(data.detail) : response.statusText;
+    const error = new Error(`Backend error ${response.status}: ${detail}`);
+    error.status = response.status;
+    throw error;
   }
   return data;
 }

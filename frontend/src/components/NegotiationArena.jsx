@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { saveSimulationRecord } from '../services/supabase';
 import {
   FileText,
@@ -31,6 +31,7 @@ import { getEngineStatus, runOrchestrator, stepOrchestrator, submitHumanTurn } f
 
 // Offline fallback only: kept outside the component so renders stay pure.
 const randomChance = () => Math.random();
+const EMPTY_AGENTS = [];
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');
@@ -175,22 +176,23 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
   const { isDark } = useTheme();
   const [turns, setTurns] = useState([]);
   const isPracticeMode = (config?.mode || '').toLowerCase() === 'practice';
-  const humanAgentId = config?.human_agent_id || config?.human_seat || (isPracticeMode ? config?.agents?.[0]?.id : null);
+  const configuredHumanAgentId = config?.human_agent_id ?? config?.human_seat;
+  const humanAgentId = isPracticeMode
+    ? configuredHumanAgentId ?? config?.agents?.[0]?.id
+    : null;
 
-  const [orchestratorStatus, setOrchestratorStatus] = useState(() => {
-    const isPractice = (config?.mode || '').toLowerCase() === 'practice';
-    const humanId = config?.human_agent_id || config?.human_seat || (isPractice ? config?.agents?.[0]?.id : null);
-    const firstAgentId = config?.agents?.[0]?.id;
-    if (isPractice && humanId && humanId === firstAgentId) {
-      return 'waiting_for_human';
-    }
-    return 'ongoing';
-  });
+  const [orchestratorStatus, setOrchestratorStatus] = useState('ongoing');
   const [orchestratorWinner, setOrchestratorWinner] = useState(null);
   const [deadlockEvent, setDeadlockEvent] = useState(null);
   const [isRunningAll, setIsRunningAll] = useState(false);
   const [isStepping, setIsStepping] = useState(false);
   const [isSubmittingHumanTurn, setIsSubmittingHumanTurn] = useState(false);
+  const [arenaError, setArenaError] = useState('');
+  const [practiceInitGeneration, setPracticeInitGeneration] = useState(0);
+  const [isInitializing, setIsInitializing] = useState(isPracticeMode);
+  const sessionGenerationRef = useRef(0);
+  const practiceInitRequestRef = useRef(null);
+  const practiceInitContextRef = useRef(null);
   // Which engine produced the turns: 'llm' | 'rule-based' | 'mixed' | 'mock' | 'offline'
   const [engineMode, setEngineMode] = useState(null);
   const [engineModel, setEngineModel] = useState(null);
@@ -201,7 +203,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
   const scenarioMeta = SCENARIO_META[config?.id] || SCENARIO_META.vendor_pricing;
   const ScenarioIcon = scenarioMeta.icon;
   const maxRounds = Number(config?.max_rounds || 10);
-  const agents = config?.agents || [];
+  const agents = config?.agents || EMPTY_AGENTS;
 
   useEffect(() => {
     getEngineStatus()
@@ -209,15 +211,22 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         setEngineMode(status.mode);
         setEngineModel(status.model);
       })
-      .catch(() => setEngineMode('offline'));
+      .catch((err) => {
+        if (err.isNetworkError) {
+          setEngineMode('offline');
+        } else {
+          setArenaError(err.message);
+        }
+      });
   }, []);
 
-  const withAgentInfo = (t, i) => {
+  const withAgentInfo = useCallback((t, i) => {
     const agentObj = agents.find((a) => a.id === t.agent_id) || {};
     return { ...t, turn_number: i + 1, agent_name: agentObj.name || t.agent_id, role: agentObj.role || '' };
-  };
+  }, [agents]);
 
   const saveCurrentSimulation = async (customStatus, customWinner, customTurns) => {
+    const requestGeneration = sessionGenerationRef.current;
     const finalTurns = customTurns || turns;
     const finalStatus = customStatus || orchestratorStatus;
     const finalWinner = customWinner !== undefined ? customWinner : orchestratorWinner;
@@ -236,21 +245,28 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         config,
         turns: finalTurns,
       });
-      setHasSaved(true);
+      if (sessionGenerationRef.current === requestGeneration) {
+        setHasSaved(true);
+      }
     } catch (err) {
       console.warn('Simulation save warning:', err);
     } finally {
-      setIsSaving(false);
+      if (sessionGenerationRef.current === requestGeneration) {
+        setIsSaving(false);
+      }
     }
   };
 
   // Submit human participant turn in Practice Mode
   const handleSubmitHumanTurn = async (turnPayload) => {
     if (isSubmittingHumanTurn) return;
+    const requestGeneration = sessionGenerationRef.current;
     setIsSubmittingHumanTurn(true);
+    setArenaError('');
 
     try {
       const response = await submitHumanTurn(config, turnPayload, turns, true);
+      if (sessionGenerationRef.current !== requestGeneration) return;
       if (response && response.history) {
         const mapped = response.history.map(withAgentInfo);
         setTurns(mapped);
@@ -258,6 +274,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         const st = response.status || 'waiting_for_human';
         const win = response.winner || null;
         const dl = response.deadlock_event || null;
+        setArenaError('');
         setOrchestratorStatus(st);
         setOrchestratorWinner(win);
         setDeadlockEvent(dl);
@@ -267,13 +284,18 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         }
       }
     } catch (err) {
-      console.warn('Backend human turn failed, using local simulation fallback:', err);
+      if (sessionGenerationRef.current !== requestGeneration) return;
+      if (!err.isNetworkError) {
+        setArenaError(err.message || 'The backend could not process your turn.');
+        return;
+      }
+      console.warn('Backend unavailable; using local simulation fallback:', err);
       setEngineMode('offline');
 
       // Local fallback: add human turn
       const currentHumanTurn = {
         ...turnPayload,
-        round: turns.length + 1,
+        round: Math.floor(turns.length / (agents.length || 2)) + 1,
         turn_number: turns.length + 1,
         agent_name: agents.find((a) => a.id === turnPayload.agent_id)?.name || turnPayload.agent_id,
         role: agents.find((a) => a.id === turnPayload.agent_id)?.role || '',
@@ -334,7 +356,9 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         }
       }
     } finally {
-      setIsSubmittingHumanTurn(false);
+      if (sessionGenerationRef.current === requestGeneration) {
+        setIsSubmittingHumanTurn(false);
+      }
     }
   };
 
@@ -350,7 +374,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       orchestration_result: {
         status: orchestratorStatus,
         total_turns: turns.length,
-        rounds: turns.length,
+        rounds: Math.ceil(turns.length / (agents.length || 2)),
         winner: orchestratorWinner,
         history: turns,
       },
@@ -365,9 +389,10 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
   };
 
   // Generate a mock turn locally if offline or step-by-step
-  const generateLocalTurn = (currentTurnIndex) => {
+  const generateLocalTurn = useCallback((currentTurnIndex) => {
     const activeAgent = agents[currentTurnIndex % agents.length];
-    const currentRound = currentTurnIndex + 1;
+    const agentCount = agents.length || 2;
+    const currentRound = Math.floor(currentTurnIndex / agentCount) + 1;
     const limits = activeAgent?.limits || [];
 
     const offer = {};
@@ -388,7 +413,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       offer.price = 37500;
     }
 
-    const isLastTurn = currentTurnIndex + 1 >= maxRounds;
+    const isLastTurn = currentTurnIndex + 1 >= maxRounds * agentCount;
     let action = 'counter';
     if (currentRound >= 3 && randomChance() < 0.25) {
       action = 'accept';
@@ -407,28 +432,129 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       reasoning: `${activeAgent.name} proposes terms balancing strategic leverage with agreement viability for Round #${currentRound}.`,
       stance: currentRound >= maxRounds - 2 ? 'urgent' : currentRound === 1 ? 'firm' : 'flexible',
     };
-  };
+  }, [agents, maxRounds]);
+
+  useEffect(() => {
+    practiceInitContextRef.current = {
+      config,
+      agents,
+      humanAgentId,
+      maxRounds,
+      withAgentInfo,
+      generateLocalTurn,
+    };
+  }, [agents, config, generateLocalTurn, humanAgentId, maxRounds, withAgentInfo]);
+
+  useEffect(() => {
+    if (!isPracticeMode) return undefined;
+    const generation = practiceInitGeneration;
+    const context = practiceInitContextRef.current;
+    let active = true;
+
+    if (practiceInitRequestRef.current?.generation !== generation) {
+      practiceInitRequestRef.current = {
+        generation,
+        promise: runOrchestrator(context.config),
+      };
+    }
+
+    practiceInitRequestRef.current.promise
+      .then((response) => {
+        if (!active || sessionGenerationRef.current !== generation || !response) return;
+        const mapped = (response.history || []).map(context.withAgentInfo);
+        setTurns(mapped);
+        setOrchestratorStatus(response.status || 'ongoing');
+        setOrchestratorWinner(response.winner || null);
+        setDeadlockEvent(response.deadlock_event || null);
+        if (response.engine) setEngineMode(response.engine);
+        setIsInitializing(false);
+      })
+      .catch((err) => {
+        if (!active || sessionGenerationRef.current !== generation) return;
+        if (!err.isNetworkError) {
+          setArenaError(err.message || 'The backend could not initialize Practice Mode.');
+          setIsInitializing(false);
+          return;
+        }
+
+        setEngineMode('offline');
+        const localTurns = [];
+        let status = 'ongoing';
+        let winner = null;
+        for (let index = 0; index < context.maxRounds * (context.agents.length || 2); index += 1) {
+          const agent = context.agents[index % (context.agents.length || 2)];
+          if (agent?.id === context.humanAgentId) {
+            status = 'waiting_for_human';
+            break;
+          }
+          const turn = context.generateLocalTurn(index);
+          localTurns.push(turn);
+          if (turn.action === 'accept') {
+            status = 'accepted';
+            winner = turn.agent_id;
+            break;
+          }
+          if (turn.action === 'reject') {
+            status = 'rejected';
+            break;
+          }
+        }
+        if (status === 'ongoing') {
+          status = 'deadlock';
+          setDeadlockEvent({
+            type: 'max_rounds',
+            round_triggered: context.maxRounds,
+            resolution_attempt: null,
+            resolution_outcome: null,
+          });
+        }
+        setTurns(localTurns);
+        setOrchestratorStatus(status);
+        setOrchestratorWinner(winner);
+        setIsInitializing(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isPracticeMode, practiceInitGeneration]);
 
   // Step 1 Turn at a time through the backend Orchestrator + LLM Reasoning Engine
   const handleSimulateNextTurn = async () => {
     if ((orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || isStepping) return;
+    const requestGeneration = sessionGenerationRef.current;
     setIsStepping(true);
+    setArenaError('');
     try {
       const response = await stepOrchestrator(config, turns);
+      if (sessionGenerationRef.current !== requestGeneration) return;
       if (response.turn) {
         setTurns([...turns, withAgentInfo(response.turn, turns.length)]);
       }
       setOrchestratorStatus(response.status || 'ongoing');
       setOrchestratorWinner(response.winner || null);
+      setDeadlockEvent(response.deadlock_event || null);
       if (response.engine) setEngineMode(response.engine);
       return;
-    } catch {
+    } catch (err) {
+      if (sessionGenerationRef.current !== requestGeneration) return;
+      if (!err.isNetworkError) {
+        setArenaError(err.message || 'The backend could not advance the negotiation.');
+        return;
+      }
       setEngineMode('offline');
     } finally {
-      setIsStepping(false);
+      if (sessionGenerationRef.current === requestGeneration) {
+        setIsStepping(false);
+      }
     }
 
     // Backend not reachable: local simulation
+    const nextAgent = agents[turns.length % (agents.length || 2)];
+    if (isPracticeMode && nextAgent?.id === humanAgentId) {
+      setOrchestratorStatus('waiting_for_human');
+      return;
+    }
     const nextTurn = generateLocalTurn(turns.length);
     const updated = [...turns, nextTurn];
     setTurns(updated);
@@ -463,9 +589,12 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
 
   // Run full Orchestrator loop via FastAPI backend or fast local runner
   const handleRunFullOrchestrator = async () => {
+    const requestGeneration = sessionGenerationRef.current;
     setIsRunningAll(true);
+    setArenaError('');
     try {
       const response = await runOrchestrator(config);
+      if (sessionGenerationRef.current !== requestGeneration) return;
       if (response && response.history) {
         const mapped = response.history.map(withAgentInfo);
         setTurns(mapped);
@@ -476,11 +605,17 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         setOrchestratorStatus(st);
         setOrchestratorWinner(win);
         setDeadlockEvent(dl);
+        setArenaError('');
         if (st === 'accepted' || st === 'rejected' || st === 'deadlock') {
           saveCurrentSimulation(st, win, mapped);
         }
       }
-    } catch {
+    } catch (err) {
+      if (sessionGenerationRef.current !== requestGeneration) return;
+      if (!err.isNetworkError) {
+        setArenaError(err.message || 'The backend could not run the negotiation.');
+        return;
+      }
       // Graceful client fallback: simulate orchestrator loop
       setEngineMode('offline');
       let simulatedTurns = [];
@@ -490,7 +625,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       for (let i = turns.length; i < maxRounds * (agents.length || 2); i += 1) {
         if (isPracticeMode) {
           const activeAgentIndex = i % (agents.length || 2);
-          if (agents[activeAgentIndex]?.id === humanAgentId && i > turns.length) {
+          if (agents[activeAgentIndex]?.id === humanAgentId) {
             status = 'waiting_for_human';
             break;
           }
@@ -527,14 +662,17 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         saveCurrentSimulation(status, winner, fullHistory);
       }
     } finally {
-      setIsRunningAll(false);
+      if (sessionGenerationRef.current === requestGeneration) {
+        setIsRunningAll(false);
+      }
     }
   };
 
   const handleResetArena = () => {
+    sessionGenerationRef.current += 1;
     setTurns([]);
-    const firstAgentId = agents[0]?.id;
-    if (isPracticeMode && humanAgentId && humanAgentId === firstAgentId) {
+    setArenaError('');
+    if (isPracticeMode && humanAgentId === agents[0]?.id) {
       setOrchestratorStatus('waiting_for_human');
     } else {
       setOrchestratorStatus('ongoing');
@@ -542,6 +680,14 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     setOrchestratorWinner(null);
     setDeadlockEvent(null);
     setHasSaved(false);
+    setIsSaving(false);
+    setIsRunningAll(false);
+    setIsStepping(false);
+    setIsSubmittingHumanTurn(false);
+    setIsInitializing(isPracticeMode);
+    if (isPracticeMode) {
+      setPracticeInitGeneration((generation) => generation + 1);
+    }
   };
 
   return (
@@ -691,6 +837,12 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         </div>
       </header>
 
+      {arenaError && !(isPracticeMode && orchestratorStatus === 'waiting_for_human') && (
+        <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm" role="alert">
+          {arenaError}
+        </div>
+      )}
+
       {/* ── Agents Face-off Grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
         {agents.map((agent) => (
@@ -720,12 +872,15 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       {isPracticeMode && orchestratorStatus === 'waiting_for_human' && (
         <div className="mb-8">
           <HumanInputPanel
+            key={`${humanAgentId}-${practiceInitGeneration}-${turns.length}`}
             config={config}
             humanAgentId={humanAgentId}
             currentRound={Math.floor(turns.length / (agents.length || 2)) + 1}
             latestTurn={turns.length > 0 ? turns[turns.length - 1] : null}
             onSubmitTurn={handleSubmitHumanTurn}
             isSubmitting={isSubmittingHumanTurn}
+            isInitializing={isInitializing}
+            submissionError={arenaError}
           />
         </div>
       )}
@@ -748,7 +903,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
-            {turns.length > 0 && (
+            {(turns.length > 0 || isPracticeMode) && (
               <button
                 type="button"
                 onClick={handleResetArena}
@@ -763,7 +918,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
 
             <button
               type="button"
-              disabled={(orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || isStepping || isRunningAll}
+              disabled={(orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || isStepping || isRunningAll || isInitializing}
               onClick={handleSimulateNextTurn}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-md shadow-indigo-600/20 transition-all cursor-pointer shrink-0"
             >
@@ -779,7 +934,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
 
             <button
               type="button"
-              disabled={(orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || isRunningAll || isStepping}
+              disabled={(orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || isRunningAll || isStepping || isInitializing}
               onClick={handleRunFullOrchestrator}
               className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-md shadow-emerald-600/20 transition-all cursor-pointer shrink-0"
             >
