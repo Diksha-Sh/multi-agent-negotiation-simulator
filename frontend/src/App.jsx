@@ -68,7 +68,7 @@ function AppNav({
   return (
     <nav
       className={`sticky top-0 z-40 backdrop-blur-xl border-b shadow-md transition-colors duration-200 ${
-        isDark ? 'bg-zinc-950/90 border-zinc-800/80' : 'bg-white/95 border-stone-200 shadow-stone-200/40'
+        isDark ? 'bg-slate-950/80 border-slate-800/80' : 'bg-white/95 border-slate-200 shadow-slate-200/50'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col lg:flex-row items-center justify-between gap-3">
@@ -84,18 +84,18 @@ function AppNav({
             <BrandLogo className="w-8 h-8" />
             <div className="flex flex-col">
               <span
-                className={`text-sm font-extrabold tracking-tight leading-tight group-hover:text-amber-500 transition-colors ${
-                  isDark ? 'text-zinc-100' : 'text-zinc-900'
+                className={`text-sm font-extrabold tracking-tight leading-tight group-hover:text-indigo-400 transition-colors ${
+                  isDark ? 'text-slate-100' : 'text-slate-900'
                 }`}
               >
-                Negotiation<span className="text-amber-500">AI</span>
+                Negotiation<span className="text-indigo-500">AI</span>
               </span>
               <span
-                className={`text-[9px] uppercase tracking-widest font-bold font-mono ${
-                  isDark ? 'text-zinc-400' : 'text-zinc-500'
+                className={`text-[9px] uppercase tracking-widest font-bold ${
+                  isDark ? 'text-slate-400' : 'text-slate-500'
                 }`}
               >
-                Commercial Deal Desk
+                Autonomous Simulator
               </span>
             </div>
           </button>
@@ -106,31 +106,31 @@ function AppNav({
               type="button"
               onClick={toggleTheme}
               className={`p-1.5 rounded-lg border transition-colors ${
-                isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-300' : 'border-stone-200 bg-stone-100 text-zinc-700'
+                isDark ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-slate-200 bg-slate-100 text-slate-700'
               }`}
               title="Toggle Theme"
             >
-              {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-amber-600" />}
+              {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-indigo-500" />}
             </button>
             <button
               type="button"
               onClick={onOpenHistory}
               className={`p-1.5 rounded-lg border transition-colors ${
-                isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-300' : 'border-stone-200 bg-stone-100 text-zinc-700'
+                isDark ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-slate-200 bg-slate-100 text-slate-700'
               }`}
               title="Simulation History"
             >
-              <History className="w-3.5 h-3.5 text-amber-500" />
+              <History className="w-3.5 h-3.5 text-indigo-500" />
             </button>
             <button
               type="button"
               onClick={onGoHome}
               className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
                 isHomeActive
-                  ? 'bg-amber-500 text-zinc-950 font-bold border-transparent'
+                  ? 'bg-indigo-600 text-white border-transparent'
                   : isDark
-                  ? 'border-zinc-800 bg-zinc-900 text-zinc-300'
-                  : 'border-stone-200 bg-stone-100 text-zinc-700'
+                  ? 'border-slate-800 bg-slate-900 text-slate-300'
+                  : 'border-slate-200 bg-slate-100 text-slate-700'
               }`}
             >
               Home
@@ -139,7 +139,7 @@ function AppNav({
               <button
                 type="button"
                 onClick={() => onNavigateStep('login')}
-                className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-amber-500 text-zinc-950 shadow-sm"
+                className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white shadow-sm"
               >
                 Sign In
               </button>
@@ -147,7 +147,7 @@ function AppNav({
               <button
                 type="button"
                 onClick={onLogout}
-                className="p-1.5 rounded-lg border border-zinc-800 text-zinc-400 hover:text-rose-500"
+                className="p-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-rose-500"
                 title="Log Out"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -164,17 +164,17 @@ function AppNav({
             onClick={onGoHome}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               isHomeActive
-                ? 'bg-amber-500 text-zinc-950 font-bold shadow-md shadow-amber-500/20'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                 : isDark
-                ? 'bg-zinc-900/60 border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
-                : 'bg-stone-100 border border-stone-200 text-zinc-600 hover:text-zinc-900 hover:border-stone-300'
+                ? 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                : 'bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300'
             }`}
           >
             <Home className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Home</span>
           </button>
 
-          <div className={`w-2 h-0.5 ${isDark ? 'bg-zinc-800' : 'bg-stone-200'}`} />
+          <div className={`w-2 h-0.5 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
 
           {STEPS.map((step, index) => {
             const status = getStepStatus(step.number);
@@ -191,25 +191,25 @@ function AppNav({
                   onClick={() => isClickable && onNavigateStep(step.number)}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                     status === 'active'
-                      ? 'bg-amber-500 text-zinc-950 font-bold shadow-md shadow-amber-500/20'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                       : status === 'completed'
                       ? isDark
-                        ? 'bg-zinc-900/80 border border-zinc-800 text-zinc-300 hover:text-white hover:border-amber-500/40 cursor-pointer'
-                        : 'bg-stone-100 border border-stone-200 text-zinc-700 hover:text-zinc-900 hover:border-stone-300 cursor-pointer'
+                        ? 'bg-slate-900/80 border border-slate-800 text-slate-300 hover:text-white hover:border-indigo-500/40 cursor-pointer'
+                        : 'bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 hover:border-slate-300 cursor-pointer'
                       : isDark
-                      ? 'bg-zinc-950/40 border border-zinc-900 text-zinc-600 cursor-not-allowed opacity-50'
-                      : 'bg-stone-50 border border-stone-200 text-zinc-400 cursor-not-allowed opacity-50'
+                      ? 'bg-slate-950/40 border border-slate-900 text-slate-600 cursor-not-allowed opacity-50'
+                      : 'bg-slate-50 border border-slate-200 text-slate-400 cursor-not-allowed opacity-50'
                   }`}
                 >
                   <span
                     className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
                       status === 'active'
-                        ? 'bg-zinc-950/20 text-zinc-950'
+                        ? 'bg-indigo-500 text-white'
                         : status === 'completed'
                         ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
                         : isDark
-                        ? 'bg-zinc-800 text-zinc-400'
-                        : 'bg-stone-200 text-zinc-500'
+                        ? 'bg-slate-800 text-slate-400'
+                        : 'bg-slate-200 text-slate-500'
                     }`}
                   >
                     {status === 'completed' ? <Check className="w-3 h-3 stroke-[2.5]" /> : step.number}
@@ -223,10 +223,10 @@ function AppNav({
                   <div
                     className={`w-4 sm:w-6 h-0.5 ${
                       status === 'completed'
-                        ? 'bg-emerald-500/50'
+                        ? 'bg-indigo-500/50'
                         : isDark
-                        ? 'bg-zinc-800'
-                        : 'bg-stone-200'
+                        ? 'bg-slate-800'
+                        : 'bg-slate-200'
                     }`}
                   />
                 )}
@@ -243,12 +243,12 @@ function AppNav({
             onClick={onOpenHistory}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
               isDark
-                ? 'border-zinc-800 bg-zinc-900/80 text-zinc-300 hover:text-white hover:border-zinc-700'
-                : 'border-stone-300 bg-stone-100 text-zinc-700 hover:text-zinc-900 hover:bg-stone-200'
+                ? 'border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white hover:border-slate-700'
+                : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200'
             }`}
             title="View Simulation History"
           >
-            <History className="w-3.5 h-3.5 text-amber-500" />
+            <History className="w-3.5 h-3.5 text-indigo-500" />
             <span>History</span>
           </button>
 
@@ -258,8 +258,8 @@ function AppNav({
             onClick={toggleTheme}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
               isDark
-                ? 'border-zinc-800 bg-zinc-900/80 text-zinc-300 hover:text-white hover:border-zinc-700'
-                : 'border-stone-300 bg-stone-100 text-zinc-700 hover:text-zinc-900 hover:bg-stone-200'
+                ? 'border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white hover:border-slate-700'
+                : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200'
             }`}
             title="Toggle Bright/Dark Mode"
           >
@@ -270,7 +270,7 @@ function AppNav({
               </>
             ) : (
               <>
-                <Moon className="w-3.5 h-3.5 text-amber-600" />
+                <Moon className="w-3.5 h-3.5 text-indigo-500" />
                 <span>Dark Mode</span>
               </>
             )}
@@ -279,19 +279,19 @@ function AppNav({
           {currentUser ? (
             <div
               className={`flex items-center gap-2 rounded-full py-1 pl-2 pr-3 border ${
-                isDark ? 'border-zinc-800/90 bg-zinc-900/80 shadow-sm' : 'border-stone-200 bg-white shadow-sm'
+                isDark ? 'border-slate-800/90 bg-slate-900/80 shadow-sm' : 'border-slate-200 bg-white shadow-sm'
               }`}
             >
-              <div className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-500 font-bold text-[11px] flex items-center justify-center border border-amber-500/30">
+              <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-500 font-bold text-[11px] flex items-center justify-center border border-indigo-500/30">
                 {(currentUser.name || 'U').charAt(0).toUpperCase()}
               </div>
-              <span className={`text-xs font-semibold ${isDark ? 'text-zinc-200' : 'text-zinc-800'}`}>
+              <span className={`text-xs font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                 {currentUser.name}
               </span>
               <button
                 type="button"
                 onClick={onLogout}
-                className="text-zinc-400 hover:text-rose-500 ml-1.5 transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-rose-500 ml-1.5 transition-colors cursor-pointer"
                 title="Log Out"
               >
                 <LogOut className="w-3 h-3" />
@@ -301,7 +301,7 @@ function AppNav({
             <button
               type="button"
               onClick={() => onNavigateStep('login')}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-sm transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all cursor-pointer"
             >
               <LogIn className="w-3.5 h-3.5" />
               <span>Sign In</span>
@@ -513,8 +513,8 @@ function MainApp() {
 
   return (
     <div
-      className={`min-h-screen w-full flex flex-col font-sans transition-colors duration-200 relative selection:bg-amber-500 selection:text-zinc-950 ${
-        isDark ? 'bg-[#09090b] text-zinc-100' : 'bg-[#fafaf9] text-zinc-900'
+      className={`min-h-screen w-full flex flex-col font-sans transition-colors duration-200 relative selection:bg-indigo-500 selection:text-white ${
+        isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
       }`}
     >
       {/* Global Nav */}
