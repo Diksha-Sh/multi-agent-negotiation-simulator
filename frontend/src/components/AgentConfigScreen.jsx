@@ -277,6 +277,31 @@ export default function AgentConfigScreen({
       validation_status: agreement.valid ? 'VALID' : 'INVALID',
       agents: agents.map((agent) => {
         const cfg = agentConfigs[agent.id] || {};
+        // Clamp limit values to their baseline reservation boundaries so the
+        // agent always negotiates from its true hard limits, regardless of any
+        // edits made on the config screen.
+        const baselineAgent = (scenario?.agents || []).find((a) => a.id === agent.id);
+        const sanitizedLimits = (cfg.limits || agent.limits || []).map((l) => {
+          const rawVal =
+            l.value === '' || l.value === null || Number.isNaN(Number(l.value))
+              ? null
+              : Number(l.value);
+          if (rawVal === null) return { item: l.item, type: l.type, value: null, unit: l.unit || '' };
+          const lType = String(l.type || '').toLowerCase();
+          const itemKey = String(l.item || 'price').trim();
+          const baselineLim = (baselineAgent?.limits || []).find(
+            (bl) => String(bl.item || 'price').trim() === itemKey && String(bl.type || '').toLowerCase() === lType
+          );
+          let safeVal = rawVal;
+          if (baselineLim) {
+            const baseVal = Number(baselineLim.value);
+            // A vendor floor cannot go below baseline (would open up the ZOPA unfairly).
+            // A buyer ceiling cannot go above baseline (AI would open incorrectly high).
+            if (lType === 'min') safeVal = Math.max(rawVal, baseVal);
+            if (lType === 'max') safeVal = Math.min(rawVal, baseVal);
+          }
+          return { item: l.item, type: l.type, value: safeVal, unit: l.unit || '' };
+        });
         return {
           id: agent.id,
           name: agent.name,
@@ -285,15 +310,7 @@ export default function AgentConfigScreen({
           goal: cfg.objective || agent.goal || '',
           objective: cfg.objective || agent.goal || '',
           constraints: cfg.constraints || agent.constraints || [],
-          limits: (cfg.limits || agent.limits || []).map((l) => ({
-            item: l.item,
-            type: l.type,
-            value:
-              l.value === '' || l.value === null || Number.isNaN(Number(l.value))
-                ? null
-                : Number(l.value),
-            unit: l.unit || '',
-          })),
+          limits: sanitizedLimits,
           personality: cfg.personality || agent.default_personality || 'Collaborative',
         };
       }),
