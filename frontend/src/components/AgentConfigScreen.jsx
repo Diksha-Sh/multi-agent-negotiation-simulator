@@ -345,7 +345,7 @@ export default function AgentConfigScreen({
   };
 
   return (
-    <div className={`w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-left ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+    <div className={`w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-left ${isDark ? 'text-zinc-100' : 'text-zinc-900'}`}>
       {/* ── TOP CONTROL DECK ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
@@ -355,23 +355,23 @@ export default function AgentConfigScreen({
               onClick={onBack}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 isDark
-                  ? 'bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 text-slate-300 hover:text-white hover:border-indigo-500/40 hover:shadow-[0_0_20px_rgba(99,102,241,0.15)]'
-                  : 'bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:border-indigo-400 shadow-sm'
+                  ? 'bg-zinc-900/80 backdrop-blur-xl border border-zinc-800 text-zinc-300 hover:text-white hover:border-amber-500/40'
+                  : 'bg-white border border-stone-200 text-zinc-700 hover:text-zinc-900 hover:border-amber-500 shadow-sm'
               }`}
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Change Scenario</span>
             </button>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/25">
               <Sliders className="w-3 h-3" />
               <span>Step 2 of 3 · Agent Configuration Studio</span>
             </span>
           </div>
 
-          <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+          <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${isDark ? 'text-zinc-50' : 'text-zinc-900'}`}>
             {scenario.title}
           </h1>
-          <p className={`text-xs sm:text-sm mt-1 max-w-2xl ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          <p className={`text-xs sm:text-sm mt-1 max-w-2xl ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
             {scenario.description}
           </p>
         </div>
@@ -443,26 +443,26 @@ export default function AgentConfigScreen({
 
       {/* ── MODE SELECTION: SIMULATION VS PRACTICE ── */}
       <div className={`rounded-2xl backdrop-blur-xl border p-5 sm:p-6 mb-8 transition-all shadow-xl ${
-        isDark ? 'bg-slate-900/60 border-slate-800/80' : 'bg-white border-slate-200/90 shadow-slate-200/50'
+        isDark ? 'bg-zinc-900/70 border-zinc-800' : 'bg-white border-stone-200 shadow-stone-200/50'
       }`}>
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-xs font-bold uppercase tracking-wider text-indigo-500">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-500">
                 Execution Mode
               </span>
               <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                 mode === 'practice'
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                  : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
+                  : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
               }`}>
                 {mode === 'practice' ? 'Interactive Human Participant' : 'Autonomous AI vs AI'}
               </span>
             </div>
-            <h2 className={`text-base sm:text-lg font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+            <h2 className={`text-base sm:text-lg font-bold ${isDark ? 'text-zinc-100' : 'text-zinc-900'}`}>
               Choose Negotiation Format
             </h2>
-            <p className={`text-xs mt-0.5 max-w-xl ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <p className={`text-xs mt-0.5 max-w-xl ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
               {mode === 'practice'
                 ? 'Practice Mode: Take a seat as one of the stakeholders and negotiate live turn-by-turn against the autonomous AI.'
                 : 'Simulation Mode: Both agents negotiate autonomously using their configured behavioral styles and bounds.'}
@@ -471,7 +471,7 @@ export default function AgentConfigScreen({
 
           {/* Mode Switcher Buttons */}
           <div className={`p-1.5 rounded-xl border flex items-center gap-1.5 shrink-0 self-start lg:self-center ${
-            isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-100 border-slate-200'
+            isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-stone-100 border-stone-200'
           }`}>
             <button
               type="button"
@@ -479,10 +479,10 @@ export default function AgentConfigScreen({
               className={cn(
                 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer',
                 mode === 'simulation'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  ? 'bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/20'
                   : isDark
-                  ? 'text-slate-400 hover:text-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'text-zinc-400 hover:text-zinc-200'
+                  : 'text-zinc-600 hover:text-zinc-900'
               )}
             >
               <Bot className="w-4 h-4" />
@@ -952,15 +952,15 @@ export default function AgentConfigScreen({
 
       {/* ── BOTTOM FLOATING ACTION DOCK ── */}
       <div className={`flex flex-col sm:flex-row items-center justify-between gap-5 p-5 sm:p-6 rounded-2xl backdrop-blur-xl border shadow-2xl transition-all ${
-        isDark ? 'bg-slate-900/60 border-slate-800/80' : 'bg-white border-slate-200/90 shadow-slate-200/50'
+        isDark ? 'bg-zinc-900/80 border-zinc-800' : 'bg-white border-stone-200 shadow-stone-200/50'
       }`}>
         <div>
           <div className="flex items-center gap-2">
             {agreement.valid ? (
               <>
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span className={`text-sm sm:text-base font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-                  Ready for Simulation Arena
+                <span className={`text-sm sm:text-base font-bold ${isDark ? 'text-zinc-100' : 'text-zinc-900'}`}>
+                  Ready for Deal Desk Arena
                 </span>
               </>
             ) : (
@@ -972,7 +972,7 @@ export default function AgentConfigScreen({
               </>
             )}
           </div>
-          <span className={`text-xs block mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <span className={`text-xs block mt-0.5 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
             Both agent profiles verified against mathematical constraints and system validation rules.
           </span>
         </div>
@@ -983,11 +983,11 @@ export default function AgentConfigScreen({
             onClick={() => setShowPayloadModal(true)}
             className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
               isDark
-                ? 'bg-slate-900/80 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
-                : 'bg-slate-100 border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-200'
+                ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
+                : 'bg-stone-100 border-stone-200 text-zinc-700 hover:text-zinc-900 hover:bg-stone-200'
             }`}
           >
-            <Code2 className="w-3.5 h-3.5 text-indigo-500" />
+            <Code2 className="w-3.5 h-3.5 text-amber-500" />
             <span>Inspect JSON</span>
           </button>
 
@@ -995,7 +995,7 @@ export default function AgentConfigScreen({
             type="button"
             disabled={!agreement.valid || isValidating}
             onClick={handleLaunchNegotiation}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/30 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-amber-500 hover:bg-amber-400 text-zinc-950 transition-all shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0"
           >
             <Play className="w-4 h-4 fill-current" />
             <span>

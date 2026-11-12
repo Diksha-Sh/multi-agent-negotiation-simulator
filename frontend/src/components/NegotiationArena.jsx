@@ -700,22 +700,22 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       {/* ── Main Arena Header ── */}
       <header
         className={`border rounded-2xl p-6 sm:p-7 mb-8 shadow-xl transition-all backdrop-blur-xl ${
-          isDark ? 'border-slate-800/80 bg-slate-900/60' : 'border-slate-200/90 bg-white shadow-slate-200/50'
+          isDark ? 'border-zinc-800 bg-zinc-900/75' : 'border-stone-200 bg-white shadow-stone-200/50'
         }`}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold uppercase tracking-wider bg-indigo-500/10 text-indigo-500 border-indigo-500/30">
-                {isPracticeMode ? <Gamepad2 className="w-3.5 h-3.5 text-emerald-400" /> : <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md border text-[11px] font-mono font-semibold uppercase tracking-wider bg-amber-500/10 text-amber-500 border-amber-500/25">
+                {isPracticeMode ? <Gamepad2 className="w-3.5 h-3.5 text-emerald-400" /> : <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
                 Step 3 of 3 · {isPracticeMode ? 'Practice Arena' : 'Simulation Arena'}
               </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md border text-xs font-semibold bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 {isPracticeMode ? 'Practice Mode Active' : 'Orchestrator Active'}
               </span>
               {isPracticeMode && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold bg-indigo-500/10 text-indigo-400 border-indigo-500/30">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md border text-xs font-semibold bg-amber-500/10 text-amber-400 border-amber-500/30">
                   <User className="w-3.5 h-3.5" />
                   Playing as: {agents.find((a) => a.id === humanAgentId)?.name || humanAgentId}
                 </span>
@@ -724,9 +724,9 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
                 <span
                   title={engineMode === 'offline' ? 'Backend not reachable: turns are simulated in the browser' : 'Reasoning engine used for the turns'}
                   className={cn(
-                    'inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold',
+                    'inline-flex items-center gap-1.5 px-3 py-1 rounded-md border text-xs font-semibold',
                     engineMode === 'llm'
-                      ? 'bg-violet-500/10 text-violet-500 border-violet-500/30'
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                       : engineMode === 'offline'
                       ? 'bg-rose-500/10 text-rose-500 border-rose-500/30'
                       : 'bg-amber-500/10 text-amber-500 border-amber-500/30',
@@ -746,10 +746,10 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
               )}
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-500 flex items-center justify-center shrink-0">
                 <ScenarioIcon className="w-5 h-5" />
               </div>
-              <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+              <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${isDark ? 'text-zinc-50' : 'text-zinc-900'}`}>
                 {config.title}
               </h1>
             </div>
@@ -760,7 +760,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
             <button
               type="button"
               onClick={handleExportPDF}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition-all shadow-md shadow-indigo-600/25 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-amber-500 text-zinc-950 hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20 cursor-pointer"
             >
               <FileText className="w-3.5 h-3.5" />
               <span>Export PDF Report</span>
@@ -774,12 +774,12 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
                 hasSaved
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                   : isDark
-                  ? 'border-slate-700/80 bg-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-700'
-                  : 'border-slate-300 bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+                  ? 'border-zinc-700 bg-zinc-800/90 text-zinc-200 hover:text-white hover:bg-zinc-700'
+                  : 'border-stone-300 bg-white text-zinc-700 hover:text-zinc-900 hover:bg-stone-50'
               }`}
               title={hasSaved ? 'Saved to Simulation History' : 'Save Session to History'}
             >
-              {hasSaved ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Database className="w-3.5 h-3.5 text-indigo-500" />}
+              {hasSaved ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Database className="w-3.5 h-3.5 text-amber-500" />}
               <span>{hasSaved ? 'Saved to History' : isSaving ? 'Saving...' : 'Save Run'}</span>
             </button>
 
@@ -788,11 +788,11 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
               onClick={handleDownloadJSON}
               className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
                 isDark
-                  ? 'border-slate-700/80 bg-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-700'
-                  : 'border-slate-300 bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+                  ? 'border-zinc-700 bg-zinc-800/90 text-zinc-200 hover:text-white hover:bg-zinc-700'
+                  : 'border-stone-300 bg-white text-zinc-700 hover:text-zinc-900 hover:bg-stone-50'
               }`}
             >
-              <Code2 className="w-3.5 h-3.5 text-indigo-500" />
+              <Code2 className="w-3.5 h-3.5 text-amber-500" />
               <span>Transcript JSON</span>
             </button>
 
@@ -801,8 +801,8 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
               onClick={onReset}
               className={`inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                 isDark
-                  ? 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white hover:border-slate-700'
-                  : 'border-slate-200 bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                  ? 'border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:text-white hover:border-zinc-700'
+                  : 'border-stone-200 bg-stone-100 text-zinc-600 hover:text-zinc-900 hover:bg-stone-200'
               }`}
             >
               <ArrowLeft className="w-3.5 h-3.5" />
@@ -887,15 +887,15 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
 
       {/* ── Live Orchestrator Simulation Console ── */}
       <div className={`rounded-2xl border p-6 sm:p-7 mb-8 shadow-xl transition-all backdrop-blur-xl ${
-        isDark ? 'border-slate-800/80 bg-slate-900/60' : 'border-slate-200/90 bg-white shadow-slate-200/50'
+        isDark ? 'border-zinc-800 bg-zinc-900/75' : 'border-stone-200 bg-white shadow-stone-200/50'
       }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <div>
-            <div className={`flex items-center gap-2 text-base font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-              <Zap className="w-4 h-4 text-indigo-500" />
+            <div className={`flex items-center gap-2 text-base font-bold ${isDark ? 'text-zinc-100' : 'text-zinc-900'}`}>
+              <Zap className="w-4 h-4 text-amber-500" />
               <span>{isPracticeMode ? 'Practice Session Controller' : 'Orchestrator Execution Console'}</span>
             </div>
-            <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <p className={`text-xs mt-0.5 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
               {isPracticeMode
                 ? `You are piloting seat '${agents.find((a) => a.id === humanAgentId)?.name || humanAgentId}'. The referee enforces turn order and boundary invariants.`
                 : 'Executes turn sequence index 0 → 1 → 0 → 1, checks end conditions, and captures full structured Turns.'}
@@ -908,7 +908,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
                 type="button"
                 onClick={handleResetArena}
                 className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                  isDark ? 'border-slate-700 bg-slate-800 text-slate-300 hover:text-white' : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-slate-900'
+                  isDark ? 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:text-white' : 'border-stone-300 bg-stone-100 text-zinc-700 hover:text-zinc-900'
                 }`}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -920,7 +920,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
               type="button"
               disabled={(orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || isStepping || isRunningAll || isInitializing}
               onClick={handleSimulateNextTurn}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-md shadow-indigo-600/20 transition-all cursor-pointer shrink-0"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-950 shadow-md shadow-amber-500/20 transition-all cursor-pointer shrink-0"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>
@@ -952,12 +952,12 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
 
         {/* ── Waiting for Human Notice inside Console ── */}
         {isPracticeMode && orchestratorStatus === 'waiting_for_human' && (
-          <div className="p-3.5 mb-6 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold flex items-center justify-between gap-3 animate-pulse">
+          <div className="p-3.5 mb-6 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-indigo-400 shrink-0" />
+              <User className="w-4 h-4 text-amber-400 shrink-0" />
               <span>Your move is required! Formulate your offer in the <strong>Interactive Human Input Console</strong> above.</span>
             </div>
-            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+            <span className="text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
               Active Turn
             </span>
           </div>

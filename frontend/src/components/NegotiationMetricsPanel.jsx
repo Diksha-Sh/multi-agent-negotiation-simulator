@@ -221,20 +221,20 @@ export default function NegotiationMetricsPanel({
   return (
     <div
       className={`rounded-2xl border p-5 sm:p-6 mb-8 shadow-xl transition-all backdrop-blur-xl ${
-        isDark ? 'border-slate-800/80 bg-slate-900/60' : 'border-slate-200/90 bg-white shadow-slate-200/50'
+        isDark ? 'border-zinc-800 bg-zinc-900/75' : 'border-stone-200 bg-white shadow-stone-200/50'
       }`}
     >
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 mb-5 border-b border-slate-700/20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 mb-5 border-b border-zinc-700/20">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/25 flex items-center justify-center shrink-0">
             <Activity className="w-4 h-4" />
           </div>
           <div>
-            <h3 className={`text-sm font-extrabold tracking-tight ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+            <h3 className={`text-sm font-extrabold tracking-tight ${isDark ? 'text-zinc-100' : 'text-zinc-900'}`}>
               Live Negotiation Telemetry
             </h3>
-            <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-[11px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
               Real-time offer convergence, round exhaustion telemetry, and mathematical ZOPA bounds
             </p>
           </div>
@@ -471,12 +471,114 @@ export default function NegotiationMetricsPanel({
             )}
           </div>
 
-          <div className="mt-3 pt-2 border-t border-slate-700/20 flex items-center gap-1 text-[10px] text-slate-400">
-            <Sparkles className="w-3 h-3 text-indigo-400 shrink-0" />
+          <div className="mt-3 pt-2 border-t border-zinc-700/20 flex items-center gap-1 text-[10px] text-zinc-400">
+            <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
             <span className="truncate">Zone of Possible Agreement calculated from agent bounds</span>
           </div>
         </div>
       </div>
+
+      {/* ── Live Offer Convergence Trajectory Chart (shown once offers exist) ── */}
+      {(() => {
+        const primaryZopa = zopa.items.find((it) => it.isCalculable);
+        if (!primaryZopa || turns.length === 0) return null;
+        const issueKey = primaryZopa.item;
+        const points = turns
+          .map((t, idx) => ({
+            idx,
+            agentId: t.agent_id,
+            val: Number(t.offer?.[issueKey]),
+            action: t.action,
+          }))
+          .filter((p) => Number.isFinite(p.val));
+        if (points.length === 0) return null;
+
+        const allVals = points.map((p) => p.val).concat([primaryZopa.floor, primaryZopa.ceiling]);
+        const minV = Math.min(...allVals);
+        const maxV = Math.max(...allVals);
+        const span = Math.max(1, maxV - minV);
+        const pad = span * 0.12;
+        const yMin = minV - pad;
+        const yMax = maxV + pad;
+        const W = 680;
+        const H = 120;
+        const xOf = (i) => (points.length === 1 ? W / 2 : 36 + (i / Math.max(1, points.length - 1)) * (W - 72));
+        const yOf = (v) => H - 18 - ((v - yMin) / (yMax - yMin)) * (H - 36);
+
+        const yFloor = yOf(primaryZopa.floor);
+        const yCeil = yOf(primaryZopa.ceiling);
+        const bandTop = Math.min(yFloor, yCeil);
+        const bandHeight = Math.max(2, Math.abs(yFloor - yCeil));
+
+        const agent0Id = agents[0]?.id;
+        const polyline = points.map((p, i) => `${xOf(i).toFixed(1)},${yOf(p.val).toFixed(1)}`).join(' ');
+
+        return (
+          <div className={`mt-4 p-4 rounded-xl border ${isDark ? 'bg-zinc-950/70 border-zinc-800/80' : 'bg-stone-50 border-stone-200'}`}>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2 text-[11px] font-mono">
+              <span className={`font-bold uppercase tracking-wider ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                Offer Convergence Trajectory · {formatKey(issueKey)} ({primaryZopa.unit})
+              </span>
+              <div className="flex items-center gap-4 text-[10px]">
+                <span className="inline-flex items-center gap-1.5 text-amber-400">
+                  <span className="w-2 h-2 rounded-full bg-amber-400" /> {agents[0]?.name || 'Agent 1'}
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-emerald-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" /> {agents[1]?.name || 'Agent 2'}
+                </span>
+                <span className={isDark ? 'text-zinc-500' : 'text-zinc-500'}>
+                  Shaded = ZOPA [{formatValue(primaryZopa.floor)} – {formatValue(primaryZopa.ceiling)}]
+                </span>
+              </div>
+            </div>
+            <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-28 overflow-visible">
+              {/* Shaded ZOPA corridor */}
+              <rect
+                x="24"
+                y={bandTop}
+                width={W - 48}
+                height={bandHeight}
+                rx="4"
+                fill="rgba(16, 185, 129, 0.10)"
+                stroke="rgba(16, 185, 129, 0.25)"
+                strokeDasharray="4 4"
+              />
+              {/* Connecting concession line */}
+              {points.length > 1 && (
+                <polyline
+                  fill="none"
+                  stroke={isDark ? 'rgba(161, 161, 170, 0.4)' : 'rgba(113, 113, 122, 0.45)'}
+                  strokeWidth="1.75"
+                  points={polyline}
+                />
+              )}
+              {/* Offer nodes */}
+              {points.map((p, i) => {
+                const cx = xOf(i);
+                const cy = yOf(p.val);
+                const isFirstAgent = agent0Id ? p.agentId === agent0Id : i % 2 === 0;
+                const fill = p.action === 'accept' ? '#10b981' : isFirstAgent ? '#f59e0b' : '#34d399';
+                return (
+                  <g key={i}>
+                    <circle cx={cx} cy={cy} r={p.action === 'accept' ? 6 : 4.5} fill={fill} stroke={isDark ? '#09090b' : '#ffffff'} strokeWidth="1.5" />
+                    <text
+                      x={cx}
+                      y={cy - 9}
+                      textAnchor="middle"
+                      fontSize="9.5"
+                      fontFamily="JetBrains Mono, monospace"
+                      fontWeight="700"
+                      fill={fill}
+                    >
+                      {formatValue(p.val)}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+        );
+      })()}
     </div>
   );
 }
