@@ -109,3 +109,22 @@ export function checkDeadlockStatus(config, history = []) {
 export function getEngineStatus() {
   return request('/api/orchestrator/engine');
 }
+
+/** POST /api/summary -> Milestone 4 Post-Interaction Quality Score, Sentiment Timeline & Coaching */
+export function getPostInteractionSummary(payload) {
+  return request('/api/summary', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/** GET /api/analytics or POST /api/analytics -> Milestone 4 Multi-Session Performance Analytics */
+export function getPerformanceAnalytics(sessions = null) {
+  if (Array.isArray(sessions) && sessions.length > 0) {
+    return request('/api/analytics', {
+      method: 'POST',
+      body: { sessions },
+    });
+  }
+  return request('/api/analytics');
+}

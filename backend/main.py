@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.config import API_TITLE, API_VERSION, FRONTEND_ORIGIN_REGEX, HOST, PORT, RELOAD
-from backend.routers import configuration, health, orchestrator, personalities, scenarios
+from backend.routers import analytics, configuration, health, orchestrator, personalities, scenarios
 from backend.scenario_loader import ScenarioFileError
 
 app = FastAPI(
@@ -42,6 +42,7 @@ app.include_router(scenarios.router)
 app.include_router(personalities.router)
 app.include_router(configuration.router)
 app.include_router(orchestrator.router)
+app.include_router(analytics.router)
 
 
 if __name__ == "__main__":

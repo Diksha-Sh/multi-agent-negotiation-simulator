@@ -20,12 +20,16 @@ import {
   Check,
   User,
   Gamepad2,
+  Award,
+  BarChart3,
 } from 'lucide-react';
 import { AgentAvatar } from './AgentAvatars';
 import NegotiationTranscript from './NegotiationTranscript';
 import NegotiationMetricsPanel from './NegotiationMetricsPanel';
 import DeadlockBanner from './DeadlockBanner';
 import HumanInputPanel from './HumanInputPanel';
+import PostInteractionSummaryModal from './PostInteractionSummaryModal';
+import PerformanceDashboardModal from './PerformanceDashboardModal';
 import { useTheme } from '../context/ThemeContext';
 import { getEngineStatus, runOrchestrator, stepOrchestrator, submitHumanTurn } from '../services/api';
 
@@ -199,6 +203,9 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
 
   const [hasSaved, setHasSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  // Milestone 4: Modals for Post-Interaction Summary and Performance Analytics
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
 
   const scenarioMeta = SCENARIO_META[config?.id] || SCENARIO_META.vendor_pricing;
   const ScenarioIcon = scenarioMeta.icon;
@@ -757,6 +764,34 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+            {/* Milestone 4: Post-Interaction Summary Dossier */}
+            {(orchestratorStatus === 'accepted' || orchestratorStatus === 'deadlock' || orchestratorStatus === 'rejected') && (
+              <button
+                type="button"
+                onClick={() => setShowSummaryModal(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-md shadow-emerald-600/30 cursor-pointer animate-pulse"
+                title="View Milestone 4 Post-Interaction Quality Score & Sentiment Timeline"
+              >
+                <Award className="w-3.5 h-3.5" />
+                <span>Post-Interaction Dossier</span>
+              </button>
+            )}
+
+            {/* Milestone 4: Cross-Session Performance Analytics */}
+            <button
+              type="button"
+              onClick={() => setShowAnalyticsModal(true)}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
+                isDark
+                  ? 'border-slate-700/80 bg-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-700'
+                  : 'border-slate-300 bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+              title="View Milestone 4 Cross-Session Performance Analytics"
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Analytics</span>
+            </button>
+
             <button
               type="button"
               onClick={handleExportPDF}
@@ -1132,6 +1167,23 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
           <span>{config.title || 'Negotiation report'}</span>
         </footer>
       </section>
+
+      {/* ── Milestone 4: Post-Interaction Summary Dossier Modal ── */}
+      <PostInteractionSummaryModal
+        isOpen={showSummaryModal}
+        onClose={() => setShowSummaryModal(false)}
+        config={config}
+        history={turns}
+        status={orchestratorStatus}
+        winner={orchestratorWinner}
+        deadlockEvent={deadlockEvent}
+      />
+
+      {/* ── Milestone 4: Multi-Session Performance Analytics Modal ── */}
+      <PerformanceDashboardModal
+        isOpen={showAnalyticsModal}
+        onClose={() => setShowAnalyticsModal(false)}
+      />
     </>
   );
 }
