@@ -236,7 +236,24 @@ def test_counteroffer_module_accept_is_used(monkeypatch):
     monkeypatch.setattr(engine_mod, "_counteroffer_fn", lambda: evaluate_offer)
     _, state = run("vendor_pricing")
     assert calls and calls[0] == ({"price": state.history[0]["offer"]["price"]}, "vendor")
-    assert state.history[1]["action"] == "accept"
+    # The buyer's opening (35800) is close to the vendor's floor: the vendor holds out
+    # instead of taking a near walk-away deal on turn 2, then follows the module's accept.
+    assert state.history[1]["action"] == "counter"
+    assert state.status == "accepted"
+    assert state.history[-1]["action"] == "accept"
+
+
+def test_module_accept_ignored_for_own_limit_offer_early():
+    """D1: goals that restate the hard limit must not end the negotiation on turn 2."""
+    for scenario in ("job_offer", "project_budget_allocation"):
+        _, state = run(scenario)
+        assert state.status == "accepted"
+        assert len(state.history) > 2, scenario
+        final = state.history[-1]["offer"]
+        for agent in state.agents:
+            for limit in agent["limits"]:
+                value = final[limit["item"]]
+                assert value <= limit["value"] if limit["type"] == "max" else value >= limit["value"]
 
 
 def test_counteroffer_module_errors_do_not_stop_the_negotiation(monkeypatch):

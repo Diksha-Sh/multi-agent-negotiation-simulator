@@ -308,6 +308,14 @@ def test_all_scenarios_run_in_orchestrator(filename):
     orch = NegotiationOrchestrator(config)
     final_state = orch.run_loop(mock_agent_fn)
 
-    assert final_state.round == config["max_rounds"]
+    # The random mock agent only counters, so the run always ends in deadlock: either at the
+    # round limit, or earlier when the deadlock module detects repeated identical offers
+    # (common in Job Offer, where salary rounds to 12/13/14) and its ladder ends in breakdown.
+    max_turns = config["max_rounds"] * len(config["agents"])
     assert final_state.status == "deadlock"
-    assert len(final_state.history) == config["max_rounds"] * len(config["agents"])
+    assert len(final_state.history) <= max_turns
+    if len(final_state.history) == max_turns:
+        assert final_state.round == config["max_rounds"]
+    else:
+        assert final_state.deadlock_event["resolution_outcome"] == "breakdown"
+        assert final_state.deadlock_event["resolution_attempt"] == "declare_breakdown"

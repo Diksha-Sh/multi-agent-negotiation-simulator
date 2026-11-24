@@ -4,6 +4,7 @@ Endpoints:
 - POST /api/summary: Generate comprehensive post-interaction report (Quality Score, Sentiment, Recommendations).
 - POST /api/analytics: Aggregate cross-session analytics and deadlock pattern mining.
 - GET /api/analytics: Retrieve baseline multi-session benchmark analytics.
+- GET /api/analytics/demo-sessions: Realistic sessions played by the engine (dashboard demo data).
 """
 
 from __future__ import annotations
@@ -11,7 +12,7 @@ from __future__ import annotations
 from typing import Any
 from fastapi import APIRouter, Body
 
-from backend.analytics import analyze_performance, get_sample_sessions
+from backend.analytics import analyze_performance, generate_demo_sessions, get_sample_sessions
 from backend.summary_agent import generate_post_interaction_summary
 
 router = APIRouter(prefix="/api", tags=["analytics"])
@@ -46,3 +47,15 @@ def compute_analytics(payload: dict[str, Any] = Body(default_factory=dict)) -> d
 def get_default_analytics() -> dict[str, Any]:
     """Returns pre-aggregated benchmark performance analytics across scenarios."""
     return analyze_performance(get_sample_sessions())
+
+
+@router.get(
+    "/analytics/demo-sessions",
+    summary="Demo dataset: 30 real negotiations played by the rule-based engine",
+)
+def get_demo_sessions() -> dict[str, Any]:
+    """All 3 scenarios x 9 personality pairings (+3 short Aggressive runs), in the same shape
+    as saved history records, with turns and deadlock events. Used by the Performance
+    Dashboard when a user has no saved sessions yet, and for the pitch demo."""
+    sessions = generate_demo_sessions()
+    return {"sessions": sessions, "analytics": analyze_performance(sessions)}

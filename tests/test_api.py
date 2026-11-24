@@ -186,7 +186,8 @@ def test_config_to_orchestrator_runs_rule_based_negotiation(scenario_id, monkeyp
             assert value <= limit["value"] if limit["type"] == "max" else value >= limit["value"]
             previous = previous_counters.get((turn["agent_id"], item))
             if previous is not None:
-                assert value <= previous if limit["type"] == "max" else value >= previous
+                # Never go back on a concession: a max-limited agent only moves up, a min-limited one only down.
+                assert value >= previous if limit["type"] == "max" else value <= previous
             previous_counters[(turn["agent_id"], item)] = value
     assert result["winner"] == result["history"][-1]["agent_id"]
     accepted_offer = result["history"][-1]["offer"]

@@ -201,7 +201,10 @@ export async function saveSimulationRecord({
   totalTurns,
   config,
   turns,
+  deadlockEvent = null,
 }) {
+  // The deadlock event travels inside config (jsonb), so no table change is needed.
+  config = deadlockEvent ? { ...(config || {}), deadlock_event: deadlockEvent } : config;
   const newRecord = {
     id: `sim-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     user_id: userId,
@@ -213,6 +216,7 @@ export async function saveSimulationRecord({
     total_turns: totalTurns,
     config,
     turns,
+    deadlock_event: deadlockEvent,
     created_at: new Date().toISOString(),
   };
 

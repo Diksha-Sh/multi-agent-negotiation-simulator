@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Code2, Check, Copy, Download, X } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -32,7 +33,7 @@ export function PayloadInspectorModal({ isOpen, onClose, payload }) {
     URL.revokeObjectURL(url);
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
       <div className={`relative w-full max-w-3xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[88vh] ${
         isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-slate-200/50'
@@ -119,5 +120,5 @@ export function PayloadInspectorModal({ isOpen, onClose, payload }) {
         </div>
       </div>
     </div>
-  );
+  , document.body);
 }

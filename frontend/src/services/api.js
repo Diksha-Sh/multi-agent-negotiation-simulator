@@ -128,3 +128,8 @@ export function getPerformanceAnalytics(sessions = null) {
   }
   return request('/api/analytics');
 }
+
+/** GET /api/analytics/demo-sessions -> 30 negotiations played by the engine (dashboard demo data) */
+export function getDemoSessions() {
+  return request('/api/analytics/demo-sessions');
+}

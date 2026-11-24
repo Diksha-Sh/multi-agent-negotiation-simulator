@@ -12,7 +12,6 @@ import {
   Clock,
   Sparkles,
   Mic,
-  MicOff,
 } from 'lucide-react';
 import { AgentAvatar } from './AgentAvatars';
 import { useTheme } from '../context/ThemeContext';
@@ -138,7 +137,6 @@ export default function HumanInputPanel({
         : lim.value ?? '';
     }
     // Keep editable form state aligned only when the scenario, seat, or proposal changes.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOfferValues(next);
   }, [
     config?.id,

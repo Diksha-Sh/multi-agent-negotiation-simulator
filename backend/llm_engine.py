@@ -328,6 +328,31 @@ def _opening(agent: dict[str, Any], item: str, limit: dict[str, Any], personalit
     return max(opening, 0.0) if limit["value"] >= 0 else opening
 
 
+def _acceptable_so_far(state: NegotiationState, agent: dict[str, Any], incoming: dict[str, Any],
+                       limits: dict[str, dict[str, Any]], shared: dict[str, float], progress: float) -> bool:
+    """True when the offer sits in the part of the agent's range it is ready to give up by now.
+
+    0 = the agent's opening position, 1 = its hard limit. Early on an agent only takes
+    offers in the better half of its range; the window widens as time runs out.
+    """
+    personality = _personality(agent)
+    openings = _constrain_offer(
+        {item: _opening(agent, item, limit, personality) for item, limit in limits.items() if item not in shared},
+        state,
+    )
+    allowed = max(progress, 0.5)
+    for item, limit in limits.items():
+        if item in shared or not _is_number(incoming.get(item)) or not _is_number(openings.get(item)):
+            continue
+        span = limit["value"] - float(openings[item])
+        if abs(span) < 1e-9:
+            continue
+        worse = (float(incoming[item]) - float(openings[item])) / span
+        if worse > allowed + 1e-9:
+            return False
+    return True
+
+
 def _stance(personality: str, progress: float, action: str) -> str:
     if action == "accept":
         return "flexible"
@@ -422,6 +447,11 @@ def recommend_move(state: NegotiationState, agent: dict[str, Any], max_rounds: i
             for i in limits
         )
         module_accepts = bool(module_decision and module_decision.get("action") == "accept")
+        if module_accepts and not _acceptable_so_far(state, agent, incoming, limits, shared, progress):
+            # The module accepts anything that meets its target; when the goal only restates
+            # the hard limit, that would mean taking the worst possible deal on turn 2.
+            module_accepts = False
+            notes.append("Incoming offer is too close to the hard limit this early; holding out.")
         if inside and (good_enough or module_accepts):
             return {"action": "accept", "offer": dict(incoming), "stance": "flexible",
                     "notes": notes + ["Incoming offer meets the current acceptance threshold."]}
