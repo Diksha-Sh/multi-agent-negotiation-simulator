@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -24,12 +24,19 @@ export default function PostInteractionSummaryModal({
   status = 'accepted',
   winner = null,
   deadlockEvent = null,
+  variant = 'modal',
 }) {
   const { isDark } = useTheme();
   // The summary is stored with the request it belongs to, so a reopened dossier for a
   // different run never shows the previous run's report while the new one loads.
   const [loaded, setLoaded] = useState({ key: null, data: null });
-  const requestKey = isOpen ? JSON.stringify([status, winner, history.length, history[history.length - 1]?.offer]) : null;
+  const configKey = JSON.stringify(config || {});
+  const historyKey = JSON.stringify(history || []);
+  const deadlockKey = JSON.stringify(deadlockEvent || null);
+  const stableConfig = useMemo(() => JSON.parse(configKey), [configKey]);
+  const stableHistory = useMemo(() => JSON.parse(historyKey), [historyKey]);
+  const stableDeadlockEvent = useMemo(() => JSON.parse(deadlockKey), [deadlockKey]);
+  const requestKey = isOpen ? JSON.stringify([status, winner, history.length, history[history.length - 1]?.offer, configKey]) : null;
   const isLoading = isOpen && loaded.key !== requestKey;
   const summaryData = isLoading ? null : loaded.data;
 
@@ -39,11 +46,11 @@ export default function PostInteractionSummaryModal({
     let isMounted = true;
 
     const payload = {
-      config,
-      history,
+      config: stableConfig,
+      history: stableHistory,
       status,
       winner,
-      deadlock_event: deadlockEvent,
+      deadlock_event: stableDeadlockEvent,
     };
 
     getPostInteractionSummary(payload)
@@ -53,61 +60,65 @@ export default function PostInteractionSummaryModal({
         }
       })
       .catch((err) => {
-        console.warn('Backend summary call failed, using local fallback:', err);
+        console.warn('Backend summary request failed:', err);
         if (isMounted) {
           // Local fallback in case backend is offline
-          setLoaded({ key: requestKey, data: {
-            scenario_title: config?.title || 'Negotiation Session',
-            status,
-            rounds_completed: Math.ceil(history.length / 2),
-            total_turns: history.length,
-            executive_summary:
-              status === 'accepted'
-                ? 'Negotiation concluded with a mutually accepted agreement inside the feasible agreement corridor.'
-                : 'Negotiation reached an impasse without mutual consensus.',
-            resolution_quality: {
-              overall_score: status === 'accepted' ? 88.5 : 42.0,
-              tier: status === 'accepted' ? 'Balanced Commercial Agreement' : 'Impasse / High Friction Resolution',
-              breakdown: {
-                agreement_outcome: status === 'accepted' ? 40 : 10,
-                pacing_efficiency: 16.5,
-                concession_reciprocity: 14.0,
-                boundary_safety: 18.0,
-              },
+          setLoaded({
+            key: requestKey,
+            data: {
+              scenario_title: config?.title || 'Negotiation Session',
+              status,
+              rounds_completed: Math.ceil(history.length / 2),
+              total_turns: history.length,
+              executive_summary:
+                status === 'accepted'
+                  ? 'Negotiation concluded with a mutually accepted agreement inside the feasible agreement corridor.'
+                  : 'Negotiation reached an impasse without mutual consensus.',
+              final_agreement: null,
+              resolution_quality: null,
+              sentiment_journey: null,
+              personalized_recommendations: {},
             },
-            sentiment_journey: history.map((t, i) => ({
-              turn_index: i + 1,
-              round: t.round || Math.ceil((i + 1) / 2),
-              agent_id: t.agent_id,
-              action: t.action,
-              stance: t.stance || 'flexible',
-              sentiment: t.action === 'accept' ? 'Satisfied' : t.stance === 'firm' ? 'Confident' : 'Collaborative',
-              sentiment_score: t.action === 'accept' ? 0.9 : t.stance === 'firm' ? 0.4 : 0.6,
-              description: `Turn ${i + 1}: ${t.action} proposal logged.`,
-              offer: t.offer,
-            })),
-            personalized_recommendations: {},
-          } });
+          });
         }
       });
 
     return () => {
       isMounted = false;
     };
-  }, [isOpen, requestKey, config, history, status, winner, deadlockEvent]);
+  }, [isOpen, requestKey, configKey, historyKey, status, winner, deadlockKey, stableConfig, stableHistory, stableDeadlockEvent, config?.title, history.length]);
 
   if (!isOpen) return null;
 
   const quality = summaryData?.resolution_quality;
   const sentimentJourney = summaryData?.sentiment_journey || [];
   const recommendations = summaryData?.personalized_recommendations || {};
+  const isPage = variant === 'page';
+  const finalAgreement =
+    status === 'accepted' && summaryData?.final_agreement
+      ? summaryData.final_agreement
+      : null;
+  const lastTurn = history.length > 0 ? history[history.length - 1] : null;
+  const outcomeTitle =
+    status === 'accepted'
+      ? 'Agreement Reached'
+      : status === 'deadlock'
+      ? 'Negotiation Deadlock'
+      : 'Negotiation Breakdown';
+  const outcomeReason =
+    summaryData?.executive_summary ||
+    (status === 'deadlock'
+      ? deadlockEvent?.message || deadlockEvent?.details || 'The parties could not converge on mutually acceptable terms.'
+      : 'The negotiation was rejected or ended without a settlement.');
 
-  // Rendered into <body> so the sticky navigation bar can never cover the dossier.
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-fade-in">
+  const content = (
+    <div className={isPage
+      ? 'w-full min-h-[70vh] flex justify-center p-4 sm:p-6 animate-fade-in'
+      : 'fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-fade-in'}>
       <div
         className={cn(
-          'w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden transition-all my-auto',
+          'w-full max-w-4xl flex flex-col rounded-2xl border shadow-2xl overflow-hidden transition-all my-auto',
+          isPage ? 'max-h-none' : 'max-h-[90vh]',
           isDark
             ? 'bg-slate-900 border-slate-800 text-slate-100'
             : 'bg-white border-slate-200 text-slate-900'
@@ -156,6 +167,58 @@ export default function PostInteractionSummaryModal({
             </div>
           ) : (
             <>
+              <section
+                className={cn(
+                  'p-5 rounded-2xl border',
+                  status === 'accepted'
+                    ? 'border-emerald-500/30 bg-emerald-500/10'
+                    : status === 'deadlock'
+                    ? 'border-amber-500/30 bg-amber-500/10'
+                    : 'border-rose-500/30 bg-rose-500/10',
+                )}
+                role="status"
+              >
+                <div className="flex items-start gap-3">
+                  {status === 'accepted'
+                    ? <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
+                    : status === 'deadlock'
+                    ? <AlertTriangle className="w-6 h-6 text-amber-400 shrink-0" />
+                    : <X className="w-6 h-6 text-rose-400 shrink-0" />}
+                  <div>
+                    <h3 className="text-base font-extrabold">{outcomeTitle}</h3>
+                    <p className="text-xs text-slate-400 mt-1">{outcomeReason}</p>
+                    {deadlockEvent?.resolution_outcome && (
+                      <p className="text-xs mt-2 text-amber-300">
+                        Resolution outcome: {deadlockEvent.resolution_outcome}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {(status === 'accepted' || status === 'deadlock' || status === 'rejected') && (
+                <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/40">
+                    <span className="text-[10px] uppercase font-bold text-slate-500">Negotiation rounds</span>
+                    <p className="mt-1 text-lg font-bold">{summaryData?.rounds_completed ?? 0}</p>
+                  </div>
+                  <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/40">
+                    <span className="text-[10px] uppercase font-bold text-slate-500">Last exchanged offer</span>
+                    {lastTurn?.offer ? (
+                      <p className="mt-1 text-sm font-mono">
+                        {Object.entries(lastTurn.offer).map(([key, value]) => `${key.replace(/_/g, ' ')}: ${value}`).join(' · ')}
+                      </p>
+                    ) : <p className="mt-1 text-sm text-slate-400">No offer was recorded.</p>}
+                  </div>
+                  <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/40">
+                    <span className="text-[10px] uppercase font-bold text-slate-500">Participants</span>
+                    <p className="mt-1 text-sm">
+                      {(config?.agents || []).map((agent) => agent.name || agent.id).join(' · ') || 'Not available'}
+                    </p>
+                  </div>
+                </section>
+              )}
+
               {/* 1. Resolution Quality Score Banner */}
               <div
                 className={cn(
@@ -171,7 +234,7 @@ export default function PostInteractionSummaryModal({
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Resolution Quality Score</span>
                   </div>
                   <h3 className="text-base sm:text-lg font-bold text-slate-100">
-                    {quality?.tier || 'Comprehensive Performance Evaluation'}
+                    {quality?.tier || 'Resolution score is not available yet.'}
                   </h3>
                   <p className="text-xs text-slate-400 max-w-xl leading-relaxed">
                     {summaryData?.executive_summary}
@@ -180,9 +243,9 @@ export default function PostInteractionSummaryModal({
 
                 <div className="flex items-baseline gap-2 shrink-0 bg-slate-950/60 px-5 py-3 rounded-xl border border-slate-800">
                   <span className="text-3xl sm:text-4xl font-extrabold text-emerald-400 font-mono">
-                    {quality?.overall_score ?? 85}
+                    {quality?.overall_score ?? '—'}
                   </span>
-                  <span className="text-xs text-slate-400 font-bold">/ 100</span>
+                  {quality?.overall_score != null && <span className="text-xs text-slate-400 font-bold">/ 100</span>}
                 </div>
               </div>
 
@@ -208,6 +271,55 @@ export default function PostInteractionSummaryModal({
                 </div>
               )}
 
+              {status === 'accepted' && (
+                <section className="p-5 sm:p-6 rounded-2xl border border-slate-700 bg-white text-slate-900">
+                  <div className="text-center border-b border-slate-300 pb-4">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-indigo-600">Simulated Agreement Preview</p>
+                    <h3 className="text-xl font-extrabold mt-1">{summaryData?.scenario_title || config?.title || 'Negotiation Session'}</h3>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-5 text-xs">
+                    <div>
+                      <span className="font-bold text-slate-500 uppercase text-[10px]">Participants</span>
+                      <p className="mt-1">{(config?.agents || []).map((agent) => agent.name || agent.id).join(' · ') || 'Not available'}</p>
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-500 uppercase text-[10px]">Agreement Status</span>
+                      <p className="mt-1 font-bold text-emerald-700">Accepted</p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <span className="font-bold text-slate-500 uppercase text-[10px]">Final Agreed Terms</span>
+                      {finalAgreement ? (
+                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {Object.entries(finalAgreement).map(([key, value]) => (
+                            <div key={key} className="p-3 rounded-lg bg-slate-100 border border-slate-200">
+                              <span className="block capitalize text-slate-500">{key.replace(/_/g, ' ')}</span>
+                              <strong className="font-mono">{String(value)}</strong>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-slate-500">Final agreed terms are not available.</p>
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-500 uppercase text-[10px]">Preview Generated On</span>
+                      <p className="mt-1">
+                        {summaryData?.completed_at
+                          ? new Date(summaryData.completed_at).toLocaleString()
+                          : 'Not available'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-500 uppercase text-[10px]">Rounds</span>
+                      <p className="mt-1">{summaryData?.rounds_completed ?? 'Not available'}</p>
+                    </div>
+                  </div>
+                  <p className="text-center text-[10px] font-bold uppercase tracking-wide border-t border-slate-300 pt-4 text-slate-600">
+                    SIMULATED AGREEMENT – This is an automatically generated negotiation summary for demonstration purposes only. It is not a legally binding contract.
+                  </p>
+                </section>
+              )}
+
               {/* 2. Sentiment Journey Timeline */}
               <div className="space-y-3 pt-2">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-400">
@@ -216,7 +328,11 @@ export default function PostInteractionSummaryModal({
                 </div>
 
                 <div className="space-y-2.5">
-                  {sentimentJourney.map((item, idx) => {
+                  {!summaryData?.sentiment_journey ? (
+                    <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/40 text-xs text-slate-400">
+                      Actual sentiment analysis is not available.
+                    </div>
+                  ) : sentimentJourney.map((item, idx) => {
                     const isAccept = item.action === 'accept';
                     const isReject = item.action === 'reject';
 
@@ -345,5 +461,7 @@ export default function PostInteractionSummaryModal({
         </div>
       </div>
     </div>
-  , document.body);
+  );
+
+  return isPage ? content : createPortal(content, document.body);
 }

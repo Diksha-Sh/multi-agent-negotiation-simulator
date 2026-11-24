@@ -175,7 +175,7 @@ function AgentCard({ agent, isHuman = false }) {
   );
 }
 
-export default function NegotiationArena({ config, onReset, currentUser, onOpenDashboard }) {
+export default function NegotiationArena({ config, onReset, currentUser, onOpenDashboard, onTerminalOutcome }) {
   const { isDark } = useTheme();
   const [turns, setTurns] = useState([]);
   const isPracticeMode = (config?.mode || '').toLowerCase() === 'practice';
@@ -196,6 +196,7 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
   const sessionGenerationRef = useRef(0);
   const practiceInitRequestRef = useRef(null);
   const practiceInitContextRef = useRef(null);
+  const terminalCallbackKeyRef = useRef('');
   // Which engine produced the turns: 'llm' | 'rule-based' | 'mixed' | 'mock' | 'offline'
   const [engineMode, setEngineMode] = useState(null);
   const [engineModel, setEngineModel] = useState(null);
@@ -224,6 +225,28 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
         }
       });
   }, []);
+
+  useEffect(() => {
+    const terminalKey = JSON.stringify({
+      status: orchestratorStatus,
+      winner: orchestratorWinner,
+      lastTurn: turns[turns.length - 1] || null,
+      deadlockEvent,
+    });
+    if (terminalCallbackKeyRef.current === terminalKey) return;
+    if (
+      ['accepted', 'deadlock', 'rejected'].includes(orchestratorStatus) &&
+      typeof onTerminalOutcome === 'function'
+    ) {
+      terminalCallbackKeyRef.current = terminalKey;
+      onTerminalOutcome({
+        status: orchestratorStatus,
+        winner: orchestratorWinner,
+        history: turns,
+        deadlockEvent,
+      });
+    }
+  }, [orchestratorStatus, orchestratorWinner, deadlockEvent, turns, onTerminalOutcome]);
 
   const withAgentInfo = useCallback((t, i) => {
     const agentObj = agents.find((a) => a.id === t.agent_id) || {};
@@ -683,8 +706,10 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
 
   const handleResetArena = () => {
     sessionGenerationRef.current += 1;
+    terminalCallbackKeyRef.current = '';
     setTurns([]);
     setArenaError('');
+    if (typeof onTerminalOutcome === 'function') onTerminalOutcome(null);
     if (isPracticeMode && humanAgentId === agents[0]?.id) {
       setOrchestratorStatus('waiting_for_human');
     } else {
