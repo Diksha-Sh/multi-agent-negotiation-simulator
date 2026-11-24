@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChange, signOutUser } from './services/supabase';
 import SimulationHistoryModal from './components/SimulationHistoryModal';
+import PerformanceDashboard from './components/PerformanceDashboard';
 import {
   Sun,
   Moon,
@@ -12,6 +13,7 @@ import {
   Sliders,
   Play,
   History,
+  BarChart3,
 } from 'lucide-react';
 import BrandLogo from './components/BrandLogo';
 import vendorPricing from './data/vendor_pricing.json';
@@ -42,6 +44,7 @@ function normalizeStep(step) {
   if (step === 2 || step === '2' || step === 'config') return 2;
   if (step === 3 || step === '3' || step === 'negotiate') return 3;
   if (step === 'login') return 'login';
+  if (step === 'dashboard') return 'dashboard';
   return 0; // Default active screen fallback: step = 0 (Landing Page)
 }
 
@@ -52,12 +55,14 @@ function AppNav({
   onLogout,
   onNavigateStep,
   onOpenHistory,
+  onOpenDashboard,
   selectedScenario,
   negotiationConfig,
 }) {
   const { isDark, toggleTheme } = useTheme();
   const currentStepNum = normalizeStep(currentStep);
   const isHomeActive = currentStepNum === 0;
+  const isDashboardActive = currentStepNum === 'dashboard';
 
   const getStepStatus = (stepNumber) => {
     if (currentStepNum === stepNumber) return 'active';
@@ -111,6 +116,19 @@ function AppNav({
               title="Toggle Theme"
             >
               {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-indigo-500" />}
+            </button>
+            <button
+              type="button"
+              onClick={onOpenDashboard}
+              aria-label="Performance Dashboard"
+              className={`p-1.5 rounded-lg border transition-colors ${
+                isDashboardActive
+                  ? 'bg-indigo-600 border-transparent text-white'
+                  : isDark ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-slate-200 bg-slate-100 text-slate-700'
+              }`}
+              title="Performance Dashboard"
+            >
+              <BarChart3 className={`w-3.5 h-3.5 ${isDashboardActive ? 'text-white' : 'text-emerald-500'}`} />
             </button>
             <button
               type="button"
@@ -237,6 +255,24 @@ function AppNav({
 
         {/* User Pill & Theme Switcher (Desktop) */}
         <div className="hidden lg:flex items-center gap-3">
+          {/* Dashboard Tab */}
+          <button
+            type="button"
+            onClick={onOpenDashboard}
+            aria-current={isDashboardActive ? 'page' : undefined}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
+              isDashboardActive
+                ? 'bg-indigo-600 border-transparent text-white'
+                : isDark
+                  ? 'border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white hover:border-slate-700'
+                  : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200'
+            }`}
+            title="Multi-session Performance Dashboard"
+          >
+            <BarChart3 className={`w-3.5 h-3.5 ${isDashboardActive ? 'text-white' : 'text-emerald-500'}`} />
+            <span>Dashboard</span>
+          </button>
+
           {/* History Button */}
           <button
             type="button"
@@ -525,6 +561,7 @@ function MainApp() {
         onLogout={handleLogout}
         onNavigateStep={handleSetStep}
         onOpenHistory={() => setIsHistoryOpen(true)}
+        onOpenDashboard={() => handleSetStep('dashboard')}
         selectedScenario={selectedScenario}
         negotiationConfig={negotiationConfig}
       />
@@ -560,6 +597,14 @@ function MainApp() {
             config={activeConfig}
             onReset={handleReset}
             currentUser={currentUser}
+            onOpenDashboard={() => handleSetStep('dashboard')}
+          />
+        )}
+
+        {activeStep === 'dashboard' && (
+          <PerformanceDashboard
+            currentUser={currentUser}
+            onStartNegotiation={() => handleSetStep(1)}
           />
         )}
       </main>

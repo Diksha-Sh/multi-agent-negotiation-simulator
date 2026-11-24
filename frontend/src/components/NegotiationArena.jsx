@@ -29,7 +29,6 @@ import NegotiationMetricsPanel from './NegotiationMetricsPanel';
 import DeadlockBanner from './DeadlockBanner';
 import HumanInputPanel from './HumanInputPanel';
 import PostInteractionSummaryModal from './PostInteractionSummaryModal';
-import PerformanceDashboardModal from './PerformanceDashboardModal';
 import { useTheme } from '../context/ThemeContext';
 import { getEngineStatus, runOrchestrator, stepOrchestrator, submitHumanTurn } from '../services/api';
 
@@ -176,7 +175,7 @@ function AgentCard({ agent, isHuman = false }) {
   );
 }
 
-export default function NegotiationArena({ config, onReset, currentUser }) {
+export default function NegotiationArena({ config, onReset, currentUser, onOpenDashboard }) {
   const { isDark } = useTheme();
   const [turns, setTurns] = useState([]);
   const isPracticeMode = (config?.mode || '').toLowerCase() === 'practice';
@@ -205,7 +204,6 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
   const [isSaving, setIsSaving] = useState(false);
   // Milestone 4: Modals for Post-Interaction Summary and Performance Analytics
   const [showSummaryModal, setShowSummaryModal] = useState(false);
-  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
 
   const scenarioMeta = SCENARIO_META[config?.id] || SCENARIO_META.vendor_pricing;
   const ScenarioIcon = scenarioMeta.icon;
@@ -232,11 +230,12 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     return { ...t, turn_number: i + 1, agent_name: agentObj.name || t.agent_id, role: agentObj.role || '' };
   }, [agents]);
 
-  const saveCurrentSimulation = async (customStatus, customWinner, customTurns) => {
+  const saveCurrentSimulation = async (customStatus, customWinner, customTurns, customDeadlock) => {
     const requestGeneration = sessionGenerationRef.current;
     const finalTurns = customTurns || turns;
     const finalStatus = customStatus || orchestratorStatus;
     const finalWinner = customWinner !== undefined ? customWinner : orchestratorWinner;
+    const finalDeadlock = customDeadlock !== undefined ? customDeadlock : deadlockEvent;
 
     if (hasSaved || isSaving || !finalTurns || finalTurns.length === 0) return;
     setIsSaving(true);
@@ -251,6 +250,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         totalTurns: finalTurns.length,
         config,
         turns: finalTurns,
+        deadlockEvent: finalDeadlock || null,
       });
       if (sessionGenerationRef.current === requestGeneration) {
         setHasSaved(true);
@@ -287,7 +287,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         setDeadlockEvent(dl);
 
         if (st === 'accepted' || st === 'rejected' || st === 'deadlock') {
-          saveCurrentSimulation(st, win, mapped);
+          saveCurrentSimulation(st, win, mapped, dl);
         }
       }
     } catch (err) {
@@ -314,13 +314,13 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         setOrchestratorStatus('accepted');
         setOrchestratorWinner(turnPayload.agent_id);
         setDeadlockEvent(null);
-        saveCurrentSimulation('accepted', turnPayload.agent_id, afterHumanTurns);
+        saveCurrentSimulation('accepted', turnPayload.agent_id, afterHumanTurns, null);
       } else if (turnPayload.action === 'reject') {
         setTurns(afterHumanTurns);
         setOrchestratorStatus('rejected');
         setOrchestratorWinner(null);
         setDeadlockEvent(null);
-        saveCurrentSimulation('rejected', null, afterHumanTurns);
+        saveCurrentSimulation('rejected', null, afterHumanTurns, null);
       } else if (afterHumanTurns.length >= maxRounds * (agents.length || 2)) {
         setTurns(afterHumanTurns);
         setOrchestratorStatus('deadlock');
@@ -331,7 +331,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
           resolution_attempt: null,
           resolution_outcome: null,
         });
-        saveCurrentSimulation('deadlock', null, afterHumanTurns);
+        saveCurrentSimulation('deadlock', null, afterHumanTurns, { type: 'max_rounds', round_triggered: maxRounds, resolution_attempt: null, resolution_outcome: 'breakdown' });
       } else {
         // AI opponent makes counter-turn
         const aiTurn = generateLocalTurn(afterHumanTurns.length);
@@ -342,12 +342,12 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
           setOrchestratorStatus('accepted');
           setOrchestratorWinner(aiTurn.agent_id);
           setDeadlockEvent(null);
-          saveCurrentSimulation('accepted', aiTurn.agent_id, fullTurns);
+          saveCurrentSimulation('accepted', aiTurn.agent_id, fullTurns, null);
         } else if (aiTurn.action === 'reject') {
           setOrchestratorStatus('rejected');
           setOrchestratorWinner(null);
           setDeadlockEvent(null);
-          saveCurrentSimulation('rejected', null, fullTurns);
+          saveCurrentSimulation('rejected', null, fullTurns, null);
         } else if (fullTurns.length >= maxRounds * (agents.length || 2)) {
           setOrchestratorStatus('deadlock');
           setOrchestratorWinner(null);
@@ -357,7 +357,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
             resolution_attempt: null,
             resolution_outcome: null,
           });
-          saveCurrentSimulation('deadlock', null, fullTurns);
+          saveCurrentSimulation('deadlock', null, fullTurns, { type: 'max_rounds', round_triggered: maxRounds, resolution_attempt: null, resolution_outcome: 'breakdown' });
         } else {
           setOrchestratorStatus('waiting_for_human');
         }
@@ -535,13 +535,19 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
     try {
       const response = await stepOrchestrator(config, turns);
       if (sessionGenerationRef.current !== requestGeneration) return;
+      const updatedTurns = response.turn ? [...turns, withAgentInfo(response.turn, turns.length)] : turns;
       if (response.turn) {
-        setTurns([...turns, withAgentInfo(response.turn, turns.length)]);
+        setTurns(updatedTurns);
       }
-      setOrchestratorStatus(response.status || 'ongoing');
+      const stepStatus = response.status || 'ongoing';
+      setOrchestratorStatus(stepStatus);
       setOrchestratorWinner(response.winner || null);
       setDeadlockEvent(response.deadlock_event || null);
       if (response.engine) setEngineMode(response.engine);
+      // A negotiation finished turn by turn is saved to History like a full run.
+      if (stepStatus === 'accepted' || stepStatus === 'rejected' || stepStatus === 'deadlock') {
+        saveCurrentSimulation(stepStatus, response.winner || null, updatedTurns, response.deadlock_event || null);
+      }
       return;
     } catch (err) {
       if (sessionGenerationRef.current !== requestGeneration) return;
@@ -570,12 +576,12 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       setOrchestratorStatus('accepted');
       setOrchestratorWinner(nextTurn.agent_id);
       setDeadlockEvent(null);
-      saveCurrentSimulation('accepted', nextTurn.agent_id, updated);
+      saveCurrentSimulation('accepted', nextTurn.agent_id, updated, null);
     } else if (nextTurn.action === 'reject') {
       setOrchestratorStatus('rejected');
       setOrchestratorWinner(null);
       setDeadlockEvent(null);
-      saveCurrentSimulation('rejected', null, updated);
+      saveCurrentSimulation('rejected', null, updated, null);
     } else if (updated.length >= maxRounds * (agents.length || 2)) {
       setOrchestratorStatus('deadlock');
       setOrchestratorWinner(null);
@@ -585,7 +591,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         resolution_attempt: null,
         resolution_outcome: null,
       });
-      saveCurrentSimulation('deadlock', null, updated);
+      saveCurrentSimulation('deadlock', null, updated, { type: 'max_rounds', round_triggered: maxRounds, resolution_attempt: null, resolution_outcome: 'breakdown' });
     } else if (isPracticeMode) {
       const nextAgentIndex = updated.length % (agents.length || 2);
       if (agents[nextAgentIndex]?.id === humanAgentId) {
@@ -614,7 +620,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
         setDeadlockEvent(dl);
         setArenaError('');
         if (st === 'accepted' || st === 'rejected' || st === 'deadlock') {
-          saveCurrentSimulation(st, win, mapped);
+          saveCurrentSimulation(st, win, mapped, dl);
         }
       }
     } catch (err) {
@@ -666,7 +672,7 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       setOrchestratorWinner(winner);
       setDeadlockEvent(dl);
       if (status === 'accepted' || status === 'rejected' || status === 'deadlock') {
-        saveCurrentSimulation(status, winner, fullHistory);
+        saveCurrentSimulation(status, winner, fullHistory, dl);
       }
     } finally {
       if (sessionGenerationRef.current === requestGeneration) {
@@ -780,13 +786,13 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
             {/* Milestone 4: Cross-Session Performance Analytics */}
             <button
               type="button"
-              onClick={() => setShowAnalyticsModal(true)}
+              onClick={() => onOpenDashboard?.()}
               className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
                 isDark
                   ? 'border-slate-700/80 bg-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-700'
                   : 'border-slate-300 bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50'
               }`}
-              title="View Milestone 4 Cross-Session Performance Analytics"
+              title="Open the multi-session Performance Dashboard"
             >
               <BarChart3 className="w-3.5 h-3.5 text-emerald-400" />
               <span>Analytics</span>
@@ -1180,10 +1186,6 @@ export default function NegotiationArena({ config, onReset, currentUser }) {
       />
 
       {/* ── Milestone 4: Multi-Session Performance Analytics Modal ── */}
-      <PerformanceDashboardModal
-        isOpen={showAnalyticsModal}
-        onClose={() => setShowAnalyticsModal(false)}
-      />
     </>
   );
 }

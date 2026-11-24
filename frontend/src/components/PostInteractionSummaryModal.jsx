@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Award,
   TrendingUp,
-  Brain,
   CheckCircle2,
-  AlertTriangle,
   Sparkles,
-  Shield,
-  Clock,
   Lightbulb,
   HeartHandshake,
 } from 'lucide-react';
@@ -29,14 +26,17 @@ export default function PostInteractionSummaryModal({
   deadlockEvent = null,
 }) {
   const { isDark } = useTheme();
-  const [summaryData, setSummaryData] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  // The summary is stored with the request it belongs to, so a reopened dossier for a
+  // different run never shows the previous run's report while the new one loads.
+  const [loaded, setLoaded] = useState({ key: null, data: null });
+  const requestKey = isOpen ? JSON.stringify([status, winner, history.length, history[history.length - 1]?.offer]) : null;
+  const isLoading = isOpen && loaded.key !== requestKey;
+  const summaryData = isLoading ? null : loaded.data;
 
   useEffect(() => {
     if (!isOpen) return;
 
     let isMounted = true;
-    setIsLoading(true);
 
     const payload = {
       config,
@@ -49,15 +49,14 @@ export default function PostInteractionSummaryModal({
     getPostInteractionSummary(payload)
       .then((res) => {
         if (isMounted) {
-          setSummaryData(res);
-          setIsLoading(false);
+          setLoaded({ key: requestKey, data: res });
         }
       })
       .catch((err) => {
         console.warn('Backend summary call failed, using local fallback:', err);
         if (isMounted) {
           // Local fallback in case backend is offline
-          setSummaryData({
+          setLoaded({ key: requestKey, data: {
             scenario_title: config?.title || 'Negotiation Session',
             status,
             rounds_completed: Math.ceil(history.length / 2),
@@ -88,15 +87,14 @@ export default function PostInteractionSummaryModal({
               offer: t.offer,
             })),
             personalized_recommendations: {},
-          });
-          setIsLoading(false);
+          } });
         }
       });
 
     return () => {
       isMounted = false;
     };
-  }, [isOpen, config, history, status, winner, deadlockEvent]);
+  }, [isOpen, requestKey, config, history, status, winner, deadlockEvent]);
 
   if (!isOpen) return null;
 
@@ -104,7 +102,8 @@ export default function PostInteractionSummaryModal({
   const sentimentJourney = summaryData?.sentiment_journey || [];
   const recommendations = summaryData?.personalized_recommendations || {};
 
-  return (
+  // Rendered into <body> so the sticky navigation bar can never cover the dossier.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-fade-in">
       <div
         className={cn(
@@ -346,5 +345,5 @@ export default function PostInteractionSummaryModal({
         </div>
       </div>
     </div>
-  );
+  , document.body);
 }

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
   Sliders,
@@ -1010,7 +1011,7 @@ export default function AgentConfigScreen({
       </div>
 
       {/* ── Cognitive Radar Modal ── */}
-      {showRadarModal && (
+      {showRadarModal && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
           <div className={`w-full max-w-2xl rounded-2xl border p-6 sm:p-7 shadow-2xl space-y-6 ${
             isDark ? 'bg-slate-900/95 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
@@ -1046,7 +1047,8 @@ export default function AgentConfigScreen({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* ── Payload Inspector Modal ── */}
