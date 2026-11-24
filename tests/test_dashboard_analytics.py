@@ -127,7 +127,22 @@ def test_resolved_by_ladder_and_insights():
     sessions = [record(deadlock={"type": "stall"}), record()]
     result = analyze_performance(sessions)
     assert result["resolved_by_ladder"] == 1
-    assert any("ladder turned 1 of 1" in line for line in result["key_insights"])
+    assert any("1 of 2 negotiations (50%) hit a deadlock" in line and "turned 1 of them" in line
+               for line in result["key_insights"])
+
+
+def test_deadlock_event_rate_counts_resolved_and_unresolved_deadlocks():
+    sessions = [
+        record(deadlock={"type": "stall"}),                      # stuck, then a deal
+        record(status="deadlock", deadlock={"type": "max_rounds"}),  # stuck, no deal
+        record(),                                                # never stuck
+        record(),
+    ]
+    result = analyze_performance(sessions)
+    assert result["deadlock_events"] == 2
+    assert result["deadlock_event_rate"] == 50.0
+    assert result["deadlock_rate"] == 25.0     # only runs that ENDED in deadlock
+    assert result["no_deal_rate"] == 25.0
 
 
 def test_personality_matrix():

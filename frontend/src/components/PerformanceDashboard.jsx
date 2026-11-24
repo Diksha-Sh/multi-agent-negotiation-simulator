@@ -139,6 +139,9 @@ function localAnalytics(sessions) {
     total_sessions: total,
     agreement_rate: pct(count('accepted')),
     deadlock_rate: pct(count('deadlock')),
+    no_deal_rate: pct(count('deadlock') + count('rejected')),
+    deadlock_events: sessions.filter((s) => sessionDeadlock(s) || s.status === 'deadlock').length,
+    deadlock_event_rate: pct(sessions.filter((s) => sessionDeadlock(s) || s.status === 'deadlock').length),
     avg_rounds: rounds.length ? Math.round((rounds.reduce((a, b) => a + b, 0) / rounds.length) * 10) / 10 : 0,
     resolved_by_ladder: sessions.filter((s) => sessionDeadlock(s) && s.status === 'accepted').length,
     win_rates: [],
@@ -875,7 +878,7 @@ export default function PerformanceDashboard({ currentUser, onStartNegotiation }
   const avgTurns = filtered.length ? Math.round((filtered.reduce((n, s) => n + (s.turns || []).length, 0) / filtered.length) * 10) / 10 : 0;
   const outcomeData = [
     { label: 'Agreement', value: filtered.filter((s) => s.status === 'accepted').length, color: DONUT_COLORS.accepted },
-    { label: 'Deadlock', value: filtered.filter((s) => s.status === 'deadlock').length, color: DONUT_COLORS.deadlock },
+    { label: 'Ended in deadlock', value: filtered.filter((s) => s.status === 'deadlock').length, color: DONUT_COLORS.deadlock },
     { label: 'Walked away', value: filtered.filter((s) => s.status === 'rejected').length, color: DONUT_COLORS.rejected },
   ];
   const triggerCount = (t) => filtered.filter((s) => sessionDeadlock(s)?.type === t).length;
@@ -1018,10 +1021,10 @@ export default function PerformanceDashboard({ currentUser, onStartNegotiation }
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <GradientTile index={0} label="Completed runs" value={filtered.length} hint={`${scenarios.length} scenario${scenarios.length === 1 ? '' : 's'} available`} />
                         <GradientTile index={1} label="Agreement rate" value={analytics ? `${analytics.agreement_rate}%` : '…'} hint="ended in a deal" />
-                        <GradientTile index={2} label="Deadlock rate" value={analytics ? `${analytics.deadlock_rate}%` : '…'} hint="ended without a deal" />
-                        <GradientTile index={3} label="Average rounds" value={analytics ? analytics.avg_rounds : '…'} hint="to reach an outcome" />
-                        <GradientTile index={0} label="Mediator rescues" value={rescued} hint="stuck runs that still closed" />
-                        <GradientTile index={1} label="Mediator success" value={stuck ? `${Math.round((rescued / stuck) * 100)}%` : '–'} hint={`${rescued} of ${stuck} stuck runs`} />
+                        <GradientTile index={2} label="Deadlock rate" value={analytics ? `${analytics.deadlock_event_rate ?? 0}%` : '…'} hint={`${stuck} of ${filtered.length} runs got stuck`} />
+                        <GradientTile index={3} label="Mediator success" value={stuck ? `${Math.round((rescued / stuck) * 100)}%` : '–'} hint={`${rescued} of ${stuck} stuck runs still closed`} />
+                        <GradientTile index={0} label="No-deal rate" value={analytics ? `${analytics.no_deal_rate ?? analytics.deadlock_rate}%` : '…'} hint="ended without an agreement" />
+                        <GradientTile index={1} label="Average rounds" value={analytics ? analytics.avg_rounds : '…'} hint="to reach an outcome" />
                         <GradientTile index={2} label="Practice sessions" value={practiceCount} hint="human vs AI" />
                         <GradientTile index={3} label="Average turns" value={avgTurns} hint="offers per negotiation" />
                       </div>

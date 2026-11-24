@@ -171,7 +171,8 @@ without speech support fall back to typing.
 
 | Output | Meaning |
 |---|---|
-| `agreement_rate`, `deadlock_rate`, `avg_rounds` | Headline KPIs over completed runs only |
+| `agreement_rate`, `deadlock_rate`, `avg_rounds` | Headline KPIs over completed runs only; `deadlock_rate` counts runs that ended in deadlock |
+| `deadlock_events`, `deadlock_event_rate`, `no_deal_rate` | Runs where a deadlock was detected at any point (resolved or not), and runs that ended without an agreement |
 | `resolved_by_ladder` | Runs that hit a deadlock but still ended in a deal |
 | `deadlock_triggers` | How often each deadlock type occurred |
 | `scenario_breakdown` | Agreement, deadlock rate and rounds per scenario |
@@ -215,7 +216,7 @@ flowchart LR
 
 | View | What it shows |
 |---|---|
-| KPI tiles (Overview) | Eight tiles: completed runs, agreement rate, deadlock rate, average rounds, mediator rescues (runs that got stuck and still closed), mediator success (rescues / stuck runs), practice sessions, average turns |
+| KPI tiles (Overview) | Eight tiles: completed runs, agreement rate, deadlock rate (runs where a deadlock was detected, even if the ladder then found a deal), mediator success (stuck runs that still closed), no-deal rate (runs that ended without an agreement), average rounds, practice sessions, average turns |
 | Outcome donut (Overview) | Share of runs ending in agreement, deadlock or walk-away, total in the centre |
 | Deadlock trigger donut (Overview) | First deadlock each run hit (repeated rejection, same position, stall, max rounds) or never stuck |
 | Concession Trajectory Curve | Both agents' offers turn by turn converging inside the shaded ZOPA, each party's limit, deadlock ladder steps as markers, the final deal point; item switch for multi-item scenarios (salary / remote days) |
@@ -321,11 +322,11 @@ Interactive documentation: `http://localhost:8000/docs`.
 | `test_llm_engine.py` | 63 | Strategy, prompts, JSON parsing, guardrails, fallback, accept rule |
 | `test_deadlock.py` | 41 | Detection rules, ladder, engine follow-through, API |
 | `test_orchestrator.py` | 14 | Turn order, rounds, end conditions |
-| `test_dashboard_analytics.py` | 13 | Record normalisation, value share, heatmap, matrix, demo dataset |
+| `test_dashboard_analytics.py` | 14 | Record normalisation, value share, deadlock rates, heatmap, matrix, demo dataset |
 | `test_practice_mode.py` | 11 | Human turns, waiting state, practice deadlocks |
 | `test_summary_analytics.py` | 5 | Summary agent and baseline analytics |
 | `test_counteroffer.py` | 4 | Accept / counter / reject logic |
-| **Total** | **288** | all passing; frontend lint clean; production build passes |
+| **Total** | **289** | all passing; frontend lint clean; production build passes |
 
 Run everything:
 

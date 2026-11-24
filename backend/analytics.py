@@ -119,6 +119,10 @@ def analyze_performance(sessions: list[dict[str, Any]]) -> dict[str, Any]:
 
     # Sessions that hit a deadlock but still ended in a deal (the resolution ladder worked)
     resolved_by_ladder = sum(1 for s in normalized if s["deadlock_event"] and s["status"] == "accepted")
+    # Sessions where a deadlock was detected at any point, whatever the final outcome.
+    # deadlock_rate (above) only counts runs that ENDED in deadlock, i.e. without a deal.
+    deadlock_events = sum(1 for s in normalized if s["deadlock_event"] or s["status"] == "deadlock")
+    deadlock_event_rate = pct(deadlock_events, total_sessions)
 
     # Recurring deadlock triggers (any session that hit one, even if the ladder then found a deal)
     deadlock_triggers: dict[str, int] = {t: 0 for t in DEADLOCK_TYPES}
@@ -234,6 +238,9 @@ def analyze_performance(sessions: list[dict[str, Any]]) -> dict[str, Any]:
         "total_sessions": total_sessions,
         "agreement_rate": agreement_rate,
         "deadlock_rate": deadlock_rate,
+        "no_deal_rate": pct(deadlocked_sessions + rejected_sessions, total_sessions),
+        "deadlock_events": deadlock_events,
+        "deadlock_event_rate": deadlock_event_rate,
         "avg_rounds": avg_rounds,
         "status_distribution": {
             "accepted": accepted_sessions,
@@ -250,7 +257,8 @@ def analyze_performance(sessions: list[dict[str, Any]]) -> dict[str, Any]:
         "personality_matrix": personality_matrix,
         "resolved_by_ladder": resolved_by_ladder,
         "key_insights": _insights(total_sessions, agreement_rate, deadlock_triggers, avg_rounds,
-                                  scenario_breakdown, personality_matrix, resolved_by_ladder, deadlocked_sessions),
+                                  scenario_breakdown, personality_matrix, resolved_by_ladder, deadlocked_sessions,
+                                  deadlock_events),
     }
 
 
@@ -261,7 +269,7 @@ def _num(value: float) -> str:
 
 def _insights(total: int, agreement_rate: float, triggers: dict[str, int], avg_rounds: float,
               scenarios: list[dict[str, Any]], matrix: list[dict[str, Any]],
-              resolved: int = 0, breakdowns: int = 0) -> list[str]:
+              resolved: int = 0, breakdowns: int = 0, stuck: int = 0) -> list[str]:
     """Plain statements that only claim what the data shows."""
     if not total:
         return ["No completed negotiations yet. Run a simulation or practice session to populate analytics."]
@@ -273,9 +281,10 @@ def _insights(total: int, agreement_rate: float, triggers: dict[str, int], avg_r
         insights.append(f"The most frequent deadlock trigger is '{top.replace('_', ' ')}' ({count} of {total} sessions).")
     else:
         insights.append("No deadlock was triggered in these sessions.")
-    if resolved:
-        insights.append(f"The deadlock resolution ladder turned {resolved} of {resolved + breakdowns} "
-                        f"stuck negotiations into agreements.")
+    stuck = max(stuck, resolved + breakdowns)
+    if stuck:
+        insights.append(f"{stuck} of {total} negotiations ({_num(stuck / total * 100)}%) hit a deadlock; "
+                        f"the resolution ladder turned {resolved} of them into agreements.")
     if len(scenarios) > 1:
         hardest = max(scenarios, key=lambda s: (s["deadlock_rate"], s["avg_rounds"]))
         insights.append(f"{hardest['title']} takes the longest to settle: {_num(hardest['avg_rounds'])} rounds on average"
