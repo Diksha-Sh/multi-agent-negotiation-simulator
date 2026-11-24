@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChange, signOutUser } from './services/supabase';
 import SimulationHistoryModal from './components/SimulationHistoryModal';
 import {
@@ -22,6 +22,7 @@ import AgentConfigScreen from './components/AgentConfigScreen';
 import LandingPage from './components/LandingPage';
 import NegotiationArena from './components/NegotiationArena';
 import LoginPage from './components/LoginPage';
+import PostInteractionSummaryModal from './components/PostInteractionSummaryModal';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 
 const scenarios = [vendorPricing, jobOffer, projectBudgetAllocation];
@@ -30,6 +31,7 @@ const STEPS = [
   { number: 1, key: 'select', label: 'Select Arena', icon: Layers },
   { number: 2, key: 'config', label: 'Configure Agents', icon: Sliders },
   { number: 3, key: 'negotiate', label: 'Simulation Arena', icon: Play },
+  { number: 4, key: 'outcome', label: 'Outcome', icon: Check },
 ];
 
 /**
@@ -41,6 +43,7 @@ function normalizeStep(step) {
   if (step === 1 || step === '1' || step === 'select') return 1;
   if (step === 2 || step === '2' || step === 'config') return 2;
   if (step === 3 || step === '3' || step === 'negotiate') return 3;
+  if (step === 4 || step === '4' || step === 'outcome') return 4;
   if (step === 'login') return 'login';
   return 0; // Default active screen fallback: step = 0 (Landing Page)
 }
@@ -54,6 +57,7 @@ function AppNav({
   onOpenHistory,
   selectedScenario,
   negotiationConfig,
+  terminalOutcome,
 }) {
   const { isDark, toggleTheme } = useTheme();
   const currentStepNum = normalizeStep(currentStep);
@@ -181,7 +185,8 @@ function AppNav({
             const isClickable =
               step.number === 1 ||
               (step.number === 2 && (selectedScenario || scenarios[0])) ||
-              (step.number === 3 && (negotiationConfig || selectedScenario));
+              (step.number === 3 && (negotiationConfig || selectedScenario)) ||
+              (step.number === 4 && terminalOutcome);
 
             return (
               <div key={step.key} className="flex items-center gap-2 sm:gap-3">
@@ -366,6 +371,7 @@ function MainApp() {
       return null;
     }
   });
+  const [terminalOutcome, setTerminalOutcome] = useState(null);
 
   // Supabase Auth State Synchronization
   useEffect(() => {
@@ -394,7 +400,16 @@ function MainApp() {
     try {
       const saved = localStorage.getItem('negotiation_step');
       if (saved !== null && saved !== undefined && saved !== '') {
-        return normalizeStep(saved);
+        const normalized = normalizeStep(saved);
+        if (normalized === 4) {
+          try {
+            localStorage.setItem('negotiation_step', '3');
+          } catch {
+            // ignore
+          }
+          return 3;
+        }
+        return normalized;
       }
     } catch {
       // fallback
@@ -483,6 +498,7 @@ function MainApp() {
 
   // Start negotiation handler
   const handleStartNegotiation = (config) => {
+    setTerminalOutcome(null);
     setNegotiationConfig(config);
     try {
       localStorage.setItem('negotiation_config', JSON.stringify(config));
@@ -495,6 +511,7 @@ function MainApp() {
   // Reset handler from Arena
   const handleReset = () => {
     setNegotiationConfig(null);
+    setTerminalOutcome(null);
     try {
       localStorage.removeItem('negotiation_config');
     } catch (err) {
@@ -502,6 +519,25 @@ function MainApp() {
     }
     handleSetStep(1); // Return to Step 1: Select Arena
   };
+
+  const handleTerminalOutcome = useCallback((outcome) => {
+    setTerminalOutcome(outcome);
+    if (!outcome) {
+      setCurrentStep(3);
+      try {
+        localStorage.setItem('negotiation_step', '3');
+      } catch {
+        // ignore
+      }
+      return;
+    }
+    setCurrentStep(4);
+    try {
+      localStorage.setItem('negotiation_step', '4');
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const activeConfig = negotiationConfig || selectedScenario || scenarios[0];
   const activeStep = normalizeStep(currentStep);
@@ -527,6 +563,7 @@ function MainApp() {
         onOpenHistory={() => setIsHistoryOpen(true)}
         selectedScenario={selectedScenario}
         negotiationConfig={negotiationConfig}
+        terminalOutcome={terminalOutcome}
       />
 
       {/* Main Content Area */}
@@ -560,6 +597,19 @@ function MainApp() {
             config={activeConfig}
             onReset={handleReset}
             currentUser={currentUser}
+            onTerminalOutcome={handleTerminalOutcome}
+          />
+        )}
+        {activeStep === 4 && terminalOutcome && (
+          <PostInteractionSummaryModal
+            isOpen
+            variant="page"
+            onClose={() => handleSetStep(3)}
+            config={activeConfig}
+            history={terminalOutcome.history || []}
+            status={terminalOutcome.status}
+            winner={terminalOutcome.winner}
+            deadlockEvent={terminalOutcome.deadlockEvent}
           />
         )}
       </main>

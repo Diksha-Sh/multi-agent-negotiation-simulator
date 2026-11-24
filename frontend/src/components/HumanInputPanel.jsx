@@ -11,11 +11,10 @@ import {
   Shield,
   Clock,
   Sparkles,
-  Mic,
-  MicOff,
 } from 'lucide-react';
 import { AgentAvatar } from './AgentAvatars';
 import { useTheme } from '../context/ThemeContext';
+import VoiceInputController from './VoiceInputController';
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');
@@ -46,6 +45,10 @@ export default function HumanInputPanel({
 
   // Reservation limits for human agent
   const limits = useMemo(() => humanAgent.limits || [], [humanAgent]);
+  const offerFields = useMemo(
+    () => limits.map((limit) => limit.item).filter(Boolean),
+    [limits],
+  );
 
   // Action: 'counter' | 'accept' | 'reject'
   const [action, setAction] = useState('counter');
@@ -53,73 +56,12 @@ export default function HumanInputPanel({
   const [stance, setStance] = useState('flexible');
   // Reasoning text
   const [reasoning, setReasoning] = useState('');
-  // Milestone 4: Web Speech Voice Input State
-  const [isListening, setIsListening] = useState(false);
-  const [voiceNotice, setVoiceNotice] = useState('');
-
-  const handleToggleVoice = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setVoiceNotice('Voice input is not supported in this browser. Try Google Chrome.');
-      setTimeout(() => setVoiceNotice(''), 4000);
-      return;
-    }
-
-    if (isListening) {
-      setIsListening(false);
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        setVoiceNotice('Listening... Speak your counteroffer and rationale.');
-      };
-
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0]?.transcript || '';
-        if (transcript) {
-          setReasoning((prev) => (prev ? `${prev} ${transcript}` : transcript));
-          const numMatch = transcript.match(/\b\d[\d,]*\b/);
-          if (numMatch) {
-            const parsedVal = Number(numMatch[0].replace(/,/g, ''));
-            if (Number.isFinite(parsedVal)) {
-              const primaryKey = limits[0]?.item || 'price';
-              setOfferValues((prev) => ({ ...prev, [primaryKey]: parsedVal }));
-            }
-          }
-          setVoiceNotice(`Heard: "${transcript}"`);
-          setTimeout(() => setVoiceNotice(''), 4500);
-        }
-      };
-
-      recognition.onerror = () => {
-        setIsListening(false);
-        setVoiceNotice('Microphone access interrupted or denied.');
-        setTimeout(() => setVoiceNotice(''), 3000);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognition.start();
-    } catch (err) {
-      console.warn('Speech recognition start failed:', err);
-      setIsListening(false);
-    }
-  };
-
   // Values for each negotiable item
   const [offerValues, setOfferValues] = useState(() => {
     const initial = {};
     for (const lim of limits) {
-      const itemKey = lim.item || 'price';
+      const itemKey = lim.item;
+      if (!itemKey) continue;
       if (latestTurn?.offer?.[itemKey] !== undefined) {
         initial[itemKey] = latestTurn.offer[itemKey];
       } else {
@@ -132,7 +74,8 @@ export default function HumanInputPanel({
   useEffect(() => {
     const next = {};
     for (const lim of limits) {
-      const itemKey = lim.item || 'price';
+      const itemKey = lim.item;
+      if (!itemKey) continue;
       next[itemKey] = latestTurn?.offer?.[itemKey] !== undefined
         ? latestTurn.offer[itemKey]
         : lim.value ?? '';
@@ -154,7 +97,7 @@ export default function HumanInputPanel({
 
   // Check if an offer value violates the human's reservation boundary
   const getBoundaryViolation = (item, val) => {
-    const itemLimits = limits.filter((lim) => (lim.item || 'price') === item);
+    const itemLimits = limits.filter((lim) => lim.item === item);
     if (itemLimits.length === 0) return `No reservation limit is configured for ${item}.`;
     if (val === '' || val === null || val === undefined) return 'A value is required.';
     const num = Number(val);
@@ -181,7 +124,8 @@ export default function HumanInputPanel({
   };
   const counterofferErrors = limits
     .map((lim) => {
-      const itemKey = lim.item || 'price';
+      const itemKey = lim.item;
+      if (!itemKey) return null;
       const violation = getBoundaryViolation(itemKey, offerValues[itemKey] ?? '');
       return violation ? { item: itemKey, message: violation } : null;
     })
@@ -196,6 +140,15 @@ export default function HumanInputPanel({
 
   const handleQuickReason = (text) => {
     setReasoning(text);
+  };
+
+  const handleVoiceResult = ({ field, offer, reasoning: spokenReasoning }) => {
+    setOfferValues((previous) => ({ ...previous, [field]: offer }));
+    if (spokenReasoning) {
+      setReasoning((previous) =>
+        previous ? `${previous} ${spokenReasoning}` : spokenReasoning,
+      );
+    }
   };
 
   const handleSubmit = (e) => {
@@ -398,36 +351,18 @@ export default function HumanInputPanel({
                 Formulate Counteroffer Terms
               </label>
 
-              {/* Milestone 4: Voice-to-Negotiate Toggle */}
-              <button
-                type="button"
-                onClick={handleToggleVoice}
+              <VoiceInputController
+                isDark={isDark}
                 disabled={controlsDisabled}
-                className={cn(
-                  'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer',
-                  isListening
-                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 animate-pulse'
-                    : isDark
-                    ? 'bg-slate-900 border-slate-800 text-indigo-400 hover:text-white hover:border-indigo-500/40'
-                    : 'bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100'
-                )}
-                title="Speak to dictate your counteroffer and rationale (Web Speech API)"
-              >
-                <Mic className={cn('w-3.5 h-3.5', isListening && 'animate-bounce text-rose-400')} />
-                <span>{isListening ? 'Listening...' : 'Voice Input'}</span>
-              </button>
+                offerFields={offerFields}
+                onOfferResult={handleVoiceResult}
+              />
             </div>
-
-            {voiceNotice && (
-              <div className="p-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                <span>{voiceNotice}</span>
-              </div>
-            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {limits.map((lim, idx) => {
-                const itemKey = lim.item || 'price';
+                const itemKey = lim.item;
+                if (!itemKey) return null;
                 const isMin = String(lim.type).toLowerCase() === 'min';
                 const val = offerValues[itemKey] ?? '';
                 const violation = getBoundaryViolation(itemKey, val);
