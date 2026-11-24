@@ -2,6 +2,7 @@
 
 Endpoints:
 - POST /api/summary: Generate comprehensive post-interaction report (Quality Score, Sentiment, Recommendations).
+- POST /api/sentiment: Generate dedicated cognitive trajectory and coaching dossier.
 - POST /api/analytics: Aggregate cross-session analytics and deadlock pattern mining.
 - GET /api/analytics: Retrieve baseline multi-session benchmark analytics.
 """
@@ -12,6 +13,7 @@ from typing import Any
 from fastapi import APIRouter, Body
 
 from backend.analytics import analyze_performance, get_sample_sessions
+from backend.sentiment_agent import generate_sentiment_report
 from backend.summary_agent import generate_post_interaction_summary
 
 router = APIRouter(prefix="/api", tags=["analytics"])
@@ -31,6 +33,24 @@ def get_session_summary(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
         history=history,
         status=status,
         winner=winner,
+        deadlock_event=deadlock_event,
+    )
+
+
+@router.post("/sentiment", summary="Analyze cognitive sentiment trajectory and personalized coaching")
+def get_sentiment_analysis(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    """Generates cognitive state trajectory (Confidence/Dominance, Collaboration/Empathy, Urgency/Anxiety)
+    and personalized coaching recommendations."""
+    config = payload.get("config") or {}
+    history = payload.get("history") or []
+    status = payload.get("status") or "accepted"
+    deadlock_event = payload.get("deadlock_event")
+
+    return generate_sentiment_report(
+        state=payload,
+        config=config,
+        history=history,
+        status=status,
         deadlock_event=deadlock_event,
     )
 
