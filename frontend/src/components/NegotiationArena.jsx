@@ -4,14 +4,12 @@ import {
   FileText,
   Code2,
   ArrowLeft,
-  CheckCircle2,
   Zap,
   Play,
   RotateCcw,
   ShoppingBag,
   Briefcase,
   Wallet,
-  Radio,
   Sparkles,
   Trophy,
   AlertTriangle,
@@ -19,9 +17,9 @@ import {
   Database,
   Check,
   User,
-  Gamepad2,
   Award,
   BarChart3,
+  Mic,
 } from 'lucide-react';
 import { AgentAvatar } from './AgentAvatars';
 import NegotiationTranscript from './NegotiationTranscript';
@@ -65,117 +63,77 @@ function AgentCard({ agent, isHuman = false }) {
 
   return (
     <div
-      className={`flex flex-col rounded-2xl border overflow-hidden shadow-xl transition-all ${
+      className={`liquid-glass flex flex-col rounded-2xl border overflow-hidden shadow-lg transition-all ${
         isHuman
-          ? 'border-emerald-500/80 ring-2 ring-emerald-500/30 bg-emerald-950/10'
+          ? 'border-[#EE2A54] ring-1 ring-[#EE2A54]/40 bg-[#131B4B]'
           : isDark
-          ? 'border-slate-800/80 bg-slate-900/60 backdrop-blur-xl'
-          : 'border-slate-200/90 bg-white shadow-slate-200/50'
+          ? 'border-white/15 bg-[#131B4B]/80'
+          : 'border-[#0E153A]/15 bg-white'
       }`}
     >
-      {/* card header */}
       <div
         className={`px-5 py-3.5 border-b flex items-center justify-between gap-3 ${
           isHuman
-            ? 'border-emerald-500/20 bg-emerald-500/10'
+            ? 'border-[#EE2A54]/30 bg-[#EE2A54]/10'
             : isDark
-            ? 'border-slate-800/80 bg-slate-950/40'
-            : 'border-slate-100 bg-slate-50'
+            ? 'border-white/10 bg-[#0A102E]/70'
+            : 'border-[#0E153A]/10 bg-[#F4F7FC]'
         }`}
       >
         <div className="flex items-center gap-3">
           <AgentAvatar role={agent.role || agent.id} size="sm" />
           <div>
-            <h3 className={`text-sm font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{agent.name}</h3>
-            <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{agent.role}</span>
+            <h3 className={`text-sm font-extrabold ${isDark ? 'text-white' : 'text-[#0E153A]'}`}>{agent.name}</h3>
+            <span className={`text-xs ${isDark ? 'text-[#A3B3D9]' : 'text-[#0E153A]/70'}`}>{agent.role}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {isHuman && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-              👤 You (Human)
+            <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#EE2A54] text-white">
+              You
             </span>
           )}
-          <span className={cn('inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border shrink-0', meta.badge)}>
+          <span className={cn('inline-flex items-center text-xs font-bold px-2.5 py-0.5 rounded-full border shrink-0', meta.badge)}>
             {personality}
           </span>
         </div>
       </div>
 
-      <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
-        <div className="space-y-3">
-          {/* objective bubble */}
-          <div
-            className={`border rounded-xl p-3.5 ${
-              isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-slate-50'
-            }`}
-          >
-            <span className="block text-[10px] font-bold uppercase tracking-wider text-indigo-500 mb-1">
-              Configured Objective
-            </span>
-            <p className={`text-xs leading-relaxed font-medium ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-              "{agent.goal || agent.objective}"
-            </p>
-          </div>
-
-          {/* constraints & limits in compact chips */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* constraints */}
-            {Array.isArray(agent.constraints) && agent.constraints.length > 0 && (
-              <div
-                className={`p-3 rounded-xl border ${
-                  isDark ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50'
-                }`}
-              >
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-amber-500 mb-1.5">
-                  Active Constraints
-                </span>
-                <ul className="space-y-1">
-                  {agent.constraints.map((c, i) => (
-                    <li key={i} className={`text-[11px] flex items-start gap-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                      <span className="text-amber-500">•</span>
-                      <span className="leading-snug">{c}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* limits */}
-            {Array.isArray(agent.limits) && agent.limits.length > 0 && (
-              <div
-                className={`p-3 rounded-xl border ${
-                  isDark ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50'
-                }`}
-              >
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-indigo-500 mb-1.5">
-                  Reservation Bounds
-                </span>
-                <div className="space-y-1.5">
-                  {agent.limits.map((l, idx) => {
-                    const isMin = String(l.type).toLowerCase() === 'min';
-                    return (
-                      <div key={idx} className="flex items-center justify-between text-[11px]">
-                        <span className={`capitalize ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                          {isMin ? 'Floor' : 'Ceiling'}:
-                        </span>
-                        <span className={`font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                          {l.value} {l.unit}
-                        </span>
-                      </div>
-                    );
-                  })}
+      <div className="p-4 space-y-3">
+        {Array.isArray(agent.limits) && agent.limits.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {agent.limits.map((l, idx) => {
+              const isMin = String(l.type).toLowerCase() === 'min';
+              return (
+                <div
+                  key={idx}
+                  className={`px-3 py-1.5 rounded-xl border text-xs flex items-center gap-1.5 ${
+                    isDark ? 'border-white/10 bg-[#0A102E]/80' : 'border-[#0E153A]/15 bg-[#F4F7FC]'
+                  }`}
+                >
+                  <span className={isDark ? 'text-[#A3B3D9]' : 'text-[#0E153A]'}>
+                    {isMin ? 'Min' : 'Max'} {(l.item || '').replace(/_/g, ' ')}:
+                  </span>
+                  <span className={`font-mono font-bold ${isDark ? 'text-[#1CD4A3]' : 'text-[#0E153A]'}`}>
+                    {l.value} {l.unit}
+                  </span>
                 </div>
-              </div>
-            )}
+              );
+            })}
           </div>
-        </div>
+        )}
+
+        {(agent.goal || agent.objective) && (
+          <p className={`text-xs leading-relaxed ${isDark ? 'text-[#A3B3D9]' : 'text-[#0E153A]/80'}`}>
+            <strong className={isDark ? 'text-white' : 'text-[#0E153A]'}>Goal:</strong> {agent.goal || agent.objective}
+          </p>
+        )}
       </div>
     </div>
   );
 }
 
-export default function NegotiationArena({ config, onReset, currentUser, onOpenDashboard, onTerminalOutcome }) {
+export default function NegotiationArena({ config, onReset, currentUser, onOpenDashboard, onTerminalOutcome, onSwitchToPractice }) {
   const { isDark } = useTheme();
   const [turns, setTurns] = useState([]);
   const isPracticeMode = (config?.mode || '').toLowerCase() === 'practice';
@@ -735,171 +693,117 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
           isDark ? 'text-slate-100' : 'text-slate-900'
         }`}
       >
-      {/* ── Main Arena Header ── */}
+      {/* ── Clean Arena Header ── */}
       <header
-        className={`border rounded-2xl p-6 sm:p-7 mb-8 shadow-xl transition-all backdrop-blur-xl ${
-          isDark ? 'border-slate-800/80 bg-slate-900/60' : 'border-slate-200/90 bg-white shadow-slate-200/50'
+        className={`liquid-glass border rounded-2xl p-5 sm:p-6 mb-6 shadow-xl transition-all ${
+          isDark ? 'border-white/15 bg-[#131B4B]/85' : 'border-[#0E153A]/15 bg-white shadow-sm'
         }`}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold uppercase tracking-wider bg-indigo-500/10 text-indigo-500 border-indigo-500/30">
-                {isPracticeMode ? <Gamepad2 className="w-3.5 h-3.5 text-emerald-400" /> : <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
-                Step 3 of 3 · {isPracticeMode ? 'Practice Arena' : 'Simulation Arena'}
+            <div className="flex flex-wrap items-center gap-2 mb-2.5">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#EE2A54]/15 text-[#EE2A54] border border-[#EE2A54]/40">
+                {isPracticeMode ? <Mic className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
+                <span>{isPracticeMode ? 'Practice + Voice Mode' : 'AI vs AI Simulation'}</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                {isPracticeMode ? 'Practice Mode Active' : 'Orchestrator Active'}
-              </span>
-              {isPracticeMode && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold bg-indigo-500/10 text-indigo-400 border-indigo-500/30">
-                  <User className="w-3.5 h-3.5" />
-                  Playing as: {agents.find((a) => a.id === humanAgentId)?.name || humanAgentId}
-                </span>
-              )}
               {engineMode && (
                 <span
-                  title={engineMode === 'offline' ? 'Backend not reachable: turns are simulated in the browser' : 'Reasoning engine used for the turns'}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold',
-                    engineMode === 'llm'
-                      ? 'bg-violet-500/10 text-violet-500 border-violet-500/30'
-                      : engineMode === 'offline'
-                      ? 'bg-rose-500/10 text-rose-500 border-rose-500/30'
-                      : 'bg-amber-500/10 text-amber-500 border-amber-500/30',
-                  )}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${
+                    isDark ? 'bg-[#0A102E] text-[#1CD4A3] border-[#1CD4A3]/40' : 'bg-[#F4F7FC] text-[#0E153A] border-[#0E153A]/15'
+                  }`}
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
                   {engineMode === 'llm'
                     ? `LLM Engine${engineModel ? ` · ${engineModel}` : ''}`
-                    : engineMode === 'mixed'
-                    ? 'LLM + Rule-based Fallback'
                     : engineMode === 'offline'
-                    ? 'Offline Simulation'
-                    : engineMode === 'mock'
-                    ? 'Mock Engine'
-                    : 'Rule-based Engine'}
+                    ? 'Offline Fallback'
+                    : 'Rule-Based Engine'}
                 </span>
               )}
+              <span
+                className={`px-3 py-1 rounded-full border text-xs font-bold ${
+                  isDark ? 'border-white/15 bg-[#0A102E] text-[#A3B3D9]' : 'border-[#0E153A]/15 bg-[#F4F7FC] text-[#0E153A]'
+                }`}
+              >
+                Max {maxRounds} Rounds
+              </span>
             </div>
+
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-[#EE2A54]/15 border border-[#EE2A54]/40 text-[#EE2A54] flex items-center justify-center shrink-0">
                 <ScenarioIcon className="w-5 h-5" />
               </div>
-              <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+              <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-[#0E153A]'}`}>
                 {config.title}
               </h1>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-            {/* Milestone 4: Post-Interaction Summary Dossier */}
-            {(orchestratorStatus === 'accepted' || orchestratorStatus === 'deadlock' || orchestratorStatus === 'rejected') && (
-              <button
-                type="button"
-                onClick={() => setShowSummaryModal(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-md shadow-emerald-600/30 cursor-pointer animate-pulse"
-                title="View Milestone 4 Post-Interaction Quality Score & Sentiment Timeline"
-              >
-                <Award className="w-3.5 h-3.5" />
-                <span>Post-Interaction Dossier</span>
-              </button>
-            )}
-
-            {/* Milestone 4: Cross-Session Performance Analytics */}
+          {/* Clean Single-Line Toolbar */}
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
             <button
               type="button"
               onClick={() => onOpenDashboard?.()}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                 isDark
-                  ? 'border-slate-700/80 bg-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-700'
-                  : 'border-slate-300 bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+                  ? 'border-white/15 bg-[#0A102E] text-white hover:border-[#1CD4A3]'
+                  : 'border-[#0E153A]/15 bg-[#F4F7FC] text-[#0E153A] hover:border-[#EE2A54]'
               }`}
-              title="Open the multi-session Performance Dashboard"
             >
-              <BarChart3 className="w-3.5 h-3.5 text-emerald-400" />
+              <BarChart3 className="w-3.5 h-3.5 text-[#1CD4A3]" />
               <span>Analytics</span>
             </button>
 
             <button
               type="button"
               onClick={handleExportPDF}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition-all shadow-md shadow-indigo-600/25 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#1D2B78] hover:bg-[#EE2A54] text-white transition-all cursor-pointer"
             >
               <FileText className="w-3.5 h-3.5" />
-              <span>Export PDF Report</span>
+              <span>Export PDF</span>
             </button>
 
             <button
               type="button"
               onClick={saveCurrentSimulation}
               disabled={hasSaved || isSaving || turns.length === 0}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer disabled:opacity-50 ${
                 hasSaved
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  ? 'bg-[#1CD4A3]/15 text-[#1CD4A3] border-[#1CD4A3]/40'
                   : isDark
-                  ? 'border-slate-700/80 bg-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-700'
-                  : 'border-slate-300 bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+                  ? 'border-white/15 bg-[#0A102E] text-white hover:border-[#EE2A54]'
+                  : 'border-[#0E153A]/15 bg-[#F4F7FC] text-[#0E153A]'
               }`}
-              title={hasSaved ? 'Saved to Simulation History' : 'Save Session to History'}
             >
-              {hasSaved ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Database className="w-3.5 h-3.5 text-indigo-500" />}
-              <span>{hasSaved ? 'Saved to History' : isSaving ? 'Saving...' : 'Save Run'}</span>
+              {hasSaved ? <Check className="w-3.5 h-3.5 text-[#1CD4A3]" /> : <Database className="w-3.5 h-3.5 text-[#EE2A54]" />}
+              <span>{hasSaved ? 'Saved' : isSaving ? 'Saving...' : 'Save Run'}</span>
             </button>
 
             <button
               type="button"
               onClick={handleDownloadJSON}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                 isDark
-                  ? 'border-slate-700/80 bg-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-700'
-                  : 'border-slate-300 bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+                  ? 'border-white/15 bg-[#0A102E] text-white hover:border-[#EE2A54]'
+                  : 'border-[#0E153A]/15 bg-[#F4F7FC] text-[#0E153A]'
               }`}
             >
-              <Code2 className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Transcript JSON</span>
+              <Code2 className="w-3.5 h-3.5 text-[#1CD4A3]" />
+              <span>JSON</span>
             </button>
 
             <button
               type="button"
               onClick={onReset}
-              className={`inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                 isDark
-                  ? 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white hover:border-slate-700'
-                  : 'border-slate-200 bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                  ? 'border-white/15 bg-[#0A102E]/70 text-[#A3B3D9] hover:text-white'
+                  : 'border-[#0E153A]/15 bg-white text-[#0E153A]'
               }`}
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Change Scenario</span>
+              <span>Change Arena</span>
             </button>
           </div>
-        </div>
-
-        <p className={`text-xs sm:text-sm leading-relaxed mb-4 max-w-2xl ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-          {config.description}
-        </p>
-
-        {/* Minimal metadata chips */}
-        <div className={`flex flex-wrap items-center gap-2 pt-3 border-t text-xs ${
-          isDark ? 'border-slate-800' : 'border-slate-100'
-        }`}>
-          <span className="px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 font-semibold">
-            Max Rounds: {maxRounds}
-          </span>
-          <span className={`px-2.5 py-1 rounded-lg border font-semibold ${
-            isDark ? 'border-slate-800 bg-slate-900/60 text-slate-300' : 'border-slate-200 bg-slate-100 text-slate-700'
-          }`}>
-            {agents.length} Stakeholder Agents
-          </span>
-          {currentUser && (
-            <span className={`px-2.5 py-1 rounded-lg border font-semibold ${
-              isDark ? 'border-slate-800 bg-slate-900/60 text-slate-300' : 'border-slate-200 bg-slate-100 text-slate-700'
-            }`}>
-              Operator: <strong className={isDark ? "text-slate-100" : "text-slate-900"}>{currentUser.name}</strong>
-            </span>
-          )}
         </div>
       </header>
 
@@ -952,29 +856,41 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
       )}
 
       {/* ── Live Orchestrator Simulation Console ── */}
-      <div className={`rounded-2xl border p-6 sm:p-7 mb-8 shadow-xl transition-all backdrop-blur-xl ${
-        isDark ? 'border-slate-800/80 bg-slate-900/60' : 'border-slate-200/90 bg-white shadow-slate-200/50'
+      <div className={`liquid-glass rounded-2xl border p-6 mb-8 shadow-xl transition-all ${
+        isDark ? 'border-white/15 bg-[#131B4B]/85' : 'border-[#0E153A]/15 bg-white shadow-sm'
       }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <div>
-            <div className={`flex items-center gap-2 text-base font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-              <Zap className="w-4 h-4 text-indigo-500" />
-              <span>{isPracticeMode ? 'Practice Session Controller' : 'Orchestrator Execution Console'}</span>
+            <div className={`flex items-center gap-2 text-lg font-extrabold ${isDark ? 'text-white' : 'text-[#0E153A]'}`}>
+              <Zap className="w-5 h-5 text-[#EE2A54]" />
+              <span>{isPracticeMode ? 'Practice & Voice Arena' : 'Simulation Console'}</span>
             </div>
-            <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <p className={`text-sm mt-0.5 ${isDark ? 'text-[#A3B3D9]' : 'text-[#0E153A]/75'}`}>
               {isPracticeMode
-                ? `You are piloting seat '${agents.find((a) => a.id === humanAgentId)?.name || humanAgentId}'. The referee enforces turn order and boundary invariants.`
-                : 'Executes turn sequence index 0 → 1 → 0 → 1, checks end conditions, and captures full structured Turns.'}
+                ? `Playing as ${agents.find((a) => a.id === humanAgentId)?.name || humanAgentId}. Use your Voice Mic or type an offer above.`
+                : 'Step through turn-by-turn or run the full autonomous negotiation loop.'}
             </p>
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
+            {!isPracticeMode && typeof onSwitchToPractice === 'function' && (
+              <button
+                type="button"
+                onClick={onSwitchToPractice}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs bg-[#1CD4A3]/15 hover:bg-[#1CD4A3] text-[#1CD4A3] hover:text-[#0A102E] border border-[#1CD4A3]/50 transition-all cursor-pointer shrink-0"
+                title="Switch to Human vs AI Mode with Voice Mic"
+              >
+                <Mic className="w-4 h-4" />
+                <span>Play with Voice Mic</span>
+              </button>
+            )}
+
             {(turns.length > 0 || isPracticeMode) && (
               <button
                 type="button"
                 onClick={handleResetArena}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                  isDark ? 'border-slate-700 bg-slate-800 text-slate-300 hover:text-white' : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-slate-900'
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  isDark ? 'border-white/15 bg-[#0A102E] text-[#A3B3D9] hover:text-white' : 'border-[#0E153A]/15 bg-[#F4F7FC] text-[#0E153A]'
                 }`}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -986,7 +902,7 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
               type="button"
               disabled={(orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || isStepping || isRunningAll || isInitializing}
               onClick={handleSimulateNextTurn}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-md shadow-indigo-600/20 transition-all cursor-pointer shrink-0"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs bg-[#1D2B78] hover:bg-[#273999] disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-md transition-all cursor-pointer shrink-0"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>
@@ -994,7 +910,7 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
                   ? 'Thinking...'
                   : isPracticeMode
                   ? 'Advance / AI Move'
-                  : 'Simulate Next Turn'}
+                  : 'Next Turn'}
               </span>
             </button>
 
@@ -1002,7 +918,7 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
               type="button"
               disabled={(orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || isRunningAll || isStepping || isInitializing}
               onClick={handleRunFullOrchestrator}
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-md shadow-emerald-600/20 transition-all cursor-pointer shrink-0"
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-bold text-xs bg-[#EE2A54] hover:bg-[#d62249] disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-[0_4px_16px_rgba(238,42,84,0.45)] transition-all cursor-pointer shrink-0"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>
@@ -1062,13 +978,23 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleDownloadJSON}
-              className="px-3.5 py-1.5 rounded-xl text-xs font-bold border border-current bg-current/10 hover:bg-current/20 transition-all cursor-pointer shrink-0"
-            >
-              Download Full Transcript
-            </button>
+            <div className="flex items-center gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowSummaryModal(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#EE2A54] hover:bg-[#d62249] text-white transition-all shadow-[0_4px_16px_rgba(238,42,84,0.45)] cursor-pointer"
+              >
+                <Award className="w-4 h-4" />
+                <span>View Outcome &amp; Score</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadJSON}
+                className="px-3.5 py-2.5 rounded-xl text-xs font-bold border border-current bg-current/10 hover:bg-current/20 transition-all cursor-pointer shrink-0"
+              >
+                Download Transcript
+              </button>
+            </div>
           </div>
         )}
 
@@ -1077,58 +1003,6 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
           <NegotiationTranscript turns={turns} agents={agents} />
         </div>
       </div>
-
-      {/* ── Downstream Orchestrator Integration Cards ── */}
-      <div
-        className={`rounded-2xl border p-6 sm:p-7 shadow-xl backdrop-blur-xl ${
-          isDark ? 'border-slate-800/80 bg-slate-900/60' : 'border-slate-200/90 bg-white shadow-slate-200/50'
-        }`}
-      >
-        <div className="flex items-center gap-2 mb-4">
-          <Radio className="w-4 h-4 text-indigo-500" />
-          <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-            Downstream Orchestrator Integration
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-          <div
-            className={`p-4 rounded-xl border space-y-1.5 ${
-              isDark ? 'border-slate-800/80 bg-slate-950/50' : 'border-slate-200 bg-slate-50'
-            }`}
-          >
-            <span className="font-mono text-indigo-500 font-bold block">01</span>
-            <h4 className={`font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>Config Export to Backend</h4>
-            <p className={isDark ? 'text-slate-400' : 'text-slate-600'}>
-              The active scenario JSON with all agents, bounds, and personalities is formatted and validated for the orchestrator.
-            </p>
-          </div>
-
-          <div
-            className={`p-4 rounded-xl border space-y-1.5 ${
-              isDark ? 'border-slate-800/80 bg-slate-950/50' : 'border-slate-200 bg-slate-50'
-            }`}
-          >
-            <span className="font-mono text-emerald-500 font-bold block">02</span>
-            <h4 className={`font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>Multi-Agent Loop</h4>
-            <p className={isDark ? 'text-slate-400' : 'text-slate-600'}>
-              Agents submit turn-by-turn proposals constrained by strict min/max limits until mutual convergence or impasse.
-            </p>
-          </div>
-
-          <div
-            className={`p-4 rounded-xl border space-y-1.5 ${
-              isDark ? 'border-slate-800/80 bg-slate-950/50' : 'border-slate-200 bg-slate-50'
-            }`}
-          >
-            <span className="font-mono text-sky-500 font-bold block">03</span>
-            <h4 className={`font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>Final Settlement Report</h4>
-            <p className={isDark ? 'text-slate-400' : 'text-slate-600'}>
-              The settlement terms and negotiation transcripts are verified against reservation boundaries and exportable.
-            </p>
-          </div>
-        </div>
-        </div>
       </div>
       <section id="print-area">
         <header className="print-header">

@@ -14,6 +14,7 @@ import {
   Play,
   History,
   BarChart3,
+  Handshake,
 } from 'lucide-react';
 import BrandLogo from './components/BrandLogo';
 import vendorPricing from './data/vendor_pricing.json';
@@ -30,9 +31,9 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 const scenarios = [vendorPricing, jobOffer, projectBudgetAllocation];
 
 const STEPS = [
-  { number: 1, key: 'select', label: 'Select Arena', icon: Layers },
-  { number: 2, key: 'config', label: 'Configure Agents', icon: Sliders },
-  { number: 3, key: 'negotiate', label: 'Simulation Arena', icon: Play },
+  { number: 1, key: 'select', label: 'Arena', icon: Layers },
+  { number: 2, key: 'config', label: 'Setup', icon: Sliders },
+  { number: 3, key: 'negotiate', label: 'Negotiate', icon: Play },
   { number: 4, key: 'outcome', label: 'Outcome', icon: Check },
 ];
 
@@ -76,129 +77,58 @@ function AppNav({
 
   return (
     <nav
-      className={`sticky top-0 z-40 backdrop-blur-xl border-b shadow-md transition-colors duration-200 ${
-        isDark ? 'bg-slate-950/80 border-slate-800/80' : 'bg-white/95 border-slate-200 shadow-slate-200/50'
+      className={`sticky top-0 z-40 backdrop-blur-xl border-b transition-colors duration-200 ${
+        isDark
+          ? 'bg-[#0E153A]/90 border-white/10 shadow-[0_8px_32px_rgba(10,16,46,0.65)]'
+          : 'bg-white/95 border-[#0E153A]/10 shadow-sm'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col lg:flex-row items-center justify-between gap-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
         {/* Brand Logo / Home Navigation */}
-        <div className="flex items-center justify-between w-full lg:w-auto gap-4">
-          <button
-            type="button"
-            onClick={onGoHome}
-            aria-label="Return to Home Page"
-            className="flex items-center gap-3 cursor-pointer group bg-transparent border-0 p-0 text-left outline-none"
-            title="Return to Home Page"
-          >
-            <BrandLogo className="w-8 h-8" />
-            <div className="flex flex-col">
-              <span
-                className={`text-sm font-extrabold tracking-tight leading-tight group-hover:text-indigo-400 transition-colors ${
-                  isDark ? 'text-slate-100' : 'text-slate-900'
-                }`}
-              >
-                Negotiation<span className="text-indigo-500">AI</span>
-              </span>
-              <span
-                className={`text-[9px] uppercase tracking-widest font-bold ${
-                  isDark ? 'text-slate-400' : 'text-slate-500'
-                }`}
-              >
-                Autonomous Simulator
-              </span>
-            </div>
-          </button>
-
-          {/* Mobile Actions: Theme Toggle, Home, & Auth */}
-          <div className="flex items-center gap-2 lg:hidden">
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className={`p-1.5 rounded-lg border transition-colors ${
-                isDark ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-slate-200 bg-slate-100 text-slate-700'
-              }`}
-              title="Toggle Theme"
-            >
-              {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-indigo-500" />}
-            </button>
-            <button
-              type="button"
-              onClick={onOpenDashboard}
-              aria-label="Performance Dashboard"
-              className={`p-1.5 rounded-lg border transition-colors ${
-                isDashboardActive
-                  ? 'bg-indigo-600 border-transparent text-white'
-                  : isDark ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-slate-200 bg-slate-100 text-slate-700'
-              }`}
-              title="Performance Dashboard"
-            >
-              <BarChart3 className={`w-3.5 h-3.5 ${isDashboardActive ? 'text-white' : 'text-emerald-500'}`} />
-            </button>
-            <button
-              type="button"
-              onClick={onOpenHistory}
-              className={`p-1.5 rounded-lg border transition-colors ${
-                isDark ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-slate-200 bg-slate-100 text-slate-700'
-              }`}
-              title="Simulation History"
-            >
-              <History className="w-3.5 h-3.5 text-indigo-500" />
-            </button>
-            <button
-              type="button"
-              onClick={onGoHome}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
-                isHomeActive
-                  ? 'bg-indigo-600 text-white border-transparent'
-                  : isDark
-                  ? 'border-slate-800 bg-slate-900 text-slate-300'
-                  : 'border-slate-200 bg-slate-100 text-slate-700'
+        <button
+          type="button"
+          onClick={onGoHome}
+          aria-label="Return to Home Page"
+          className="flex items-center gap-2.5 cursor-pointer group bg-transparent border-0 p-0 text-left outline-none shrink-0"
+          title="Return to Home Page"
+        >
+          <BrandLogo className="w-9 h-9" />
+          <div className="flex flex-col leading-none">
+            <span
+              className={`text-base font-black tracking-tight whitespace-nowrap group-hover:text-[#EE2A54] transition-colors ${
+                isDark ? 'text-white' : 'text-[#0E153A]'
               }`}
             >
-              Home
-            </button>
-            {!currentUser ? (
-              <button
-                type="button"
-                onClick={() => onNavigateStep('login')}
-                className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white shadow-sm"
-              >
-                Sign In
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onLogout}
-                className="p-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-rose-500"
-                title="Log Out"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            )}
+              Negotiation<span className="text-[#EE2A54]">AI</span>
+            </span>
+            <span
+              className={`text-[10px] font-bold tracking-wider uppercase whitespace-nowrap mt-0.5 ${
+                isDark ? 'text-[#1CD4A3]' : 'text-[#0E153A]/70'
+              }`}
+            >
+              Deal Studio
+            </span>
           </div>
-        </div>
+        </button>
 
-        {/* Stepper Navigation */}
-        <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
-          {/* Home Tab */}
+        {/* Single-Line Stepper Navigation */}
+        <div className="hidden md:flex items-center justify-center gap-1.5 overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={onGoHome}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
               isHomeActive
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                ? 'bg-[#EE2A54] text-white shadow-[0_2px_14px_rgba(238,42,84,0.45)]'
                 : isDark
-                ? 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
-                : 'bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300'
+                ? 'bg-[#131B4B]/80 border border-white/10 text-[#A3B3D9] hover:text-white hover:border-[#EE2A54]/60'
+                : 'bg-[#F4F7FC] border border-[#0E153A]/15 text-[#0E153A]/75 hover:text-[#0E153A]'
             }`}
           >
             <Home className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Home</span>
+            <span>Home</span>
           </button>
 
-          <div className={`w-2 h-0.5 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
-
-          {STEPS.map((step, index) => {
+          {STEPS.map((step) => {
             const status = getStepStatus(step.number);
             const isClickable =
               step.number === 1 ||
@@ -207,142 +137,127 @@ function AppNav({
               (step.number === 4 && terminalOutcome);
 
             return (
-              <div key={step.key} className="flex items-center gap-2 sm:gap-3">
+              <div key={step.key} className="flex items-center gap-1.5 shrink-0">
+                <div
+                  className={`w-3 h-0.5 shrink-0 ${
+                    status === 'completed'
+                      ? 'bg-[#1CD4A3]'
+                      : isDark
+                      ? 'bg-white/15'
+                      : 'bg-[#0E153A]/15'
+                  }`}
+                />
                 <button
                   type="button"
                   disabled={!isClickable}
                   onClick={() => isClickable && onNavigateStep(step.number)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all ${
                     status === 'active'
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                      ? 'bg-[#EE2A54] text-white shadow-[0_2px_14px_rgba(238,42,84,0.45)]'
                       : status === 'completed'
                       ? isDark
-                        ? 'bg-slate-900/80 border border-slate-800 text-slate-300 hover:text-white hover:border-indigo-500/40 cursor-pointer'
-                        : 'bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 hover:border-slate-300 cursor-pointer'
+                        ? 'bg-[#131B4B] border border-[#1CD4A3]/50 text-white hover:border-[#1CD4A3] cursor-pointer'
+                        : 'bg-[#1CD4A3]/10 border border-[#1CD4A3]/40 text-[#0E153A] cursor-pointer'
                       : isDark
-                      ? 'bg-slate-950/40 border border-slate-900 text-slate-600 cursor-not-allowed opacity-50'
-                      : 'bg-slate-50 border border-slate-200 text-slate-400 cursor-not-allowed opacity-50'
+                      ? 'bg-[#0A102E]/60 border border-white/10 text-[#A3B3D9]/45 cursor-not-allowed'
+                      : 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
                   }`}
                 >
                   <span
-                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
                       status === 'active'
-                        ? 'bg-indigo-500 text-white'
+                        ? 'bg-white text-[#EE2A54]'
                         : status === 'completed'
-                        ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
+                        ? 'bg-[#1CD4A3] text-[#0A102E]'
                         : isDark
-                        ? 'bg-slate-800 text-slate-400'
+                        ? 'bg-[#1C2663] text-[#A3B3D9]'
                         : 'bg-slate-200 text-slate-500'
                     }`}
                   >
-                    {status === 'completed' ? <Check className="w-3 h-3 stroke-[2.5]" /> : step.number}
+                    {status === 'completed' ? <Check className="w-2.5 h-2.5 stroke-[3]" /> : step.number}
                   </span>
-                  <span className="hidden sm:inline">
-                    {step.number === 3 && negotiationConfig?.mode === 'practice' ? 'Practice Arena' : step.label}
+                  <span>
+                    {step.number === 3 && negotiationConfig?.mode === 'practice' ? 'Practice' : step.label}
                   </span>
                 </button>
-
-                {index < STEPS.length - 1 && (
-                  <div
-                    className={`w-4 sm:w-6 h-0.5 ${
-                      status === 'completed'
-                        ? 'bg-indigo-500/50'
-                        : isDark
-                        ? 'bg-slate-800'
-                        : 'bg-slate-200'
-                    }`}
-                  />
-                )}
               </div>
             );
           })}
         </div>
 
-        {/* User Pill & Theme Switcher (Desktop) */}
-        <div className="hidden lg:flex items-center gap-3">
-          {/* Dashboard Tab */}
+        {/* Right Actions */}
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={onOpenDashboard}
             aria-current={isDashboardActive ? 'page' : undefined}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border whitespace-nowrap shrink-0 transition-all cursor-pointer ${
               isDashboardActive
-                ? 'bg-indigo-600 border-transparent text-white'
+                ? 'bg-[#EE2A54] border-transparent text-white'
                 : isDark
-                  ? 'border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white hover:border-slate-700'
-                  : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200'
+                ? 'border-white/15 bg-[#131B4B] text-white hover:border-[#1CD4A3]'
+                : 'border-[#0E153A]/15 bg-[#F4F7FC] text-[#0E153A] hover:border-[#EE2A54]'
             }`}
-            title="Multi-session Performance Dashboard"
+            title="Performance Dashboard"
           >
-            <BarChart3 className={`w-3.5 h-3.5 ${isDashboardActive ? 'text-white' : 'text-emerald-500'}`} />
-            <span>Dashboard</span>
+            <BarChart3 className={`w-3.5 h-3.5 ${isDashboardActive ? 'text-white' : 'text-[#1CD4A3]'}`} />
+            <span className="hidden sm:inline">Dashboard</span>
           </button>
 
-          {/* History Button */}
           <button
             type="button"
             onClick={onOpenHistory}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border whitespace-nowrap shrink-0 transition-all cursor-pointer ${
               isDark
-                ? 'border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white hover:border-slate-700'
-                : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200'
+                ? 'border-white/15 bg-[#131B4B] text-white hover:border-[#EE2A54]'
+                : 'border-[#0E153A]/15 bg-[#F4F7FC] text-[#0E153A] hover:border-[#EE2A54]'
             }`}
-            title="View Simulation History"
+            title="Simulation History"
           >
-            <History className="w-3.5 h-3.5 text-indigo-500" />
-            <span>History</span>
+            <History className="w-3.5 h-3.5 text-[#EE2A54]" />
+            <span className="hidden sm:inline">History</span>
           </button>
 
-          {/* Theme Toggle Button */}
           <button
             type="button"
             onClick={toggleTheme}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
+            aria-label={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            className={`p-2 rounded-xl border shrink-0 transition-all cursor-pointer ${
               isDark
-                ? 'border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white hover:border-slate-700'
-                : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200'
+                ? 'border-white/15 bg-[#131B4B] text-[#1CD4A3] hover:border-[#EE2A54]'
+                : 'border-[#0E153A]/15 bg-[#F4F7FC] text-[#0E153A] hover:border-[#EE2A54]'
             }`}
-            title="Toggle Bright/Dark Mode"
+            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
-            {isDark ? (
-              <>
-                <Sun className="w-3.5 h-3.5 text-amber-400" />
-                <span>Light Mode</span>
-              </>
-            ) : (
-              <>
-                <Moon className="w-3.5 h-3.5 text-indigo-500" />
-                <span>Dark Mode</span>
-              </>
-            )}
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
           {currentUser ? (
             <div
-              className={`flex items-center gap-2 rounded-full py-1 pl-2 pr-3 border ${
-                isDark ? 'border-slate-800/90 bg-slate-900/80 shadow-sm' : 'border-slate-200 bg-white shadow-sm'
+              className={`flex items-center gap-2 rounded-xl py-1 pl-2 pr-2.5 border whitespace-nowrap shrink-0 ${
+                isDark ? 'border-white/15 bg-[#131B4B]' : 'border-[#0E153A]/15 bg-white'
               }`}
             >
-              <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-500 font-bold text-[11px] flex items-center justify-center border border-indigo-500/30">
+              <div className="w-6 h-6 rounded-lg bg-[#EE2A54]/20 text-[#EE2A54] font-bold text-xs flex items-center justify-center">
                 {(currentUser.name || 'U').charAt(0).toUpperCase()}
               </div>
-              <span className={`text-xs font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+              <span className={`hidden sm:inline text-xs font-bold ${isDark ? 'text-white' : 'text-[#0E153A]'}`}>
                 {currentUser.name}
               </span>
               <button
                 type="button"
                 onClick={onLogout}
-                className="text-slate-400 hover:text-rose-500 ml-1.5 transition-colors cursor-pointer"
+                className="text-[#A3B3D9] hover:text-[#EE2A54] transition-colors cursor-pointer"
                 title="Log Out"
               >
-                <LogOut className="w-3 h-3" />
+                <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
           ) : (
             <button
               type="button"
               onClick={() => onNavigateStep('login')}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold bg-[#EE2A54] hover:bg-[#d62249] text-white whitespace-nowrap shrink-0 shadow-[0_2px_12px_rgba(238,42,84,0.35)] transition-all cursor-pointer"
             >
               <LogIn className="w-3.5 h-3.5" />
               <span>Sign In</span>
@@ -357,6 +272,21 @@ function AppNav({
 function MainApp() {
   const { isDark } = useTheme();
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [showSplash, setShowSplash] = useState(() => {
+    try {
+      if (sessionStorage.getItem('negotiation_splash_seen')) return false;
+      sessionStorage.setItem('negotiation_splash_seen', '1');
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    if (!showSplash) return undefined;
+    const timer = setTimeout(() => setShowSplash(false), 1700);
+    return () => clearTimeout(timer);
+  }, [showSplash]);
 
   // 1. Authenticated session safely restored from localStorage / Supabase
   const [currentUser, setCurrentUser] = useState(() => {
@@ -505,7 +435,7 @@ function MainApp() {
     }
   };
 
-  // Login handler
+  // Login handler -> reveals the Home page through the Tug-of-War split curtain
   const handleLogin = (userData) => {
     try {
       localStorage.setItem('negotiation_user', JSON.stringify(userData));
@@ -513,7 +443,8 @@ function MainApp() {
       console.debug('Failed to cache user session:', err);
     }
     setCurrentUser(userData);
-    handleSetStep(1); // Proceed to Step 1: Select Arena
+    setShowSplash(true);
+    handleSetStep(0);
   };
 
   // Logout handler with Supabase signout
@@ -565,15 +496,28 @@ function MainApp() {
       } catch {
         // ignore
       }
-      return;
-    }
-    setCurrentStep(4);
-    try {
-      localStorage.setItem('negotiation_step', '4');
-    } catch {
-      // ignore
     }
   }, []);
+
+  const handleSwitchToPractice = useCallback(() => {
+    setTerminalOutcome(null);
+    setNegotiationConfig((prev) => {
+      const base = prev || selectedScenario || scenarios[0];
+      const firstAgentId = base?.agents?.[0]?.id || 'buyer';
+      const next = {
+        ...base,
+        mode: 'practice',
+        human_agent_id: base.human_agent_id || base.human_seat || firstAgentId,
+        human_seat: base.human_seat || base.human_agent_id || firstAgentId,
+      };
+      try {
+        localStorage.setItem('negotiation_config', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, [selectedScenario]);
 
   const activeConfig = negotiationConfig || selectedScenario || scenarios[0];
   const activeStep = normalizeStep(currentStep);
@@ -585,10 +529,60 @@ function MainApp() {
 
   return (
     <div
-      className={`min-h-screen w-full flex flex-col font-sans transition-colors duration-200 relative selection:bg-indigo-500 selection:text-white ${
-        isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+      className={`min-h-screen w-full flex flex-col font-sans transition-colors duration-200 relative selection:bg-[#EE2A54] selection:text-white ${
+        isDark ? 'bg-[#0A102E] text-white' : 'bg-[#F4F7FC] text-[#0E153A]'
       }`}
     >
+      {/* Ambient Moving Liquid Glass Orbs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div
+          className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full blur-[120px] animate-orb-a opacity-30"
+          style={{ background: 'radial-gradient(circle, #EE2A54 0%, transparent 70%)' }}
+        />
+        <div
+          className="absolute top-1/3 -right-24 w-[460px] h-[460px] rounded-full blur-[140px] animate-orb-b opacity-25"
+          style={{ background: 'radial-gradient(circle, #1CD4A3 0%, transparent 70%)' }}
+        />
+      </div>
+
+      {/* Tug-of-War Split Curtain Reveal (Initial Load & Post Sign-In) */}
+      {showSplash && (
+        <div
+          onClick={() => setShowSplash(false)}
+          className="fixed inset-0 z-50 overflow-hidden cursor-pointer animate-tug-fade"
+          title="Click anywhere to enter"
+        >
+          {/* Left Half Pulling Left */}
+          <div className="absolute inset-y-0 left-0 w-1/2 overflow-hidden animate-tug-left border-r border-[#EE2A54]/60 shadow-[10px_0_40px_rgba(0,0,0,0.6)]">
+            <img
+              src="/tug-of-war.jpg"
+              alt="Negotiation Tug of War Left"
+              className="w-[200%] max-w-none h-full object-cover object-left"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0A102E]/40 via-transparent to-[#0A102E]/60" />
+          </div>
+
+          {/* Right Half Pulling Right */}
+          <div className="absolute inset-y-0 right-0 w-1/2 overflow-hidden animate-tug-right border-l border-[#1CD4A3]/60 shadow-[-10px_0_40px_rgba(0,0,0,0.6)]">
+            <img
+              src="/tug-of-war.jpg"
+              alt="Negotiation Tug of War Right"
+              className="w-[200%] max-w-none h-full object-cover object-right -ml-[100%]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-l from-[#0A102E]/40 via-transparent to-[#0A102E]/60" />
+          </div>
+
+          {/* Center Tension Emblem */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <div className="px-6 py-3 rounded-2xl bg-[#0A102E]/90 border border-white/20 backdrop-blur-xl shadow-2xl flex items-center gap-3">
+              <Handshake className="w-6 h-6 text-[#1CD4A3]" />
+              <span className="text-lg font-black tracking-tight text-white">
+                Negotiation<span className="text-[#EE2A54]">AI</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Global Nav */}
       <AppNav
         currentStep={activeStep}
@@ -636,6 +630,7 @@ function MainApp() {
             currentUser={currentUser}
             onOpenDashboard={() => handleSetStep('dashboard')}
             onTerminalOutcome={handleTerminalOutcome}
+            onSwitchToPractice={handleSwitchToPractice}
           />
         )}
 

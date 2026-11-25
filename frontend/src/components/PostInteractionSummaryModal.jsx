@@ -8,6 +8,7 @@ import {
   Sparkles,
   Lightbulb,
   HeartHandshake,
+  AlertTriangle,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { getPostInteractionSummary } from '../services/api';

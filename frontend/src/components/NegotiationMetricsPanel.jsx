@@ -3,7 +3,6 @@ import {
   Activity,
   Layers,
   Scale,
-  Sparkles,
   CheckCircle2,
   AlertTriangle,
   HelpCircle,
@@ -12,9 +11,6 @@ import {
 import { AgentAvatar } from './AgentAvatars';
 import { useTheme } from '../context/ThemeContext';
 
-/**
- * Format key string to readable title
- */
 function formatKey(key) {
   return String(key).replace(/_/g, ' ');
 }
@@ -26,20 +22,11 @@ function formatValue(val) {
   return String(val);
 }
 
-/**
- * Calculate ZOPA overlap strictly adhering to issue limits compatibility:
- * For an issue to have a viable ZOPA, buyers/sellers or competing parties must
- * define compatible limits (at least one 'min' floor and one 'max' ceiling).
- * The spread is computed as lowest ceiling - highest floor.
- * An issue is overlapping if ceiling >= floor.
- * The overall negotiation is only allOverlapping if ALL calculable issues are feasible.
- */
 function calculateZopaOverlap(agents = []) {
   if (!Array.isArray(agents) || agents.length < 2) {
     return { isCalculable: false, allOverlapping: false, items: [], unitsByItem: {} };
   }
 
-  // Aggregate limits and extract precise units per issue
   const issueMap = {};
   const unitsByItem = {};
 
@@ -64,8 +51,8 @@ function calculateZopaOverlap(agents = []) {
         issueMap[itemKey] = {
           item: itemKey,
           unit,
-          floors: [],   // min limits
-          ceilings: [], // max limits
+          floors: [],
+          ceilings: [],
         };
       }
 
@@ -84,11 +71,8 @@ function calculateZopaOverlap(agents = []) {
   const items = [];
 
   for (const [key, data] of Object.entries(issueMap)) {
-    // If we have at least one floor and one ceiling, we can compare them for ZOPA
     if (data.floors.length > 0 && data.ceilings.length > 0) {
-      // The highest minimum requirement among agents
       const floorEntry = data.floors.reduce((prev, curr) => (curr.value > prev.value ? curr : prev));
-      // The lowest maximum ceiling among agents
       const ceilingEntry = data.ceilings.reduce((prev, curr) => (curr.value < prev.value ? curr : prev));
 
       const floor = floorEntry.value;
@@ -108,26 +92,21 @@ function calculateZopaOverlap(agents = []) {
         isCalculable: true,
       });
     } else {
-      // Missing either floor or ceiling for this issue (e.g. unilateral limit)
       const isOnlyCeiling = data.floors.length === 0;
       items.push({
         item: key,
         unit: data.unit,
         isCalculable: false,
-        isOverlapping: true, // Not constrained by conflicting reservation points
+        isOverlapping: true,
         reason: isOnlyCeiling
-          ? `Cap only (≤ ${data.ceilings[0]?.value} ${data.unit})`
-          : `Floor only (≥ ${data.floors[0]?.value} ${data.unit})`,
+          ? `Cap ≤ ${data.ceilings[0]?.value} ${data.unit}`
+          : `Floor ≥ ${data.floors[0]?.value} ${data.unit}`,
       });
     }
   }
 
-  // ZOPA is calculable if at least one issue has overlapping/conflicting reservation bounds
   const calculableItems = items.filter((it) => it.isCalculable);
   const isCalculable = calculableItems.length > 0;
-
-  // Crucial multi-issue rule: ALL calculable issues must overlap for the negotiation to be feasible.
-  // If even ONE issue has an impasse (ceiling < floor), allOverlapping is FALSE.
   const allOverlapping = isCalculable && calculableItems.every((it) => it.isOverlapping);
 
   return { isCalculable, allOverlapping, items, unitsByItem };
@@ -140,9 +119,6 @@ export default function NegotiationMetricsPanel({
 }) {
   const { isDark } = useTheme();
 
-  // 1. Precise Round Progress Calculation:
-  // Supports incomplete rounds, irregular turn sequences, and human turns in Practice Mode.
-  // If the latest turn explicitly provides a turn.round, use it; otherwise compute from turn count.
   const agentCount = Math.max(1, agents.length || 2);
   const latestTurn = turns.length > 0 ? turns[turns.length - 1] : null;
 
@@ -156,7 +132,6 @@ export default function NegotiationMetricsPanel({
 
   const progressPercent = Math.min(100, Math.round((currentRound / Math.max(1, maxRounds)) * 100));
 
-  // 2. Latest Turns & Stances per Agent
   const latestByAgent = useMemo(() => {
     const map = {};
     for (const agent of agents) {
@@ -168,7 +143,6 @@ export default function NegotiationMetricsPanel({
       };
     }
 
-    // Traverse turns in chronological order to capture each agent's latest proposals and stance
     for (const turn of turns) {
       if (!turn || !turn.agent_id) continue;
       if (!map[turn.agent_id]) {
@@ -191,133 +165,115 @@ export default function NegotiationMetricsPanel({
     return map;
   }, [agents, turns]);
 
-  // 3. Mathematical ZOPA Overlap Calculation
   const zopa = useMemo(() => calculateZopaOverlap(agents), [agents]);
 
-  // 4. Stance Visual Metadata Helper
   const getStanceMeta = (stance) => {
     const s = String(stance || '').toLowerCase();
     if (s === 'urgent' || s === 'aggressive') {
       return {
-        badge: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
-        dot: 'bg-rose-500',
-        text: 'Urgent',
+        badge: 'bg-[#EE2A54]/15 text-[#EE2A54] border-[#EE2A54]/40',
+        dot: 'bg-[#EE2A54]',
+        text: s === 'urgent' ? 'Urgent' : 'Firm',
       };
     }
     if (s === 'firm') {
       return {
-        badge: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-        dot: 'bg-amber-500',
+        badge: 'bg-amber-500/15 text-amber-400 border-amber-500/40',
+        dot: 'bg-amber-400',
         text: 'Firm',
       };
     }
     return {
-      badge: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-      dot: 'bg-emerald-500',
+      badge: 'bg-[#1CD4A3]/15 text-[#1CD4A3] border-[#1CD4A3]/40',
+      dot: 'bg-[#1CD4A3]',
       text: 'Flexible',
     };
   };
 
   return (
     <div
-      className={`rounded-2xl border p-5 sm:p-6 mb-8 shadow-xl transition-all backdrop-blur-xl ${
-        isDark ? 'border-slate-800/80 bg-slate-900/60' : 'border-slate-200/90 bg-white shadow-slate-200/50'
+      className={`liquid-glass rounded-2xl border p-5 sm:p-6 mb-6 shadow-xl transition-all ${
+        isDark ? 'border-white/10 bg-[#131B4B]/80' : 'border-[#0E153A]/15 bg-white shadow-sm'
       }`}
     >
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 mb-5 border-b border-slate-700/20">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 flex items-center justify-center shrink-0">
+      <div className={`flex flex-wrap items-center justify-between gap-3 pb-4 mb-5 border-b ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#EE2A54]/15 text-[#EE2A54] border border-[#EE2A54]/30 flex items-center justify-center shrink-0">
             <Activity className="w-4 h-4" />
           </div>
           <div>
-            <h3 className={`text-sm font-extrabold tracking-tight ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+            <h3 className={`text-base font-extrabold tracking-tight ${isDark ? 'text-white' : 'text-[#0E153A]'}`}>
               Live Negotiation Telemetry
             </h3>
-            <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Real-time offer convergence, round exhaustion telemetry, and mathematical ZOPA bounds
+            <p className={`text-xs ${isDark ? 'text-[#A3B3D9]' : 'text-slate-500'}`}>
+              Real-time round progress, active offers, and agreement range
             </p>
           </div>
         </div>
 
-        {/* Global ZOPA Pill */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2">
           {zopa.isCalculable ? (
             <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold border ${
                 zopa.allOverlapping
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                  : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                  ? 'bg-[#1CD4A3]/15 text-[#1CD4A3] border-[#1CD4A3]/40'
+                  : 'bg-[#EE2A54]/15 text-[#EE2A54] border-[#EE2A54]/40'
               }`}
             >
-              {zopa.allOverlapping ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              ) : (
-                <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-              )}
-              <span>{zopa.allOverlapping ? 'ZOPA Feasible' : 'ZOPA Impasse'}</span>
+              {zopa.allOverlapping ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+              <span>{zopa.allOverlapping ? 'Match Zone Open' : 'Bounds Conflict'}</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/5 text-[#A3B3D9] border border-white/10">
               <HelpCircle className="w-3.5 h-3.5" />
-              <span>ZOPA N/A</span>
+              <span>Bounds Open</span>
             </span>
           )}
         </div>
       </div>
 
-      {/* ── 4-Quadrant Telemetry Grid ── */}
+      {/* ── 4-Column Telemetry Grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Round Progress */}
         <div
           className={`p-4 rounded-xl border flex flex-col justify-between ${
-            isDark ? 'border-slate-800/80 bg-slate-950/40' : 'border-slate-200/80 bg-slate-50/80'
+            isDark ? 'border-white/10 bg-[#0A102E]/70' : 'border-slate-200 bg-[#F4F7FC]'
           }`}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Round Progress
+            <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-[#A3B3D9]' : 'text-slate-500'}`}>
+              Round
             </span>
-            <Layers className="w-3.5 h-3.5 text-indigo-400" />
+            <Layers className="w-4 h-4 text-[#1CD4A3]" />
           </div>
 
           <div className="my-1">
             <div className="flex items-baseline gap-1.5">
-              <span className={`text-2xl font-black font-mono tracking-tight ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+              <span className={`text-3xl font-black font-mono ${isDark ? 'text-white' : 'text-[#0E153A]'}`}>
                 {currentRound}
               </span>
-              <span className={`text-xs font-mono font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                / {maxRounds} max
+              <span className={`text-sm font-mono font-bold ${isDark ? 'text-[#A3B3D9]' : 'text-slate-500'}`}>
+                / {maxRounds}
               </span>
             </div>
-            <span className={`text-[10px] block mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              {turns.length} total {turns.length === 1 ? 'turn' : 'turns'} executed
+            <span className={`text-xs block mt-1 ${isDark ? 'text-[#A3B3D9]' : 'text-slate-600'}`}>
+              {turns.length} {turns.length === 1 ? 'move' : 'moves'} played
             </span>
           </div>
 
-          {/* Progress Bar */}
           <div className="mt-3">
-            <div className="flex items-center justify-between text-[10px] font-mono mb-1 text-slate-400">
-              <span>Progress</span>
-              <span>{progressPercent}%</span>
-            </div>
-            <div className={`w-full h-2 rounded-full overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
+            <div className={`w-full h-2 rounded-full overflow-hidden ${isDark ? 'bg-[#1C2663]' : 'bg-slate-200'}`}>
               <div
-                className={`h-full transition-all duration-300 rounded-full ${
-                  progressPercent >= 80
-                    ? 'bg-rose-500'
-                    : progressPercent >= 50
-                    ? 'bg-amber-500'
-                    : 'bg-indigo-500'
-                }`}
+                className="h-full transition-all duration-300 rounded-full bg-gradient-to-r from-[#1CD4A3] to-[#EE2A54]"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
           </div>
         </div>
 
-        {/* Metric 2 & 3: Latest Offers & Stances for Participating Agents */}
-        {agents.slice(0, 2).map((agent, aIdx) => {
+        {/* Metric 2 & 3: Agent Positions */}
+        {agents.slice(0, 2).map((agent) => {
           const telemetry = latestByAgent[agent.id] || {};
           const lastOffer = telemetry.lastOffer;
           const stanceMeta = getStanceMeta(telemetry.stance);
@@ -327,37 +283,25 @@ export default function NegotiationMetricsPanel({
             <div
               key={agent.id}
               className={`p-4 rounded-xl border flex flex-col justify-between ${
-                isDark ? 'border-slate-800/80 bg-slate-950/40' : 'border-slate-200/80 bg-slate-50/80'
+                isDark ? 'border-white/10 bg-[#0A102E]/70' : 'border-slate-200 bg-[#F4F7FC]'
               }`}
             >
               <div>
-                <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-700/20">
-                  <div className="flex items-center gap-2">
-                    <AgentAvatar role={agent.role || agent.id} size="sm" className="w-6 h-6 rounded-lg" />
-                    <div>
-                      <span className={`text-xs font-bold block leading-tight ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-                        {agent.name}
-                      </span>
-                      <span className={`text-[9px] block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Agent {aIdx + 1}
-                      </span>
-                    </div>
+                <div className={`flex items-center justify-between gap-2 mb-3 pb-2.5 border-b ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <AgentAvatar role={agent.role || agent.id} size="sm" className="w-7 h-7 rounded-lg shrink-0" />
+                    <span className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-[#0E153A]'}`}>
+                      {agent.name}
+                    </span>
                   </div>
 
-                  {/* Stance Pill */}
                   <span
-                    className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${stanceMeta.badge}`}
-                    title={`Latest stance: ${stanceMeta.text}`}
+                    className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${stanceMeta.badge}`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full ${stanceMeta.dot} animate-pulse`} />
                     {stanceMeta.text}
                   </span>
                 </div>
-
-                {/* Latest Proposed Offer */}
-                <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Latest Position
-                </span>
 
                 {hasOffer ? (
                   <div className="space-y-1.5">
@@ -366,33 +310,29 @@ export default function NegotiationMetricsPanel({
                       return (
                         <div
                           key={key}
-                          className={`flex items-center justify-between px-2.5 py-1 rounded-lg border text-xs font-mono ${
-                            isDark
-                              ? 'bg-slate-900/80 border-slate-800 text-slate-200'
-                              : 'bg-white border-slate-200 text-slate-800'
+                          className={`flex items-center justify-between px-3 py-1.5 rounded-lg border text-xs font-mono ${
+                            isDark ? 'bg-[#131B4B] border-white/10 text-white' : 'bg-white border-slate-200 text-[#0E153A]'
                           }`}
                         >
-                          <span className="text-[10px] uppercase opacity-75 font-sans">
-                            {formatKey(key)}:
-                          </span>
-                          <span className="font-bold text-indigo-400">
-                            {formatValue(val)} {itemUnit && <span className="text-[10px] opacity-75 font-normal">{itemUnit}</span>}
+                          <span className="capitalize font-sans text-[#A3B3D9]">{formatKey(key)}</span>
+                          <span className="font-bold text-[#1CD4A3]">
+                            {formatValue(val)} {itemUnit}
                           </span>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <div className={`py-3 text-center text-xs italic ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    No active proposals yet
+                  <div className={`py-2 text-xs font-medium ${isDark ? 'text-[#A3B3D9]' : 'text-slate-500'}`}>
+                    Waiting for opening move
                   </div>
                 )}
               </div>
 
               {telemetry.lastTurn && (
-                <div className={`mt-2 pt-2 border-t text-[10px] flex items-center justify-between ${isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'}`}>
-                  <span>Last Action:</span>
-                  <span className="font-bold uppercase text-indigo-400">
+                <div className={`mt-2.5 pt-2 border-t text-xs flex items-center justify-between ${isDark ? 'border-white/10 text-[#A3B3D9]' : 'border-slate-200 text-slate-600'}`}>
+                  <span>Action:</span>
+                  <span className="font-bold uppercase text-[#EE2A54]">
                     {telemetry.lastTurn.action || 'Counter'}
                   </span>
                 </div>
@@ -401,79 +341,56 @@ export default function NegotiationMetricsPanel({
           );
         })}
 
-        {/* Metric 4: ZOPA Status & Overlap Telemetry */}
+        {/* Metric 4: Agreement Zone Spread */}
         <div
           className={`p-4 rounded-xl border flex flex-col justify-between ${
-            isDark ? 'border-slate-800/80 bg-slate-950/40' : 'border-slate-200/80 bg-slate-50/80'
+            isDark ? 'border-white/10 bg-[#0A102E]/70' : 'border-slate-200 bg-[#F4F7FC]'
           }`}
         >
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                ZOPA Spread Analysis
+            <div className="flex items-center justify-between mb-2.5">
+              <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-[#A3B3D9]' : 'text-slate-500'}`}>
+                Agreement Range
               </span>
-              <Scale className="w-3.5 h-3.5 text-indigo-400" />
+              <Scale className="w-4 h-4 text-[#EE2A54]" />
             </div>
 
             {zopa.isCalculable ? (
-              <div className="space-y-2 mt-1">
+              <div className="space-y-2">
                 {zopa.items.map((item, idx) => (
                   <div
                     key={idx}
-                    className={`p-2.5 rounded-lg border text-xs ${
-                      item.isCalculable
-                        ? item.isOverlapping
-                          ? isDark
-                            ? 'bg-emerald-950/20 border-emerald-500/30'
-                            : 'bg-emerald-50/60 border-emerald-200'
-                          : isDark
-                          ? 'bg-rose-950/20 border-rose-500/30'
-                          : 'bg-rose-50/60 border-rose-200'
+                    className={`p-2.5 rounded-xl border text-xs ${
+                      item.isCalculable && item.isOverlapping
+                        ? isDark
+                          ? 'bg-[#1CD4A3]/10 border-[#1CD4A3]/30'
+                          : 'bg-emerald-50 border-emerald-200'
                         : isDark
-                        ? 'bg-slate-900 border-slate-800 text-slate-400'
-                        : 'bg-white border-slate-200 text-slate-500'
+                        ? 'bg-[#EE2A54]/10 border-[#EE2A54]/30'
+                        : 'bg-rose-50 border-rose-200'
                     }`}
                   >
-                    <div className="flex items-center justify-between font-semibold mb-1">
-                      <span className="capitalize text-[11px] font-sans flex items-center gap-1">
-                        <Tag className="w-2.5 h-2.5 text-indigo-400" />
+                    <div className="flex items-center justify-between font-bold mb-1">
+                      <span className="capitalize flex items-center gap-1.5">
+                        <Tag className="w-3 h-3 text-[#EE2A54]" />
                         {formatKey(item.item)}
                       </span>
                       {item.isCalculable ? (
-                        <span
-                          className={`font-mono font-bold text-[11px] ${
-                            item.isOverlapping ? 'text-emerald-400' : 'text-rose-400'
-                          }`}
-                        >
-                          {item.isOverlapping ? `+${formatValue(item.spread)} ${item.unit}` : `Impasse (${formatValue(item.spread)} ${item.unit})`}
+                        <span className={`font-mono ${item.isOverlapping ? 'text-[#1CD4A3]' : 'text-[#EE2A54]'}`}>
+                          {item.isOverlapping ? `${formatValue(item.floor)}–${formatValue(item.ceiling)}` : 'No overlap'}
                         </span>
                       ) : (
-                        <span className="text-[10px] text-slate-400">N/A</span>
+                        <span className="text-[#A3B3D9]">{item.reason}</span>
                       )}
                     </div>
-
-                    {item.isCalculable ? (
-                      <div className={`text-[10px] font-mono leading-tight ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Range: {formatValue(item.floor)} &rarr; {formatValue(item.ceiling)} {item.unit}
-                      </div>
-                    ) : (
-                      <div className="text-[10px] text-slate-400 italic">
-                        {item.reason}
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className={`py-4 text-center text-xs italic ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Reservation limits not defined in scenario
+              <div className={`py-2 text-xs ${isDark ? 'text-[#A3B3D9]' : 'text-slate-500'}`}>
+                Open negotiation range
               </div>
             )}
-          </div>
-
-          <div className="mt-3 pt-2 border-t border-slate-700/20 flex items-center gap-1 text-[10px] text-slate-400">
-            <Sparkles className="w-3 h-3 text-indigo-400 shrink-0" />
-            <span className="truncate">Zone of Possible Agreement calculated from agent bounds</span>
           </div>
         </div>
       </div>

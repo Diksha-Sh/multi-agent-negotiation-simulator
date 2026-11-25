@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.config import API_TITLE, API_VERSION, FRONTEND_ORIGIN_REGEX, HOST, PORT, RELOAD
-from backend.routers import analytics, configuration, health, orchestrator, personalities, scenarios
+from backend.routers import analytics, auth, configuration, health, orchestrator, personalities, scenarios
 from backend.scenario_loader import ScenarioFileError
 
 app = FastAPI(
@@ -38,6 +38,7 @@ def scenario_file_error(_request: Request, exc: ScenarioFileError) -> JSONRespon
 
 
 app.include_router(health.router)
+app.include_router(auth.router)
 app.include_router(scenarios.router)
 app.include_router(personalities.router)
 app.include_router(configuration.router)

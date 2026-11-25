@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 /**
- * Checks whether valid Supabase credentials have been configured.
+ * Checks whether valid Supabase cloud credentials have been configured.
  */
 export const isSupabaseConfigured = () => {
   return (
@@ -17,7 +18,6 @@ export const isSupabaseConfigured = () => {
   );
 };
 
-// Initialize the Supabase client safely
 export const supabase = isSupabaseConfigured()
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -28,25 +28,35 @@ export const supabase = isSupabaseConfigured()
     })
   : null;
 
-// Local storage key for fallback simulation history
 const LOCAL_HISTORY_KEY = 'negotiation_simulations_history';
+
+async function authApi(path, { method = 'GET', body } = {}) {
+  const options = { method };
+  if (body !== undefined) {
+    options.headers = { 'Content-Type': 'application/json' };
+    options.body = JSON.stringify(body);
+  }
+  const response = await fetch(`${API_BASE}${path}`, options);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.detail || response.statusText || 'Authentication request failed');
+  }
+  return data;
+}
 
 // ── Authentication Helpers ──────────────────────────────────────────────────
 
-/**
- * Register a new user with Email and Password in Supabase.
- */
 export async function signUpWithEmail(email, password, fullName = '') {
   if (!isSupabaseConfigured() || !supabase) {
-    // Local fallback when Supabase keys are not set
-    const fallbackUser = {
-      id: `local-usr-${Date.now()}`,
-      email,
-      name: fullName || email.split('@')[0],
-      role: 'Simulation Architect',
-      type: 'local',
-    };
-    return { user: fallbackUser, session: null, error: null, isMock: true };
+    try {
+      const res = await authApi('/api/auth/signup', {
+        method: 'POST',
+        body: { email, password, full_name: fullName },
+      });
+      return { user: res.user, session: { provider: 'sqlite' }, error: null, isMock: false };
+    } catch (err) {
+      return { user: null, session: null, error: err.message || 'Registration failed' };
+    }
   }
 
   try {
@@ -79,20 +89,17 @@ export async function signUpWithEmail(email, password, fullName = '') {
   }
 }
 
-/**
- * Sign in an existing user with Email and Password.
- */
 export async function signInWithEmail(email, password) {
   if (!isSupabaseConfigured() || !supabase) {
-    // Local fallback when Supabase keys are not set
-    const fallbackUser = {
-      id: `local-usr-${Date.now()}`,
-      email,
-      name: email.split('@')[0],
-      role: 'Simulation Architect',
-      type: 'local',
-    };
-    return { user: fallbackUser, session: null, error: null, isMock: true };
+    try {
+      const res = await authApi('/api/auth/login', {
+        method: 'POST',
+        body: { email, password },
+      });
+      return { user: res.user, session: { provider: 'sqlite' }, error: null, isMock: false };
+    } catch (err) {
+      return { user: null, session: null, error: err.message || 'Invalid email or password' };
+    }
   }
 
   try {
@@ -117,9 +124,51 @@ export async function signInWithEmail(email, password) {
   }
 }
 
-/**
- * Sign out user from Supabase and clear session.
- */
+export async function requestOtpCode(identifier) {
+  try {
+    const res = await authApi('/api/auth/otp/send', {
+      method: 'POST',
+      body: { identifier },
+    });
+    return { sent: true, demoOtp: res.demo_otp, error: null };
+  } catch (err) {
+    return { sent: false, demoOtp: null, error: err.message || 'Could not send OTP' };
+  }
+}
+
+export async function verifyOtpCode(identifier, otp) {
+  try {
+    const res = await authApi('/api/auth/otp/verify', {
+      method: 'POST',
+      body: { identifier, otp },
+    });
+    return { user: res.user, error: null };
+  } catch (err) {
+    return { user: null, error: err.message || 'Invalid or expired OTP' };
+  }
+}
+
+export async function signInWithOAuthProfile({ email, name, role, type }) {
+  try {
+    const res = await authApi('/api/auth/oauth', {
+      method: 'POST',
+      body: { email, name, role, type },
+    });
+    return { user: res.user, error: null };
+  } catch {
+    return {
+      user: {
+        id: `${type}-${Date.now()}`,
+        email,
+        name,
+        role,
+        type,
+      },
+      error: null,
+    };
+  }
+}
+
 export async function signOutUser() {
   if (isSupabaseConfigured() && supabase) {
     try {
@@ -130,9 +179,6 @@ export async function signOutUser() {
   }
 }
 
-/**
- * Get the currently authenticated user from Supabase.
- */
 export async function getCurrentUser() {
   if (!isSupabaseConfigured() || !supabase) return null;
 
@@ -155,9 +201,6 @@ export async function getCurrentUser() {
   }
 }
 
-/**
- * Listen for auth state changes (sign in, sign out, token refresh).
- */
 export function onAuthStateChange(callback) {
   if (!isSupabaseConfigured() || !supabase) {
     return () => {};
@@ -187,10 +230,6 @@ export function onAuthStateChange(callback) {
 
 // ── Simulation History Helpers ──────────────────────────────────────────────
 
-/**
- * Save a completed simulation session.
- * Saves to Supabase PostgreSQL table 'simulations' when connected, and updates local cache.
- */
 export async function saveSimulationRecord({
   userId = null,
   scenarioId,
@@ -203,7 +242,6 @@ export async function saveSimulationRecord({
   turns,
   deadlockEvent = null,
 }) {
-  // The deadlock event travels inside config (jsonb), so no table change is needed.
   config = deadlockEvent ? { ...(config || {}), deadlock_event: deadlockEvent } : config;
   const newRecord = {
     id: `sim-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -212,25 +250,22 @@ export async function saveSimulationRecord({
     scenario_title: scenarioTitle,
     status,
     winner,
-    total_rounds: totalRounds,
-    total_turns: totalTurns,
+    total_rounds: Number(totalRounds) || 0,
+    total_turns: Number(totalTurns) || 0,
     config,
     turns,
     deadlock_event: deadlockEvent,
     created_at: new Date().toISOString(),
   };
 
-  // 1. Always keep in local storage for instant responsiveness & offline resilience
   try {
     const local = JSON.parse(localStorage.getItem(LOCAL_HISTORY_KEY) || '[]');
     local.unshift(newRecord);
-    // Keep last 50 runs in local storage
     localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(local.slice(0, 50)));
   } catch (err) {
     console.warn('Local history cache error:', err);
   }
 
-  // 2. Persist to Supabase if connected
   if (isSupabaseConfigured() && supabase) {
     try {
       const dbPayload = {
@@ -243,10 +278,7 @@ export async function saveSimulationRecord({
         config,
         turns,
       };
-
-      if (userId) {
-        dbPayload.user_id = userId;
-      }
+      if (userId) dbPayload.user_id = userId;
 
       const { data, error } = await supabase
         .from('simulations')
@@ -254,47 +286,54 @@ export async function saveSimulationRecord({
         .select()
         .single();
 
-      if (error) {
-        console.warn('Supabase simulation insert error:', error.message);
-        return { data: newRecord, error: error.message, isLocal: true };
+      if (!error) {
+        return { data: data || newRecord, error: null, isLocal: false };
       }
-
-      return { data: data || newRecord, error: null, isLocal: false };
     } catch (err) {
       console.warn('Failed to save to Supabase:', err);
-      return { data: newRecord, error: err.message, isLocal: true };
+    }
+  } else {
+    try {
+      const res = await authApi('/api/auth/simulations', {
+        method: 'POST',
+        body: newRecord,
+      });
+      return { data: res.data || newRecord, error: null, isLocal: false };
+    } catch (err) {
+      console.warn('SQLite simulation save warning:', err);
     }
   }
 
   return { data: newRecord, error: null, isLocal: true };
 }
 
-/**
- * Fetch past simulation records for the current user.
- */
 export async function fetchUserSimulations(userId = null) {
-  // 1. Attempt Supabase fetch if connected
   if (isSupabaseConfigured() && supabase) {
     try {
       let query = supabase
         .from('simulations')
         .select('*')
         .order('created_at', { ascending: false });
-
-      if (userId) {
-        query = query.eq('user_id', userId);
-      }
-
+      if (userId) query = query.eq('user_id', userId);
       const { data, error } = await query;
       if (!error && Array.isArray(data)) {
         return { data, error: null, source: 'supabase' };
       }
     } catch (err) {
-      console.warn('Supabase query failed, falling back to local history:', err);
+      console.warn('Supabase query failed:', err);
+    }
+  } else {
+    try {
+      const query = userId ? `?user_id=${encodeURIComponent(userId)}` : '';
+      const res = await authApi(`/api/auth/simulations${query}`);
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        return { data: res.data, error: null, source: 'sqlite' };
+      }
+    } catch (err) {
+      console.warn('SQLite simulation fetch warning:', err);
     }
   }
 
-  // 2. Fallback to localStorage
   try {
     const local = JSON.parse(localStorage.getItem(LOCAL_HISTORY_KEY) || '[]');
     return { data: local, error: null, source: 'local' };
@@ -303,11 +342,7 @@ export async function fetchUserSimulations(userId = null) {
   }
 }
 
-/**
- * Delete a simulation record by ID.
- */
 export async function deleteSimulationRecord(simulationId) {
-  // Delete from local cache
   try {
     const local = JSON.parse(localStorage.getItem(LOCAL_HISTORY_KEY) || '[]');
     const filtered = local.filter((item) => item.id !== simulationId);
@@ -316,7 +351,6 @@ export async function deleteSimulationRecord(simulationId) {
     // ignore
   }
 
-  // Delete from Supabase if connected
   if (isSupabaseConfigured() && supabase) {
     try {
       await supabase.from('simulations').delete().eq('id', simulationId);

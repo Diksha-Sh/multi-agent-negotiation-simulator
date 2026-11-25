@@ -20,8 +20,8 @@ import {
   X,
   Scale,
   Bot,
-  Gamepad2,
   UserCheck,
+  Mic,
 } from 'lucide-react';
 import vendorPricing from '../data/vendor_pricing.json';
 import { AgentAvatar } from './AgentAvatars';
@@ -52,30 +52,30 @@ const PERSONALITIES = [
     anchorStat: '95%',
     flexStat: '15%',
     riskStat: 'High',
-    activeStyles: 'border-rose-500/80 ring-1 ring-rose-500/50 bg-rose-500/10 text-rose-200 shadow-[0_0_20px_rgba(244,63,94,0.12)]',
-    desc: 'Commands high initial anchor, concedes slowly, leverages walkaway pressure.',
+    activeStyles: 'border-[#EE2A54] ring-1 ring-[#EE2A54]/60 bg-[#EE2A54]/15 text-white shadow-[0_0_20px_rgba(216,63,135,0.2)]',
+    desc: 'High opening anchor, slow concessions, firm pressure.',
   },
   {
     id: 'Collaborative',
     name: 'Collaborative',
     icon: Users,
-    badge: 'Mutual Gain · Win-Win',
+    badge: 'Mutual Gain · Balanced',
     anchorStat: '60%',
     flexStat: '80%',
     riskStat: 'Low',
-    activeStyles: 'border-indigo-500/80 ring-1 ring-indigo-500/50 bg-indigo-500/10 text-indigo-200 shadow-[0_0_20px_rgba(99,102,241,0.12)]',
-    desc: 'Offers reciprocal concessions, explores trade-offs, drives mutual value expansion.',
+    activeStyles: 'border-[#EE2A54] ring-1 ring-[#EE2A54]/60 bg-[#1D2B78]/35 text-white shadow-[0_0_20px_rgba(68,49,141,0.3)]',
+    desc: 'Reciprocal concessions, balanced trade-offs, steady convergence.',
   },
   {
     id: 'Risk-Averse',
     name: 'Risk-Averse',
     icon: Shield,
-    badge: 'Walkaway Guard · Closes Early',
+    badge: 'Safe · Closes Early',
     anchorStat: '40%',
     flexStat: '90%',
     riskStat: 'Zero',
-    activeStyles: 'border-sky-500/80 ring-1 ring-sky-500/50 bg-sky-500/10 text-sky-200 shadow-[0_0_20px_rgba(56,189,248,0.12)]',
-    desc: 'Guards strictly against impasse, concedes steadily to guarantee settlement.',
+    activeStyles: 'border-[#1CD4A3] ring-1 ring-[#1CD4A3]/60 bg-[#1CD4A3]/15 text-white shadow-[0_0_20px_rgba(233,128,116,0.2)]',
+    desc: 'Avoids deadlock, concedes early to secure agreement.',
   },
 ];
 
@@ -348,71 +348,69 @@ export default function AgentConfigScreen({
   return (
     <div className={`w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-left ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
       {/* ── TOP CONTROL DECK ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-3 mb-2.5">
+          <div className="flex items-center gap-2.5 mb-2">
             <button
               type="button"
               onClick={onBack}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                 isDark
-                  ? 'bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 text-slate-300 hover:text-white hover:border-indigo-500/40 hover:shadow-[0_0_20px_rgba(99,102,241,0.15)]'
-                  : 'bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:border-indigo-400 shadow-sm'
+                  ? 'bg-[#131B4B] border-[#1D2B78] text-[#A3B3D9] hover:text-white hover:border-[#EE2A54]'
+                  : 'bg-white border-[#1D2B78]/20 text-[#131B4B] shadow-sm'
               }`}
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Change Scenario</span>
+              <span>Back</span>
             </button>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
-              <Sliders className="w-3 h-3" />
-              <span>Step 2 of 3 · Agent Configuration Studio</span>
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-[#EE2A54]/15 text-[#EE2A54] border border-[#EE2A54]/40">
+              <Sliders className="w-3.5 h-3.5" />
+              <span>Step 2 · Configure Agents</span>
             </span>
           </div>
 
-          <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+          <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-[#131B4B]'}`}>
             {scenario.title}
           </h1>
-          <p className={`text-xs sm:text-sm mt-1 max-w-2xl ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          <p className={`text-sm mt-1 max-w-2xl ${isDark ? 'text-[#A3B3D9]' : 'text-[#131B4B]/75'}`}>
             {scenario.description}
           </p>
         </div>
 
         {/* Action Controls */}
         <div className="flex items-center gap-2.5 flex-wrap self-start sm:self-center">
-          {/* Chaos Test */}
           <button
             type="button"
             onClick={handleChaosMode}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold backdrop-blur-xl border transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
               isDark
-                ? 'bg-slate-900/60 border-slate-800/80 text-slate-300 hover:text-white hover:border-indigo-500/40 hover:shadow-[0_0_20px_rgba(99,102,241,0.15)]'
-                : 'bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:border-indigo-400 shadow-sm'
+                ? 'bg-[#131B4B] border-[#1D2B78] text-white hover:border-[#EE2A54]'
+                : 'bg-white border-[#1D2B78]/20 text-[#131B4B] shadow-sm'
             }`}
-            title="Randomize personalities for stress testing"
+            title="Randomize personalities"
           >
-            <Shuffle className="w-3.5 h-3.5 text-indigo-500" />
-            <span>Chaos Test</span>
+            <Shuffle className="w-3.5 h-3.5 text-[#1CD4A3]" />
+            <span>Randomize</span>
           </button>
 
-          {/* Cognitive Radar */}
           <button
             type="button"
             onClick={() => setShowRadarModal(true)}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold backdrop-blur-xl border transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
               isDark
-                ? 'bg-slate-900/60 border-slate-800/80 text-slate-300 hover:text-white hover:border-indigo-500/40 hover:shadow-[0_0_20px_rgba(99,102,241,0.15)]'
-                : 'bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:border-indigo-400 shadow-sm'
+                ? 'bg-[#131B4B] border-[#1D2B78] text-white hover:border-[#EE2A54]'
+                : 'bg-white border-[#1D2B78]/20 text-[#131B4B] shadow-sm'
             }`}
-            title="View pentagon cognitive radar charts"
+            title="View personality radar charts"
           >
-            <Activity className="w-3.5 h-3.5 text-indigo-500" />
-            <span>View Radar</span>
+            <Activity className="w-3.5 h-3.5 text-[#EE2A54]" />
+            <span>Radar</span>
           </button>
 
           {/* Max Rounds Stepper */}
           <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl backdrop-blur-xl border text-xs font-semibold ${
             isDark
-              ? 'bg-slate-900/60 border-slate-800/80 text-slate-300'
+              ? 'bg-[#131B4B] border-white/15 text-white'
               : 'bg-white border border-slate-200 text-slate-700 shadow-sm'
           }`}>
             <span>Rounds:</span>
@@ -426,7 +424,7 @@ export default function AgentConfigScreen({
               onBlur={() => setMaxRounds(clampRounds(maxRounds))}
               className={`w-12 text-center font-bold rounded-lg py-0.5 outline-none border text-xs ${
                 isDark
-                  ? 'bg-slate-950/80 border-slate-800 focus:border-indigo-500 text-indigo-300'
+                  ? 'bg-[#0A102E] border-white/15 focus:border-[#EE2A54] text-[#1CD4A3]'
                   : 'bg-slate-50 border-slate-300 focus:border-indigo-500 text-indigo-600'
               }`}
             />
@@ -437,91 +435,56 @@ export default function AgentConfigScreen({
       {/* ── Chaos Alert Toast ── */}
       {chaosToast && (
         <div className="p-3.5 mb-6 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold flex items-center gap-2.5 shadow-lg backdrop-blur-md">
-          <Zap className="w-4 h-4 text-indigo-500 shrink-0" />
+          <Zap className="w-4 h-4 text-[#EE2A54] shrink-0" />
           <span>{chaosToast}</span>
         </div>
       )}
 
-      {/* ── MODE SELECTION: SIMULATION VS PRACTICE ── */}
-      <div className={`rounded-2xl backdrop-blur-xl border p-5 sm:p-6 mb-8 transition-all shadow-xl ${
-        isDark ? 'bg-slate-900/60 border-slate-800/80' : 'bg-white border-slate-200/90 shadow-slate-200/50'
+      {/* ── MODE + SEAT SELECTION ── */}
+      <div className={`rounded-2xl border p-5 mb-5 shadow-lg ${
+        isDark ? 'bg-[#131B4B]/85 border-[#1D2B78]' : 'bg-white border-[#1D2B78]/20'
       }`}>
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-xs font-bold uppercase tracking-wider text-indigo-500">
-                Execution Mode
-              </span>
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                mode === 'practice'
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                  : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
-              }`}>
-                {mode === 'practice' ? 'Interactive Human Participant' : 'Autonomous AI vs AI'}
-              </span>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-[#1CD4A3]">Mode</span>
+            <div className={`p-1.5 rounded-xl border inline-flex flex-wrap items-center gap-1.5 ${
+              isDark ? 'bg-[#0A102E] border-[#1D2B78]/70' : 'bg-[#F4F7FC] border-[#1D2B78]/20'
+            }`}>
+              <button
+                type="button"
+                onClick={() => setMode('simulation')}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer',
+                  mode === 'simulation'
+                    ? 'bg-[#1D2B78] text-white shadow-sm'
+                    : isDark ? 'text-[#A3B3D9] hover:text-white' : 'text-[#131B4B]/70 hover:text-[#131B4B]'
+                )}
+              >
+                <Bot className="w-4 h-4" />
+                <span>AI vs AI</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('practice')}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer',
+                  mode === 'practice'
+                    ? 'bg-[#EE2A54] text-white shadow-[0_4px_16px_rgba(216,63,135,0.4)]'
+                    : isDark ? 'text-[#A3B3D9] hover:text-white' : 'text-[#131B4B]/70 hover:text-[#131B4B]'
+                )}
+              >
+                <Mic className="w-4 h-4" />
+                <span>Human vs AI (Voice + Practice)</span>
+              </button>
             </div>
-            <h2 className={`text-base sm:text-lg font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-              Choose Negotiation Format
-            </h2>
-            <p className={`text-xs mt-0.5 max-w-xl ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              {mode === 'practice'
-                ? 'Practice Mode: Take a seat as one of the stakeholders and negotiate live turn-by-turn against the autonomous AI.'
-                : 'Simulation Mode: Both agents negotiate autonomously using their configured behavioral styles and bounds.'}
-            </p>
           </div>
 
-          {/* Mode Switcher Buttons */}
-          <div className={`p-1.5 rounded-xl border flex items-center gap-1.5 shrink-0 self-start lg:self-center ${
-            isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-100 border-slate-200'
-          }`}>
-            <button
-              type="button"
-              onClick={() => setMode('simulation')}
-              className={cn(
-                'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer',
-                mode === 'simulation'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : isDark
-                  ? 'text-slate-400 hover:text-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              )}
-            >
-              <Bot className="w-4 h-4" />
-              <span>Simulation (AI vs AI)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMode('practice')}
-              className={cn(
-                'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer',
-                mode === 'practice'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : isDark
-                  ? 'text-slate-400 hover:text-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              )}
-            >
-              <Gamepad2 className="w-4 h-4" />
-              <span>Practice (Human vs AI)</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Seat Selection (Visible when Practice Mode is active) */}
-        {mode === 'practice' && (
-          <div className={`pt-5 mt-5 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'} animate-fade-in`}>
-            <div className="flex items-center gap-2 mb-3">
-              <UserCheck className="w-4 h-4 text-emerald-400" />
-              <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-                You are playing as:
+          {mode === 'practice' && (
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className={`text-sm font-bold flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-[#131B4B]'}`}>
+                <UserCheck className="w-4 h-4 text-[#EE2A54]" />
+                Play as:
               </span>
-              <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Select which agent seat you will pilot
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {agents.map((agent) => {
                 const isSelected = humanAgentId === agent.id;
                 return (
@@ -530,184 +493,119 @@ export default function AgentConfigScreen({
                     type="button"
                     onClick={() => setHumanAgentId(agent.id)}
                     className={cn(
-                      'p-4 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3',
+                      'px-4 py-2 rounded-xl border text-sm font-bold transition-all cursor-pointer flex items-center gap-2',
                       isSelected
-                        ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/60'
-                        : isDark
-                        ? 'border-slate-800 bg-slate-950/40 hover:border-slate-700 hover:bg-slate-900/60'
-                        : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100'
+                        ? 'border-[#EE2A54] bg-[#EE2A54]/20 text-white shadow-sm'
+                        : isDark ? 'border-[#1D2B78]/70 bg-[#0A102E] text-[#A3B3D9] hover:text-white' : 'border-[#1D2B78]/20 bg-[#F4F7FC] text-[#131B4B]'
                     )}
                   >
-                    <div className="flex items-center gap-3">
-                      <AgentAvatar role={agent.role || agent.id} size="sm" />
-                      <div>
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className={`text-sm font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-                            {agent.name}
-                          </span>
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                            isSelected
-                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold'
-                              : isDark
-                              ? 'bg-slate-800 text-slate-400 border-slate-700'
-                              : 'bg-white text-slate-600 border-slate-200'
-                          }`}>
-                            {isSelected ? '👤 You (Human)' : '🤖 AI Opponent'}
-                          </span>
-                        </div>
-                        <span className={`text-xs block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                          {agent.role}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="shrink-0 text-right">
-                      <span className={`text-xs font-bold block ${isSelected ? 'text-emerald-400' : isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                        {isSelected ? 'Active Player' : 'AI Controlled'}
-                      </span>
-                      <span className="text-[10px] opacity-75">
-                        {isSelected ? 'Your Seat' : 'Opponent'}
-                      </span>
-                    </div>
+                    <span>{agent.name}</span>
                   </button>
                 );
               })}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* ── CENTRAL TELEMETRY: HIGH-TECH ZOPA OVERLAP GAUGE ── */}
-      <div className={`rounded-2xl backdrop-blur-xl border p-5 sm:p-6 mb-8 transition-all relative overflow-hidden shadow-2xl ${
-        isDark ? 'bg-slate-900/60 border-slate-800/80' : 'bg-white border-slate-200/90 shadow-slate-200/50'
+      {/* ── AGREEMENT ZONE BAR ── */}
+      <div className={`rounded-2xl border p-5 mb-6 shadow-md ${
+        isDark ? 'bg-[#131B4B]/85 border-[#1D2B78]' : 'bg-white border-[#1D2B78]/20'
       }`}>
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className={`flex items-center gap-2 text-sm sm:text-base font-bold ${
-              isDark ? 'text-slate-100' : 'text-slate-900'
-            }`}>
-              <Scale className="w-4 h-4 text-indigo-500" />
-              <span>Mathematical ZOPA Feasibility Monitor</span>
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2.5">
+            <Scale className="w-4 h-4 text-[#EE2A54]" />
+            <span className="text-sm font-extrabold uppercase tracking-wider">Agreement Zone (ZOPA)</span>
             {agreement.valid ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+              <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Agreement Zone Open (Feasible)</span>
+                Feasible
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
+              <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full bg-[#EE2A54]/15 text-[#EE2A54] border border-[#EE2A54]/40">
                 <AlertTriangle className="w-3.5 h-3.5" />
-                <span>Impasse (Ceiling Below Floor)</span>
+                Impasse
               </span>
             )}
           </div>
 
-          {/* Game-Theoretic Forecast Dial */}
-          <div className={`inline-flex items-center gap-2.5 text-xs px-3.5 py-1.5 rounded-xl border font-semibold ${
-            isDark ? 'border-slate-800/80 bg-slate-950/80 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-700'
-          }`}>
-            <span className={isDark ? "text-slate-400" : "text-slate-500"}>Forecast:</span>
-            <strong className={`font-bold ${conflict.textColor}`}>{conflict.status}</strong>
-            <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 font-bold">
+          <div className="flex items-center gap-2.5 text-sm">
+            <span className={isDark ? 'text-[#A3B3D9]' : 'text-[#131B4B]/70'}>Forecast:</span>
+            <strong className={conflict.textColor}>{conflict.status}</strong>
+            <span className="px-3 py-1 rounded-full bg-[#1D2B78]/40 text-white border border-[#1D2B78] text-xs font-bold">
               {conflict.dealProb}% Deal Rate
             </span>
           </div>
         </div>
 
-        {/* Live Visual Meter */}
         {agreement.overlaps.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-xs sm:text-sm">
-              <div>
-                <span className={`block text-[10px] font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Floor ({agreement.overlaps[0].minAgent})
-                </span>
-                <span className="text-emerald-500 text-base sm:text-xl font-bold font-mono">
-                  {agreement.overlaps[0].min} {agreement.overlaps[0].unit}
-                </span>
-              </div>
-
-              <div className="text-center">
-                <span className="text-xs font-mono font-semibold uppercase tracking-wider text-indigo-500 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20">
-                  {agreement.overlaps[0].item}
-                </span>
-              </div>
-
-              <div className="text-right">
-                <span className={`block text-[10px] font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Ceiling ({agreement.overlaps[0].maxAgent})
-                </span>
-                <span className="text-indigo-500 text-base sm:text-xl font-bold font-mono">
-                  {agreement.overlaps[0].max} {agreement.overlaps[0].unit}
-                </span>
-              </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-mono font-bold text-[#1CD4A3]">
+                Floor ({agreement.overlaps[0].minAgent}): {agreement.overlaps[0].min} {agreement.overlaps[0].unit}
+              </span>
+              <span className="text-xs font-bold uppercase text-[#A3B3D9]">
+                {agreement.overlaps[0].item}
+              </span>
+              <span className="font-mono font-bold text-[#EE2A54]">
+                Ceiling ({agreement.overlaps[0].maxAgent}): {agreement.overlaps[0].max} {agreement.overlaps[0].unit}
+              </span>
             </div>
-
-            {/* Glowing Gradient Progress Track */}
-            <div className={`w-full h-3 rounded-full overflow-hidden border p-0.5 ${
-              isDark ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-slate-100'
-            }`}>
+            <div className={`w-full h-2.5 rounded-full overflow-hidden ${isDark ? 'bg-[#0A102E]' : 'bg-slate-200'}`}>
               {agreement.overlaps[0].isFeasible ? (
-                <div className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-indigo-500 rounded-full transition-all duration-300 shadow-md shadow-emerald-500/20" />
+                <div className="h-full bg-gradient-to-r from-[#1D2B78] via-[#EE2A54] to-[#1CD4A3] rounded-full" />
               ) : (
-                <div className="h-full bg-rose-500 rounded-full transition-all duration-300" />
+                <div className="h-full bg-rose-500 rounded-full" />
               )}
             </div>
           </div>
         )}
       </div>
 
-      {/* ── BATTLE ARENA: SIDE-BY-SIDE BALANCED GLASS CARDS (AGENT 1 VS AGENT 2) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      {/* ── SIDE-BY-SIDE AGENT CARDS (ALL IMPORTANT OPTIONS VISIBLE, NO HIDDEN DROPDOWNS) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {agents.map((agent, aIdx) => {
           const cfg = agentConfigs[agent.id] || {};
           const currentP = cfg.personality || agent.default_personality || 'Collaborative';
+          const selectedMeta = PERSONALITIES.find((p) => p.id === currentP) || PERSONALITIES[1];
           const isHuman = mode === 'practice' && humanAgentId === agent.id;
 
           return (
             <div
               key={agent.id}
-              className={`rounded-2xl backdrop-blur-xl border p-6 flex flex-col justify-between space-y-6 transition-all duration-200 shadow-2xl relative ${
+              className={`rounded-2xl border p-6 flex flex-col justify-between space-y-5 transition-all shadow-lg ${
                 isHuman
-                  ? 'border-emerald-500/80 ring-2 ring-emerald-500/30 bg-emerald-950/10'
+                  ? 'border-[#EE2A54] ring-2 ring-[#EE2A54]/40 bg-[#131B4B]'
                   : isDark
-                  ? 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700/80'
-                  : 'bg-white border-slate-200/90 shadow-slate-200/50 hover:border-slate-300'
+                  ? 'bg-[#131B4B]/85 border-[#1D2B78]'
+                  : 'bg-white border-[#1D2B78]/20'
               }`}
             >
-              {/* Agent Identity Header */}
-              <div className={`flex items-center justify-between pb-4 border-b ${
-                isDark ? 'border-slate-800/80' : 'border-slate-100'
-              }`}>
-                <div className="flex items-center gap-3.5">
+              {/* Agent Header */}
+              <div className={`flex items-center justify-between pb-4 border-b ${isDark ? 'border-[#1D2B78]/50' : 'border-[#1D2B78]/15'}`}>
+                <div className="flex items-center gap-3">
                   <AgentAvatar role={agent.role || agent.id} size="md" />
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className={`text-lg sm:text-xl font-bold tracking-tight ${
-                        isDark ? 'text-slate-100' : 'text-slate-900'
-                      }`}>
+                      <h2 className={`text-lg font-extrabold ${isDark ? 'text-white' : 'text-[#131B4B]'}`}>
                         {agent.name}
                       </h2>
-                      <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full uppercase border ${
-                        isDark ? 'bg-slate-800/80 text-slate-400 border-slate-700/60' : 'bg-slate-100 text-slate-600 border-slate-200'
+                      <span className={`text-xs font-mono px-2.5 py-0.5 rounded-full border ${
+                        isDark ? 'bg-[#0A102E] text-[#A3B3D9] border-[#1D2B78]/60' : 'bg-[#F4F7FC] text-[#1D2B78] border-[#1D2B78]/20'
                       }`}>
-                        Agent {aIdx === 0 ? 'A' : 'B'}
+                        {aIdx === 0 ? 'Agent A' : 'Agent B'}
                       </span>
                       {mode === 'practice' && (
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase border flex items-center gap-1 ${
+                        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
                           isHuman
-                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                            : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                            ? 'bg-[#EE2A54] text-white border-[#EE2A54]'
+                            : 'bg-[#1D2B78]/40 text-[#1CD4A3] border-[#1D2B78]'
                         }`}>
-                          {isHuman ? '👤 You (Human)' : '🤖 AI Opponent'}
+                          {isHuman ? 'You (Voice/Human)' : 'AI'}
                         </span>
                       )}
                     </div>
-                    <p className={`text-xs font-medium mt-0.5 ${
-                      isDark ? 'text-slate-400' : 'text-slate-500'
-                    }`}>
-                      {agent.role}
-                    </p>
+                    <p className={`text-sm ${isDark ? 'text-[#A3B3D9]' : 'text-[#131B4B]/70'}`}>{agent.role}</p>
                   </div>
                 </div>
 
@@ -720,25 +618,22 @@ export default function AgentConfigScreen({
                       handleUpdate(agent.id, 'limits', agent.limits.map((l) => ({ ...l })));
                     }
                   }}
-                  className={`inline-flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer px-2.5 py-1 rounded-lg border ${
-                    isDark
-                      ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
-                      : 'border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border cursor-pointer ${
+                    isDark ? 'border-[#1D2B78] text-[#A3B3D9] hover:text-white' : 'border-[#1D2B78]/20 text-[#131B4B]'
                   }`}
                   title="Reset to scenario defaults"
                 >
-                  <RotateCcw className="w-3 h-3" />
+                  <RotateCcw className="w-3.5 h-3.5" />
                   <span>Reset</span>
                 </button>
               </div>
 
-              {/* 1. Personality Selection (Tactile Cards with Stats) */}
+              {/* 1. Personality Pills */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-indigo-500 mb-2.5">
-                  Behavioral Personality Style
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-[#1CD4A3] mb-2.5">
+                  Personality
                 </label>
-
-                <div className="space-y-2.5">
+                <div className="grid grid-cols-3 gap-2.5">
                   {PERSONALITIES.map((p) => {
                     const isSelected = currentP === p.id;
                     const IconComp = p.icon;
@@ -748,80 +643,30 @@ export default function AgentConfigScreen({
                         type="button"
                         onClick={() => handleUpdate(agent.id, 'personality', p.id)}
                         className={cn(
-                          'w-full p-3.5 rounded-xl border text-left transition-all duration-150 cursor-pointer flex items-center justify-between gap-3.5',
+                          'px-3 py-2.5 rounded-xl border text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5',
                           isSelected
                             ? p.activeStyles
                             : isDark
-                            ? 'bg-slate-950/60 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:border-slate-700/80 hover:bg-slate-900/60'
-                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-100'
+                            ? 'bg-[#0A102E]/80 border-[#1D2B78]/60 text-[#A3B3D9] hover:text-white'
+                            : 'bg-[#F4F7FC] border-[#1D2B78]/20 text-[#131B4B]'
                         )}
                       >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={cn(
-                              'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border',
-                              isSelected
-                                ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-500'
-                                : isDark
-                                ? 'bg-slate-900 border-slate-800 text-slate-400'
-                                : 'bg-white border-slate-200 text-slate-500'
-                            )}
-                          >
-                            <IconComp className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className={`text-xs font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-                                {p.name}
-                              </span>
-                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                                isDark ? 'bg-slate-900/80 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
-                              }`}>
-                                {p.badge}
-                              </span>
-                            </div>
-                            <p className={`text-[11px] leading-snug line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                              {p.desc}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Stat Snapshot */}
-                        <div className={`hidden sm:flex flex-col text-right shrink-0 text-[10px] font-mono ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                          <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Anchor: {p.anchorStat}</span>
-                          <span>Flex: {p.flexStat}</span>
-                        </div>
+                        <IconComp className="w-4 h-4 shrink-0" />
+                        <span className="truncate">{p.name}</span>
                       </button>
                     );
                   })}
                 </div>
+                <p className={`text-xs mt-2 ${isDark ? 'text-[#A3B3D9]' : 'text-[#131B4B]/75'}`}>
+                  <strong className={isDark ? 'text-white' : 'text-[#131B4B]'}>{selectedMeta.badge}</strong> — {selectedMeta.desc}
+                </p>
               </div>
 
-              {/* 2. Primary Objective */}
+              {/* 2. Reservation Limits */}
               <div>
-                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-500 mb-2">
-                  <Target className="w-3.5 h-3.5" />
-                  <span>Primary Objective</span>
-                </div>
-                <textarea
-                  rows={2}
-                  value={cfg.objective || ''}
-                  onChange={(e) => handleUpdate(agent.id, 'objective', e.target.value)}
-                  className={`w-full rounded-lg p-3 text-xs sm:text-sm font-medium border focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all resize-none ${
-                    isDark
-                      ? 'bg-slate-950/80 border-slate-800 text-slate-100 placeholder-slate-500'
-                      : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
-                  }`}
-                  placeholder="Define the agent's primary negotiation target..."
-                />
-              </div>
-
-              {/* 3. Reservation Boundaries (ZOPA Bounds) */}
-              <div>
-                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-500 mb-2.5">
-                  <Sliders className="w-3.5 h-3.5" />
-                  <span>Reservation Boundaries (ZOPA Bounds)</span>
-                </div>
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-[#1CD4A3] mb-2.5">
+                  Reservation Limits
+                </label>
                 <div className="space-y-2.5">
                   {(cfg.limits || []).map((l, idx) => {
                     const isMin = String(l.type).toLowerCase() === 'min';
@@ -839,34 +684,21 @@ export default function AgentConfigScreen({
                     return (
                       <div key={idx} className="space-y-1">
                         <div
-                          className={`flex items-center justify-between p-3 rounded-xl border text-xs transition-colors ${
+                          className={`flex items-center justify-between p-3 rounded-xl border text-sm ${
                             isViolated
-                              ? 'border-rose-500 bg-rose-500/10 ring-1 ring-rose-500/30'
-                              : isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
+                              ? 'border-rose-500 bg-rose-500/10'
+                              : isDark ? 'bg-[#0A102E]/90 border-[#1D2B78]/60' : 'bg-[#F4F7FC] border-[#1D2B78]/20'
                           }`}
                         >
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                'inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider border',
-                                isMin
-                                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                                  : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                              )}
-                            >
-                              {isMin ? (
-                                <>
-                                  <TrendingUp className="w-3 h-3" />
-                                  <span>MIN (Floor)</span>
-                                </>
-                              ) : (
-                                <>
-                                  <TrendingDown className="w-3 h-3" />
-                                  <span>MAX (Ceiling)</span>
-                                </>
-                              )}
+                          <div className="flex items-center gap-2.5">
+                            <span className={cn(
+                              'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold uppercase border',
+                              isMin ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-[#EE2A54]/15 text-[#EE2A54] border-[#EE2A54]/30'
+                            )}>
+                              {isMin ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                              <span>{isMin ? 'Min' : 'Max'}</span>
                             </span>
-                            <span className={`font-semibold capitalize truncate ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                            <span className={`font-bold capitalize ${isDark ? 'text-white' : 'text-[#131B4B]'}`}>
                               {(l.item || '').replace(/_/g, ' ')}
                             </span>
                           </div>
@@ -876,26 +708,22 @@ export default function AgentConfigScreen({
                               type="number"
                               value={l.value ?? ''}
                               onChange={(e) => handleLimitChange(agent.id, idx, e.target.value)}
-                              className={`w-28 border rounded-lg px-2.5 py-1 text-right font-mono font-bold text-xs sm:text-sm outline-none transition-colors ${
+                              className={`w-28 border rounded-xl px-3 py-1.5 text-right font-mono font-bold text-sm outline-none ${
                                 isViolated
-                                  ? 'border-rose-500 bg-rose-950/40 text-rose-300 focus:ring-1 focus:ring-rose-500'
+                                  ? 'border-rose-500 bg-rose-950/40 text-rose-300'
                                   : isDark
-                                  ? 'bg-slate-950/80 border-slate-800 text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
-                                  : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                                  ? 'bg-[#131B4B] border-[#1D2B78] text-white focus:border-[#EE2A54]'
+                                  : 'bg-white border-[#1D2B78]/30 text-[#131B4B] focus:border-[#EE2A54]'
                               }`}
                             />
-                            <span className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                              {l.unit}
-                            </span>
+                            <span className={`text-xs font-bold ${isDark ? 'text-[#A3B3D9]' : 'text-[#1D2B78]'}`}>{l.unit}</span>
                           </div>
                         </div>
 
                         {isViolated && (
-                          <p className="text-[11px] text-rose-500 font-semibold px-1 flex items-center gap-1.5 animate-pulse">
+                          <p className="text-xs text-rose-400 font-semibold px-1 flex items-center gap-1.5">
                             <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                            <span>
-                              Violates hard constraint: {isMin ? `minimum acceptable is ${baseVal} ${l.unit}` : `maximum acceptable is ${baseVal} ${l.unit}`}
-                            </span>
+                            <span>{isMin ? `Min allowed: ${baseVal} ${l.unit}` : `Max allowed: ${baseVal} ${l.unit}`}</span>
                           </p>
                         )}
                       </div>
@@ -904,91 +732,97 @@ export default function AgentConfigScreen({
                 </div>
               </div>
 
-              {/* 4. Behavioral Constraints */}
-              {Array.isArray(cfg.constraints) && cfg.constraints.length > 0 && (
-                <div className={`pt-4 border-t ${isDark ? 'border-slate-800/80' : 'border-slate-100'}`}>
-                  <span className={`block text-[10px] font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Active Constraints
-                  </span>
-                  <ul className="space-y-1.5">
-                    {cfg.constraints.map((c, i) => (
-                      <li key={i} className={`text-xs flex items-start gap-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
-                        <span className="leading-snug">{c}</span>
-                      </li>
-                    ))}
-                  </ul>
+              {/* 3. Goal & Key Constraints (Always Visible, No Hidden Dropdowns) */}
+              <div className="space-y-3">
+                <div>
+                  <label className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-[#1CD4A3] mb-1.5">
+                    <Target className="w-3.5 h-3.5" />
+                    <span>Primary Goal</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={cfg.objective || ''}
+                    onChange={(e) => handleUpdate(agent.id, 'objective', e.target.value)}
+                    className={`w-full rounded-xl px-3.5 py-2.5 text-sm border focus:border-[#EE2A54] outline-none ${
+                      isDark ? 'bg-[#0A102E]/90 border-[#1D2B78]/60 text-white' : 'bg-[#F4F7FC] border-[#1D2B78]/20 text-[#131B4B]'
+                    }`}
+                    placeholder="Agent's primary negotiation goal..."
+                  />
                 </div>
-              )}
+
+                {Array.isArray(cfg.constraints) && cfg.constraints.length > 0 && (
+                  <div className={`rounded-xl border p-3.5 ${isDark ? 'border-[#1D2B78]/50 bg-[#0A102E]/60' : 'border-[#1D2B78]/15 bg-[#F4F7FC]'}`}>
+                    <span className={`block text-xs font-extrabold uppercase tracking-wider mb-2 ${isDark ? 'text-[#1CD4A3]' : 'text-[#1D2B78]'}`}>
+                      Rules &amp; Constraints
+                    </span>
+                    <ul className="space-y-1.5">
+                      {cfg.constraints.map((c, i) => (
+                        <li key={i} className={`text-xs flex items-start gap-2 ${isDark ? 'text-[#A3B3D9]' : 'text-[#131B4B]/80'}`}>
+                          <span className="text-[#EE2A54] font-bold">•</span>
+                          <span>{c}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* ── Impasse Alerts if Mathematical Collision ── */}
+      {/* ── ERRORS ── */}
       {!agreement.valid && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 mb-8 text-xs sm:text-sm text-rose-500 space-y-1.5">
-          <div className="font-bold flex items-center gap-2 text-sm text-rose-500">
-            <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
-            <span>Boundary or Constraint Violation Detected:</span>
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 mb-5 text-sm text-rose-400 space-y-1">
+          <div className="font-bold flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>Fix these limit issues before starting:</span>
           </div>
           {agreement.errors.map((err, i) => (
-            <p key={i} className="pl-6 font-medium">• {err}</p>
+            <p key={i} className="pl-6">• {err}</p>
           ))}
         </div>
       )}
 
-      {/* ── Backend Validation Errors ── */}
       {backendErrors.length > 0 && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 mb-8 text-xs sm:text-sm text-rose-500 space-y-1.5">
-          <div className="font-bold flex items-center gap-2 text-sm text-rose-500">
-            <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
-            <span>Backend API Invariant Check Failed:</span>
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 mb-5 text-sm text-rose-400 space-y-1">
+          <div className="font-bold flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>Backend Validation Failed:</span>
           </div>
           {backendErrors.map((err, i) => (
-            <p key={i} className="pl-6 font-medium">• {err}</p>
+            <p key={i} className="pl-6">• {err}</p>
           ))}
         </div>
       )}
 
-      {/* ── BOTTOM FLOATING ACTION DOCK ── */}
-      <div className={`flex flex-col sm:flex-row items-center justify-between gap-5 p-5 sm:p-6 rounded-2xl backdrop-blur-xl border shadow-2xl transition-all ${
-        isDark ? 'bg-slate-900/60 border-slate-800/80' : 'bg-white border-slate-200/90 shadow-slate-200/50'
+      {/* ── BOTTOM ACTION BAR ── */}
+      <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-2xl border shadow-lg ${
+        isDark ? 'bg-[#131B4B]/90 border-[#1D2B78]' : 'bg-white border-[#1D2B78]/20'
       }`}>
-        <div>
-          <div className="flex items-center gap-2">
-            {agreement.valid ? (
-              <>
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span className={`text-sm sm:text-base font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-                  Ready for Simulation Arena
-                </span>
-              </>
-            ) : (
-              <>
-                <AlertTriangle className="w-4 h-4 text-rose-500" />
-                <span className="text-sm sm:text-base font-bold text-rose-500">
-                  Adjust Limits to Re-Open Agreement Zone
-                </span>
-              </>
-            )}
-          </div>
-          <span className={`text-xs block mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Both agent profiles verified against mathematical constraints and system validation rules.
-          </span>
+        <div className="flex items-center gap-2.5 text-sm font-bold">
+          {agreement.valid ? (
+            <>
+              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              <span>Ready to launch {mode === 'practice' ? 'Practice + Voice' : 'Simulation'} Arena</span>
+            </>
+          ) : (
+            <>
+              <AlertTriangle className="w-5 h-5 text-rose-400" />
+              <span className="text-rose-400">Adjust limits to open agreement zone</span>
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
           <button
             type="button"
             onClick={() => setShowPayloadModal(true)}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-              isDark
-                ? 'bg-slate-900/80 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
-                : 'bg-slate-100 border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-200'
+            className={`inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-bold border cursor-pointer ${
+              isDark ? 'bg-[#0A102E] border-[#1D2B78] text-[#A3B3D9] hover:text-white' : 'bg-[#F4F7FC] border-[#1D2B78]/20 text-[#131B4B]'
             }`}
           >
-            <Code2 className="w-3.5 h-3.5 text-indigo-500" />
+            <Code2 className="w-4 h-4 text-[#1CD4A3]" />
             <span>Inspect JSON</span>
           </button>
 
@@ -996,14 +830,14 @@ export default function AgentConfigScreen({
             type="button"
             disabled={!agreement.valid || isValidating}
             onClick={handleLaunchNegotiation}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/30 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0"
+            className="inline-flex items-center gap-2 px-7 py-3 rounded-xl font-bold text-sm text-white bg-[#EE2A54] hover:bg-[#d62249] transition-all shadow-[0_6px_22px_rgba(216,63,135,0.45)] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Play className="w-4 h-4 fill-current" />
             <span>
               {isValidating
-                ? 'Validating API...'
+                ? 'Validating...'
                 : mode === 'practice'
-                ? 'Start Practice Arena'
+                ? 'Start Voice Practice Arena'
                 : 'Start Simulation Arena'}
             </span>
           </button>
@@ -1018,7 +852,7 @@ export default function AgentConfigScreen({
           }`}>
             <div className={`flex items-center justify-between pb-4 border-b ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
               <div className="flex items-center gap-2.5 text-base font-bold">
-                <Activity className="w-4 h-4 text-indigo-500" />
+                <Activity className="w-4 h-4 text-[#EE2A54]" />
                 <span>Cognitive Personality Radars</span>
               </div>
               <button

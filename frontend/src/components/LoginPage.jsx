@@ -19,7 +19,14 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import BrandLogo from './BrandLogo';
-import { signInWithEmail, signUpWithEmail, isSupabaseConfigured } from '../services/supabase';
+import {
+  signInWithEmail,
+  signUpWithEmail,
+  requestOtpCode,
+  verifyOtpCode,
+  signInWithOAuthProfile,
+  isSupabaseConfigured,
+} from '../services/supabase';
 
 export default function LoginPage({ onLogin, onGoHome }) {
   const { isDark, toggleTheme } = useTheme();
@@ -48,20 +55,25 @@ export default function LoginPage({ onLogin, onGoHome }) {
 
   const isCloudConnected = isSupabaseConfigured();
 
-  // Send / Resend OTP handler
-  const handleSendOtp = () => {
+  // Send / Resend OTP handler backed by SQLite OTP store
+  const handleSendOtp = async () => {
     if (!identifier.trim()) {
       setError(
         authMode === 'email'
-          ? 'Please enter your email or username before requesting an OTP.'
+          ? 'Please enter your email address before requesting an OTP.'
           : 'Please enter your mobile phone number before requesting an OTP.'
       );
       return;
     }
     setError('');
-    setOtpSentMessage('A 6-digit verification code has been dispatched.');
-    setOtp('584920'); // Sample test OTP for seamless testing
-    setTimeout(() => setOtpSentMessage(''), 5000);
+    const { sent, demoOtp, error: otpErr } = await requestOtpCode(identifier.trim());
+    if (!sent) {
+      setError(otpErr || 'Could not dispatch OTP.');
+      return;
+    }
+    setOtpSentMessage(`Verification code generated: ${demoOtp} (auto-filled for quick test)`);
+    setOtp(demoOtp || '');
+    setTimeout(() => setOtpSentMessage(''), 8000);
   };
 
   // Main login/signup submission
@@ -72,14 +84,14 @@ export default function LoginPage({ onLogin, onGoHome }) {
 
     const cleanIdentifier = identifier.trim();
 
-    // 1. Validation for Sign Up
+    // 1. Sign Up
     if (authType === 'signup') {
       if (!fullName.trim()) {
         setError('Please enter your full name.');
         return;
       }
       if (!cleanIdentifier || !cleanIdentifier.includes('@')) {
-        setError('Please provide a valid email address (e.g. architect@simulation.ai).');
+        setError('Please provide a valid email address.');
         return;
       }
       if (!password || password.length < 6) {
@@ -93,7 +105,7 @@ export default function LoginPage({ onLogin, onGoHome }) {
 
       setIsSubmitting(true);
       try {
-        const { user, error: authError, isMock } = await signUpWithEmail(
+        const { user, error: authError } = await signUpWithEmail(
           cleanIdentifier,
           password,
           fullName.trim()
@@ -101,19 +113,14 @@ export default function LoginPage({ onLogin, onGoHome }) {
 
         if (authError) {
           setError(authError);
-          setIsSubmitting(false);
           return;
         }
 
         if (user) {
-          setSuccessMessage(
-            isMock
-              ? 'Account created in demo mode! Signing you in...'
-              : 'Account registered in Supabase! Signing you in...'
-          );
+          setSuccessMessage('Account saved to database! Opening Deal Studio...');
           setTimeout(() => {
             onLogin(user);
-          }, 700);
+          }, 450);
         }
       } catch (err) {
         setError(err.message || 'Registration failed');
@@ -123,11 +130,11 @@ export default function LoginPage({ onLogin, onGoHome }) {
       return;
     }
 
-    // 2. Validation for Sign In
+    // 2. Sign In Validation
     if (!cleanIdentifier) {
       setError(
         authMode === 'email'
-          ? 'Please enter your email address or registered username.'
+          ? 'Please enter your email address.'
           : 'Please enter your 10-digit mobile phone number.'
       );
       return;
@@ -135,7 +142,7 @@ export default function LoginPage({ onLogin, onGoHome }) {
 
     if (authMode === 'email') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(cleanIdentifier) && cleanIdentifier.length < 3) {
+      if (!emailRegex.test(cleanIdentifier)) {
         setError('Please provide a valid email address.');
         return;
       }
@@ -147,53 +154,40 @@ export default function LoginPage({ onLogin, onGoHome }) {
       }
     }
 
-    // Password or OTP check
-    if (loginWithOtp) {
+    const usingOtp = authMode === 'phone' || loginWithOtp;
+    if (usingOtp) {
       if (!otp.trim() || otp.trim().length < 4) {
-        setError('Please enter the verification OTP sent to your contact.');
+        setError('Please enter the 6-digit OTP.');
         return;
       }
-    } else {
-      if (!password || password.length < 6) {
-        setError('Password must contain at least 6 characters.');
-        return;
-      }
+    } else if (!password || password.length < 6) {
+      setError('Password must contain at least 6 characters.');
+      return;
     }
 
     setIsSubmitting(true);
     try {
-      if (authMode === 'email' && !loginWithOtp) {
-        // Real Supabase Sign-In
-        const { user, error: authError } = await signInWithEmail(cleanIdentifier, password);
-        if (authError) {
-          setError(authError);
-          setIsSubmitting(false);
+      if (usingOtp) {
+        const { user, error: otpErr } = await verifyOtpCode(cleanIdentifier, otp.trim());
+        if (otpErr || !user) {
+          setError(otpErr || 'Invalid OTP code.');
           return;
         }
-
-        if (user) {
-          setSuccessMessage('Credentials verified! Loading simulator...');
-          setTimeout(() => {
-            onLogin(user);
-          }, 500);
-          return;
-        }
+        setSuccessMessage('OTP verified! Entering Deal Studio...');
+        setTimeout(() => onLogin(user), 400);
+        return;
       }
 
-      // Fallback for Phone OTP or local credentials
-      const username = cleanIdentifier.includes('@')
-        ? cleanIdentifier.split('@')[0]
-        : `User ${cleanIdentifier.slice(-4)}`;
+      const { user, error: authError } = await signInWithEmail(cleanIdentifier, password);
+      if (authError || !user) {
+        setError(authError || 'Invalid email or password.');
+        return;
+      }
 
-      const userPayload = {
-        name: username.charAt(0).toUpperCase() + username.slice(1),
-        email: cleanIdentifier.includes('@') ? cleanIdentifier : `${cleanIdentifier}@mobile.domain`,
-        role: 'Simulation Architect',
-        type: 'authenticated',
-        rememberMe,
-      };
-
-      onLogin(userPayload);
+      setSuccessMessage('Signed in! Entering Deal Studio...');
+      setTimeout(() => {
+        onLogin(user);
+      }, 400);
     } catch (err) {
       setError(err.message || 'Authentication failed');
     } finally {
@@ -202,39 +196,42 @@ export default function LoginPage({ onLogin, onGoHome }) {
   };
 
   // Google SSO Handler
-  const handleGoogleLogin = () => {
-    onLogin({
+  const handleGoogleLogin = async () => {
+    setIsSubmitting(true);
+    const { user } = await signInWithOAuthProfile({
       name: 'Google Enterprise User',
       email: 'enterprise.user@gmail.com',
       role: 'Enterprise Architect',
       type: 'google',
     });
+    setIsSubmitting(false);
+    onLogin(user);
   };
 
   // Partner Portal Handler
-  const handlePartnerLogin = (partnerName) => {
+  const handlePartnerLogin = async (partnerName) => {
     setShowPartnerDropdown(false);
-    onLogin({
+    setIsSubmitting(true);
+    const { user } = await signInWithOAuthProfile({
       name: `${partnerName} Operator`,
       email: `operator@${partnerName.toLowerCase().replace(/[^a-z]/g, '')}.com`,
       role: `${partnerName} Verified`,
       type: 'partner',
     });
+    setIsSubmitting(false);
+    onLogin(user);
   };
 
   return (
     <div
       className={`min-h-screen w-full flex flex-col justify-between p-4 sm:p-6 transition-colors duration-200 relative overflow-hidden font-sans ${
-        isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+        isDark ? 'bg-[#0A102E] text-white' : 'bg-[#F4F7FC] text-[#0E153A]'
       }`}
     >
       {/* ── Ambient Glows ── */}
       <div
-        className={`absolute top-0 left-1/2 -translate-x-1/2 w-[850px] h-[380px] rounded-full blur-[140px] pointer-events-none ${
-          isDark
-            ? 'bg-gradient-to-r from-indigo-500/15 via-purple-500/10 to-transparent'
-            : 'bg-gradient-to-r from-indigo-500/10 via-purple-500/5 to-transparent'
-        }`}
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[850px] h-[380px] rounded-full blur-[140px] pointer-events-none opacity-35"
+        style={{ background: 'radial-gradient(circle, #EE2A54 0%, #1CD4A3 55%, transparent 80%)' }}
       />
 
       {/* ── Top Bar ── */}
@@ -262,14 +259,10 @@ export default function LoginPage({ onLogin, onGoHome }) {
         <div className="flex items-center gap-3">
           {/* Supabase status badge */}
           <span
-            className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
-              isCloudConnected
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-            }`}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-[#1CD4A3]/15 text-[#1CD4A3] border-[#1CD4A3]/40"
           >
-            <Database className="w-3 h-3" />
-            {isCloudConnected ? 'Supabase Connected' : 'Demo Auth Mode'}
+            <Database className="w-3.5 h-3.5" />
+            {isCloudConnected ? 'Supabase Cloud Connected' : 'SQLite Database Connected'}
           </span>
 
           <button
@@ -299,10 +292,10 @@ export default function LoginPage({ onLogin, onGoHome }) {
       {/* ── Main Auth Card ── */}
       <main className="w-full max-w-md mx-auto my-auto z-10 py-6">
         <div
-          className={`rounded-2xl border p-7 sm:p-9 transition-all duration-200 ${
+          className={`liquid-glass rounded-2xl border p-7 sm:p-9 transition-all duration-200 ${
             isDark
-              ? 'bg-slate-900/70 backdrop-blur-xl border-slate-800/80 shadow-2xl shadow-black/60'
-              : 'bg-white/95 backdrop-blur-xl border-slate-200 shadow-xl shadow-slate-200/50'
+              ? 'bg-[#131B4B]/85 border-white/15 shadow-2xl shadow-black/60'
+              : 'bg-white/95 border-[#0E153A]/15 shadow-xl'
           }`}
         >
           {/* Header */}
@@ -335,10 +328,10 @@ export default function LoginPage({ onLogin, onGoHome }) {
               }}
               className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 authType === 'signin'
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? 'bg-[#EE2A54] text-white shadow-sm'
                   : isDark
-                  ? 'text-slate-400 hover:text-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'text-[#A3B3D9] hover:text-white'
+                  : 'text-[#0E153A]/70 hover:text-[#0E153A]'
               }`}
             >
               <span>Sign In</span>
@@ -352,10 +345,10 @@ export default function LoginPage({ onLogin, onGoHome }) {
               }}
               className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 authType === 'signup'
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? 'bg-[#EE2A54] text-white shadow-sm'
                   : isDark
-                  ? 'text-slate-400 hover:text-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'text-[#A3B3D9] hover:text-white'
+                  : 'text-[#0E153A]/70 hover:text-[#0E153A]'
               }`}
             >
               <span>Create Account</span>
@@ -524,7 +517,7 @@ export default function LoginPage({ onLogin, onGoHome }) {
             )}
 
             {/* Password vs OTP Mode Input */}
-            {authType === 'signin' && loginWithOtp ? (
+            {authType === 'signin' && (authMode === 'phone' || loginWithOtp) ? (
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className={`block text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -672,9 +665,9 @@ export default function LoginPage({ onLogin, onGoHome }) {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-md shadow-indigo-600/25 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-3 rounded-xl font-bold text-sm text-white bg-[#EE2A54] hover:bg-[#d62249] transition-all shadow-[0_6px_20px_rgba(238,42,84,0.4)] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <span>{authType === 'signup' ? 'Create Free Account' : 'Sign In'}</span>
+              <span>{authType === 'signup' ? 'Create Free Account' : 'Sign In & Enter Arena'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>

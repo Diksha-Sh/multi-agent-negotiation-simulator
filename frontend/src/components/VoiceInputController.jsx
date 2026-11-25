@@ -158,6 +158,7 @@ export default function VoiceInputController({
   isDark = false,
   disabled = false,
   offerFields = [],
+  exampleHint = '',
   onOfferResult,
   className = '',
 }) {
@@ -292,28 +293,67 @@ export default function VoiceInputController({
     }
   };
 
+  const defaultExample = (() => {
+    if (exampleHint) return exampleHint;
+    const primary = String(offerFields[0] || 'price').toLowerCase();
+    if (primary.includes('salary')) return 'Say e.g. "My offer is 14 lakh"';
+    if (primary.includes('remote')) return 'Say e.g. "My offer is 3 days"';
+    if (primary.includes('budget')) return 'Say e.g. "My offer is 75 lakh"';
+    return 'Say e.g. "My offer is 37,500"';
+  })();
+
   return (
     <div className={className}>
-      <button
-        type="button"
-        onClick={handleToggle}
-        disabled={disabled}
-        aria-pressed={isListening}
-        aria-label={isListening ? 'Stop voice recognition' : 'Start voice recognition'}
-        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer disabled:opacity-40 ${
-          isListening
-            ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 animate-pulse shadow-[0_0_18px_rgba(244,63,94,0.35)]'
-            : isDark
-            ? 'bg-slate-900 border-slate-800 text-indigo-400 hover:text-white hover:border-indigo-500/40'
-            : 'bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100'
-        }`}
-        title="Speak to dictate a negotiated offer"
-      >
-        {isListening ? <MicOff className="w-3.5 h-3.5 animate-bounce" /> : <Mic className="w-3.5 h-3.5" />}
-        <span>{isListening ? 'Listening...' : 'Voice Input'}</span>
-      </button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3.5">
+          <button
+            type="button"
+            onClick={handleToggle}
+            disabled={disabled}
+            aria-pressed={isListening}
+            aria-label={isListening ? 'Stop voice recognition' : 'Start voice recognition'}
+            className={`inline-flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-bold border transition-all cursor-pointer disabled:opacity-40 shadow-lg shrink-0 ${
+              isListening
+                ? 'bg-[#EE2A54] text-white border-white/40 animate-pulse shadow-[0_0_24px_rgba(238,42,84,0.65)]'
+                : 'bg-[#EE2A54] hover:bg-[#d62249] text-white border-[#EE2A54] shadow-[0_4px_18px_rgba(238,42,84,0.4)]'
+            }`}
+            title="Speak to dictate a negotiated offer"
+          >
+            {isListening ? <MicOff className="w-5 h-5 animate-bounce" /> : <Mic className="w-5 h-5" />}
+            <span>{isListening ? 'Listening... Tap to Stop' : 'Speak Your Offer'}</span>
+          </button>
+
+          {isListening && (
+            <div className="flex items-end gap-1 h-6 px-2" aria-hidden="true">
+              {[0, 150, 300, 100, 250].map((delay) => (
+                <span
+                  key={delay}
+                  className="w-1 h-5 rounded-full bg-[#1CD4A3] animate-sound-bar"
+                  style={{ animationDelay: `${delay}ms` }}
+                />
+              ))}
+            </div>
+          )}
+
+          <div className="text-left">
+            <span className={`block text-xs font-extrabold ${isDark ? 'text-white' : 'text-[#0E153A]'}`}>
+              Hands-Free Voice Input
+            </span>
+            <span className={`block text-xs ${isDark ? 'text-[#A3B3D9]' : 'text-slate-600'}`}>
+              {defaultExample}
+            </span>
+          </div>
+        </div>
+      </div>
       {notice && (
-        <div className="mt-2 p-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs" role="status">
+        <div
+          className={`mt-3 p-3 rounded-xl border text-xs font-semibold ${
+            isDark
+              ? 'bg-[#0A102E]/90 border-[#1CD4A3]/40 text-white'
+              : 'bg-white border-[#0E153A]/15 text-[#0E153A]'
+          }`}
+          role="status"
+        >
           {notice}
         </div>
       )}

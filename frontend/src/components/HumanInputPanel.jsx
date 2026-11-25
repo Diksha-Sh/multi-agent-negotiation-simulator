@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
-  User,
   Send,
   CheckCircle2,
   XCircle,
@@ -8,8 +7,6 @@ import {
   TrendingUp,
   TrendingDown,
   MessageSquare,
-  Shield,
-  Clock,
   Sparkles,
 } from 'lucide-react';
 import { AgentAvatar } from './AgentAvatars';
@@ -187,175 +184,202 @@ export default function HumanInputPanel({
 
   const canAccept = Boolean(latestTurn && latestTurn.action !== 'reject');
 
+  // Compute AI Strategy Coach suggested counteroffer inside ZOPA bounds
+  const coachHint = useMemo(() => {
+    if (!Array.isArray(limits) || limits.length === 0) return null;
+    const suggested = {};
+    const parts = [];
+    for (const lim of limits) {
+      const key = lim.item;
+      if (!key) continue;
+      const myType = String(lim.type || 'min').toLowerCase();
+      const myBound = Number(lim.value);
+      const oppLim = (opponentAgent?.limits || []).find((ol) => ol.item === key);
+      const oppBound = oppLim ? Number(oppLim.value) : null;
+      const latestVal = latestTurn?.offer?.[key] !== undefined ? Number(latestTurn.offer[key]) : null;
+
+      let targetVal = myBound;
+      if (oppBound !== null && Number.isFinite(oppBound) && Number.isFinite(myBound)) {
+        const low = Math.min(myBound, oppBound);
+        const high = Math.max(myBound, oppBound);
+        if (latestVal !== null && Number.isFinite(latestVal)) {
+          const clampedLatest = Math.min(high, Math.max(low, latestVal));
+          const midpoint = (myBound + clampedLatest) / 2;
+          targetVal = Number.isInteger(myBound) && Number.isInteger(oppBound)
+            ? Math.round(midpoint)
+            : Number(midpoint.toFixed(1));
+        } else {
+          const anchorRatio = myType === 'min' ? 0.65 : 0.35;
+          const raw = low + (high - low) * anchorRatio;
+          targetVal = Number.isInteger(myBound) && Number.isInteger(oppBound)
+            ? Math.round(raw)
+            : Number(raw.toFixed(1));
+        }
+      }
+      if (key === 'price' && myType === 'min') targetVal = Math.max(targetVal, 35000);
+      if (key === 'price' && myType === 'max') targetVal = Math.min(targetVal, 40000);
+      suggested[key] = targetVal;
+      parts.push(`${key.replace(/_/g, ' ')}: ${targetVal} ${lim.unit || ''}`.trim());
+    }
+    return {
+      suggested,
+      summary: parts.join(' · '),
+    };
+  }, [limits, opponentAgent, latestTurn]);
+
+  const handleApplyCoachHint = () => {
+    if (!coachHint) return;
+    setAction('counter');
+    setOfferValues((prev) => ({ ...prev, ...coachHint.suggested }));
+    if (!reasoning.trim()) {
+      setReasoning('Proposing a balanced compromise within our shared agreement zone.');
+    }
+  };
+
   return (
     <div
-      className={`rounded-2xl border p-6 sm:p-7 shadow-2xl transition-all relative overflow-hidden backdrop-blur-xl animate-fade-in ${
+      className={`liquid-glass rounded-2xl border p-6 shadow-2xl transition-all relative overflow-hidden animate-fade-in ${
         isDark
-          ? 'border-indigo-500/40 bg-gradient-to-br from-slate-900/90 via-indigo-950/20 to-slate-900/90 shadow-[0_0_40px_rgba(99,102,241,0.12)]'
-          : 'border-indigo-400 bg-gradient-to-br from-white via-indigo-50/40 to-white shadow-indigo-100 shadow-xl'
+          ? 'border-[#EE2A54]/60 bg-[#131B4B]/90 shadow-[0_0_32px_rgba(238,42,84,0.16)]'
+          : 'border-[#EE2A54]/40 bg-white shadow-xl'
       }`}
     >
-      {/* ── Top Header: Active Seat & Turn Indicator ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-indigo-500/20 mb-6">
-        <div className="flex items-center gap-3.5">
-          <div className="relative">
-            <AgentAvatar role={humanAgent.role || humanAgent.id} size="md" />
-            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-slate-900 flex items-center justify-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            </span>
-          </div>
-
+      {/* ── Clean Header ── */}
+      <div className={`flex flex-wrap items-center justify-between gap-4 pb-4 border-b mb-5 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+        <div className="flex items-center gap-3">
+          <AgentAvatar role={humanAgent.role || humanAgent.id} size="md" />
           <div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
-                <User className="w-3 h-3" />
-                <span>Your Move · Round #{currentRound}</span>
-              </span>
-              <span className="text-[10px] font-mono text-emerald-400 font-bold">
-                Seat: {humanAgent.name || humanAgentId || 'Human Agent'}
+            <div className="flex items-center gap-2.5">
+              <h2 className={`text-lg font-extrabold tracking-tight ${isDark ? 'text-white' : 'text-[#0E153A]'}`}>
+                Your Turn · Round #{currentRound}
+              </h2>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#EE2A54] text-white">
+                {humanAgent.name || humanAgentId || 'You'}
               </span>
             </div>
-            <h2 className={`text-lg sm:text-xl font-black tracking-tight ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-              Interactive Human Input Console
-            </h2>
-            <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              Playing live as <strong className="text-indigo-400 font-semibold">{humanAgent.name || humanAgentId || 'Human Agent'}</strong> ({humanAgent.role || 'Human'}) against <span className="font-semibold">{opponentAgent.name || 'AI Opponent'}</span>.
+            <p className={`text-sm ${isDark ? 'text-[#A3B3D9]' : 'text-[#0E153A]/70'}`}>
+              Negotiating against {opponentAgent.name || 'AI Opponent'}
             </p>
           </div>
         </div>
 
-        {/* Status Callout */}
-        <div className={`px-3.5 py-2 rounded-xl border text-xs font-semibold flex items-center gap-2 self-start sm:self-center shrink-0 ${
-          isDark ? 'bg-indigo-950/40 border-indigo-500/30 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800'
+        {/* Action Segmented Tabs */}
+        <div className={`inline-flex p-1 rounded-xl border gap-1 ${
+          isDark ? 'bg-[#0A102E] border-white/15' : 'bg-[#F4F7FC] border-[#0E153A]/15'
         }`}>
-          <Clock className="w-3.5 h-3.5 text-indigo-400 animate-spin" style={{ animationDuration: '4s' }} />
-          <span>Awaiting Human Decision</span>
+          <button
+            type="button"
+            disabled={controlsDisabled}
+            onClick={() => setAction('counter')}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer',
+              action === 'counter'
+                ? 'bg-[#EE2A54] text-white shadow-sm'
+                : isDark ? 'text-[#A3B3D9] hover:text-white' : 'text-[#0E153A]/75 hover:text-[#0E153A]'
+            )}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Counteroffer</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={!canAccept || controlsDisabled}
+            onClick={() => setAction('accept')}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed',
+              action === 'accept'
+                ? 'bg-[#1CD4A3] text-[#0A102E] shadow-sm'
+                : isDark ? 'text-[#A3B3D9] hover:text-white' : 'text-[#0E153A]/75 hover:text-[#0E153A]'
+            )}
+            title={!canAccept ? 'No proposal on the table to accept yet' : 'Accept current terms'}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Accept</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={controlsDisabled}
+            onClick={() => setAction('reject')}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer',
+              action === 'reject'
+                ? 'bg-rose-600 text-white shadow-sm'
+                : isDark ? 'text-[#A3B3D9] hover:text-white' : 'text-[#0E153A]/75 hover:text-[#0E153A]'
+            )}
+          >
+            <XCircle className="w-4 h-4" />
+            <span>Walk Away</span>
+          </button>
         </div>
       </div>
 
-      {/* ── Latest Opponent Move Spotlight (if any) ── */}
+      {/* ── Latest Opponent Move ── */}
       {latestTurn && (
-        <div className={`p-4 rounded-xl border mb-6 transition-all ${
-          isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+        <div className={`px-4 py-3.5 rounded-xl border mb-5 flex flex-wrap items-center justify-between gap-3 ${
+          isDark ? 'bg-[#0A102E]/85 border-white/10' : 'bg-[#F4F7FC] border-[#0E153A]/15'
         }`}>
-          <div className="flex items-center justify-between mb-2">
-            <span className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Latest AI Proposal on the Table:
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className={`text-sm font-semibold ${isDark ? 'text-[#A3B3D9]' : 'text-[#0E153A]/75'}`}>
+              {latestTurn.agent_name || opponentAgent.name} offered:
             </span>
-            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              {latestTurn.agent_name || opponentAgent.name} · Action: {latestTurn.action.toUpperCase()}
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 mb-2">
             {Object.entries(latestTurn.offer || {}).map(([key, val]) => (
-              <div key={key} className={`px-3 py-1.5 rounded-lg border font-mono text-xs font-bold ${
-                isDark ? 'bg-slate-900 border-slate-700 text-indigo-300' : 'bg-white border-slate-300 text-indigo-600'
+              <span key={key} className={`px-3 py-1 rounded-lg border font-mono text-sm font-bold ${
+                isDark ? 'bg-[#131B4B] border-[#1CD4A3]/40 text-[#1CD4A3]' : 'bg-white border-[#0E153A]/20 text-[#0E153A]'
               }`}>
-                <span className="opacity-70 capitalize">{key.replace(/_/g, ' ')}:</span> {Number(val).toLocaleString()}
-              </div>
+                {key.replace(/_/g, ' ')}: {Number(val).toLocaleString()}
+              </span>
             ))}
           </div>
-
           {latestTurn.reasoning && (
-            <p className={`text-xs italic ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              "{latestTurn.reasoning}"
-            </p>
+            <span className={`text-xs italic max-w-md ${isDark ? 'text-[#A3B3D9]' : 'text-[#0E153A]/75'}`}>
+              &ldquo;{latestTurn.reasoning}&rdquo;
+            </span>
           )}
         </div>
       )}
 
       {/* ── Main Turn Submission Form ── */}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* 1. Action Choice (Tabs) */}
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-indigo-500 mb-2.5">
-            Select Your Negotiation Action
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <button
-              type="button"
-              disabled={controlsDisabled}
-              onClick={() => setAction('counter')}
-              className={cn(
-                'p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3',
-                action === 'counter'
-                  ? 'border-indigo-500 bg-indigo-500/15 text-indigo-200 shadow-[0_0_20px_rgba(99,102,241,0.15)] ring-1 ring-indigo-500'
-                  : isDark
-                  ? 'border-slate-800 bg-slate-950/40 text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                  : 'border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              )}
-            >
-              <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="text-xs font-bold block">Counteroffer</span>
-                <span className="text-[10px] opacity-75">Adjust terms & continue bargaining</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              disabled={!canAccept || controlsDisabled}
-              onClick={() => setAction('accept')}
-              className={cn(
-                'p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed',
-                action === 'accept'
-                  ? 'border-emerald-500 bg-emerald-500/15 text-emerald-200 shadow-[0_0_20px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500'
-                  : isDark
-                  ? 'border-slate-800 bg-slate-950/40 text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                  : 'border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              )}
-              title={!canAccept ? 'No proposal on the table to accept yet' : 'Accept current terms'}
-            >
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="text-xs font-bold block">Accept Deal</span>
-                <span className="text-[10px] opacity-75">Conclude with mutual agreement</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              disabled={controlsDisabled}
-              onClick={() => setAction('reject')}
-              className={cn(
-                'p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3',
-                action === 'reject'
-                  ? 'border-rose-500 bg-rose-500/15 text-rose-200 shadow-[0_0_20px_rgba(244,63,94,0.15)] ring-1 ring-rose-500'
-                  : isDark
-                  ? 'border-slate-800 bg-slate-950/40 text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                  : 'border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              )}
-            >
-              <div className="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
-                <XCircle className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="text-xs font-bold block">Reject & Walk Away</span>
-                <span className="text-[10px] opacity-75">Terminate without accord</span>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        {/* 2. Numerical Term Inputs (If Action == 'counter') */}
+      <form onSubmit={handleSubmit} className="space-y-5">
         {action === 'counter' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold uppercase tracking-wider text-indigo-500">
-                Formulate Counteroffer Terms
-              </label>
+            {/* Voice Input + AI Strategy Coach Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              <div className={`lg:col-span-7 p-4 rounded-xl border ${
+                isDark ? 'bg-[#0A102E]/85 border-[#EE2A54]/50' : 'bg-[#F4F7FC] border-[#EE2A54]/40'
+              }`}>
+                <VoiceInputController
+                  isDark={isDark}
+                  disabled={controlsDisabled}
+                  offerFields={offerFields}
+                  onOfferResult={handleVoiceResult}
+                />
+              </div>
 
-              <VoiceInputController
-                isDark={isDark}
-                disabled={controlsDisabled}
-                offerFields={offerFields}
-                onOfferResult={handleVoiceResult}
-              />
+              {coachHint && (
+                <div className={`lg:col-span-5 p-4 rounded-xl border flex items-center justify-between gap-3 ${
+                  isDark ? 'bg-[#0A102E]/85 border-[#1CD4A3]/40' : 'bg-[#F4F7FC] border-[#1CD4A3]/50'
+                }`}>
+                  <div className="min-w-0">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-[#1CD4A3] mb-1">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      AI Coach Suggestion
+                    </span>
+                    <p className={`text-xs font-mono font-bold truncate ${isDark ? 'text-white' : 'text-[#0E153A]'}`}>
+                      {coachHint.summary}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={controlsDisabled}
+                    onClick={handleApplyCoachHint}
+                    className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#1CD4A3] hover:bg-[#16b88d] text-[#0A102E] transition-all cursor-pointer shrink-0"
+                  >
+                    Apply Hint
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -371,54 +395,54 @@ export default function HumanInputPanel({
                     key={idx}
                     className={`p-4 rounded-xl border transition-all ${
                       violation
-                        ? 'border-rose-500/60 bg-rose-500/5'
+                        ? 'border-rose-500/70 bg-rose-500/10'
                         : isDark
-                        ? 'border-slate-800 bg-slate-950/60'
-                        : 'border-slate-200 bg-white'
+                        ? 'border-white/15 bg-[#0A102E]/85'
+                        : 'border-[#0E153A]/15 bg-[#F4F7FC]'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`text-xs font-bold capitalize ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className={`text-sm font-bold capitalize ${isDark ? 'text-white' : 'text-[#0E153A]'}`}>
                         {itemKey.replace(/_/g, ' ')}
                       </span>
                       <span
                         className={cn(
-                          'inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border',
+                          'inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full border',
                           isMin
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                            ? 'bg-[#1CD4A3]/15 text-[#1CD4A3] border-[#1CD4A3]/40'
+                            : 'bg-[#EE2A54]/15 text-[#EE2A54] border-[#EE2A54]/40'
                         )}
                       >
-                        {isMin ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                        <span>{isMin ? 'Your Floor' : 'Your Ceiling'}: {itemKey === 'price' && isMin ? Math.max(Number(lim.value), 35000) : itemKey === 'price' && !isMin ? Math.min(Number(lim.value), 40000) : lim.value} {lim.unit}</span>
+                        {isMin ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                        <span>{isMin ? 'Min' : 'Max'}: {itemKey === 'price' && isMin ? Math.max(Number(lim.value), 35000) : itemKey === 'price' && !isMin ? Math.min(Number(lim.value), 40000) : lim.value} {lim.unit}</span>
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2.5">
                       <input
                         type="number"
                         step="any"
                         disabled={controlsDisabled}
                         value={val}
                         onChange={(e) => handleValueChange(itemKey, e.target.value)}
-                        className={`w-full font-mono font-bold text-sm px-3 py-2 rounded-lg border outline-none transition-colors ${
+                        className={`w-full font-mono font-bold text-base px-4 py-2.5 rounded-xl border outline-none transition-colors ${
                           violation
                             ? 'border-rose-500 text-rose-300 bg-rose-950/20'
                             : isDark
-                            ? 'bg-slate-900 border-slate-700 focus:border-indigo-500 text-slate-100'
-                            : 'bg-slate-50 border-slate-300 focus:border-indigo-500 text-slate-900'
+                            ? 'bg-[#131B4B] border-white/15 focus:border-[#EE2A54] text-white'
+                            : 'bg-white border-[#0E153A]/20 focus:border-[#EE2A54] text-[#0E153A]'
                         }`}
                         placeholder={`Enter ${itemKey}...`}
                         required
                       />
-                      <span className={`text-xs font-medium shrink-0 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      <span className={`text-sm font-bold shrink-0 ${isDark ? 'text-[#A3B3D9]' : 'text-[#0E153A]'}`}>
                         {lim.unit}
                       </span>
                     </div>
 
                     {violation && (
-                      <p className="text-[11px] text-rose-400 font-semibold mt-2 flex items-center gap-1">
-                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                      <p className="text-xs text-rose-400 font-semibold mt-2 flex items-center gap-1.5">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
                         <span>{violation}</span>
                       </p>
                     )}
@@ -430,9 +454,9 @@ export default function HumanInputPanel({
         )}
 
         {action === 'counter' && counterofferErrors.length > 0 && (
-          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs" role="alert">
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm" role="alert">
             <p className="font-bold mb-1">Review your counteroffer values:</p>
-            <ul className="list-disc pl-5 space-y-0.5">
+            <ul className="list-disc pl-5 space-y-0.5 text-xs">
               {counterofferErrors.map((error, index) => (
                 <li key={`${error.item}-${index}`}>{error.item.replace(/_/g, ' ')}: {error.message}</li>
               ))}
@@ -441,100 +465,40 @@ export default function HumanInputPanel({
         )}
 
         {submissionError && (
-          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs" role="alert">
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm" role="alert">
             <p className="font-bold mb-1">The backend rejected the turn</p>
-            <p>{submissionError}</p>
+            <p className="text-xs">{submissionError}</p>
           </div>
         )}
 
-        {/* Action == 'accept' confirmation prompt */}
         {action === 'accept' && (
-          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs sm:text-sm flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-bold block mb-1">Confirm Deal Agreement</span>
-              <p className="opacity-90 leading-relaxed text-xs">
-                You are agreeing to the opponent's latest proposal. Both parties will bind to these terms, ending the negotiation with an accepted outcome.
-              </p>
-            </div>
+          <div className="p-4 rounded-xl bg-[#1CD4A3]/10 border border-[#1CD4A3]/40 text-[#1CD4A3] text-sm flex items-center gap-2.5">
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <span>Accepting the opponent&apos;s latest terms will finalize the deal.</span>
           </div>
         )}
 
-        {/* Action == 'reject' warning prompt */}
         {action === 'reject' && (
-          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs sm:text-sm flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-bold block mb-1">Declare Walkaway Rejection</span>
-              <p className="opacity-90 leading-relaxed text-xs">
-                You are breaking off negotiations. This move is final and will conclude the session as a walkaway failure without settlement.
-              </p>
-            </div>
+          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm flex items-center gap-2.5">
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+            <span>Walking away will immediately end the negotiation without a deal.</span>
           </div>
         )}
 
-        {/* 3. Reasoning & Stance */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Reasoning Input (Span 2) */}
-          <div className="lg:col-span-2 space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold uppercase tracking-wider text-indigo-500 flex items-center gap-1.5">
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>Move Rationale / Reasoning</span>
-              </label>
-              <span className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Optional Explanation</span>
-            </div>
-
-            <textarea
-              rows={2}
-              value={reasoning}
-              disabled={controlsDisabled}
-              onChange={(e) => setReasoning(e.target.value)}
-              className={`w-full rounded-xl p-3 text-xs sm:text-sm font-medium border outline-none transition-all resize-none ${
-                isDark
-                  ? 'bg-slate-950/80 border-slate-800 focus:border-indigo-500 text-slate-100 placeholder-slate-500'
-                  : 'bg-white border-slate-200 focus:border-indigo-500 text-slate-900 placeholder-slate-400'
-              }`}
-              placeholder="State the strategic reasoning behind your move..."
-            />
-
-            {/* Quick Reason Chips */}
-            <div className="flex items-center gap-1.5 flex-wrap pt-1">
-              <span className={`text-[10px] uppercase font-bold mr-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Quick:</span>
-              {[
-                'Offering balanced compromise',
-                'Holding firm on core limits',
-                'Exploring flexible trade-offs',
-              ].map((chip, cIdx) => (
-                <button
-                  key={cIdx}
-                  type="button"
-                  disabled={controlsDisabled}
-                  onClick={() => handleQuickReason(chip)}
-                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
-                    isDark
-                      ? 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-indigo-300 hover:border-indigo-500/40'
-                      : 'border-slate-200 bg-slate-100 text-slate-600 hover:text-indigo-600 hover:border-indigo-300'
-                  }`}
-                >
-                  + {chip}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Stance Selector (Span 1) */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-indigo-500 flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5" />
-              <span>Psychological Stance</span>
+        {/* 2. Reasoning + Tone Pills */}
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label className="text-xs font-extrabold uppercase tracking-wider text-[#1CD4A3] flex items-center gap-1.5">
+              <MessageSquare className="w-4 h-4" />
+              <span>Reason (Optional)</span>
             </label>
 
-            <div className="space-y-2">
+            <div className="flex items-center gap-1.5">
+              <span className={`text-xs font-semibold mr-1 ${isDark ? 'text-[#A3B3D9]' : 'text-[#0E153A]/70'}`}>Tone:</span>
               {[
-                { id: 'flexible', label: 'Flexible', desc: 'Open & cooperative' },
-                { id: 'firm', label: 'Firm', desc: 'Resolute & assertive' },
-                { id: 'urgent', label: 'Urgent', desc: 'Seeking swift accord' },
+                { id: 'flexible', label: 'Flexible' },
+                { id: 'firm', label: 'Firm' },
+                { id: 'urgent', label: 'Urgent' },
               ].map((s) => (
                 <button
                   key={s.id}
@@ -542,53 +506,82 @@ export default function HumanInputPanel({
                   disabled={controlsDisabled}
                   onClick={() => setStance(s.id)}
                   className={cn(
-                    'w-full px-3 py-2 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between text-xs',
+                    'px-3 py-1 rounded-lg border text-xs font-bold transition-all cursor-pointer',
                     stance === s.id
-                      ? 'border-indigo-500 bg-indigo-500/15 text-indigo-300 font-bold'
+                      ? 'border-[#EE2A54] bg-[#EE2A54]/20 text-white'
                       : isDark
-                      ? 'border-slate-800 bg-slate-950/40 text-slate-400 hover:text-slate-200'
-                      : 'border-slate-200 bg-white text-slate-600 hover:text-slate-900'
+                      ? 'border-white/15 bg-[#0A102E] text-[#A3B3D9] hover:text-white'
+                      : 'border-[#0E153A]/15 bg-white text-[#0E153A]'
                   )}
                 >
-                  <span>{s.label}</span>
-                  <span className="text-[10px] opacity-75 font-normal">{s.desc}</span>
+                  {s.label}
                 </button>
               ))}
             </div>
           </div>
-        </div>
 
-        {/* 4. Submit Bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-indigo-500/20">
-          <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Move will be submitted into the turn-based referee loop and AI will formulate its counter-response.
-          </span>
+          <input
+            type="text"
+            value={reasoning}
+            disabled={controlsDisabled}
+            onChange={(e) => setReasoning(e.target.value)}
+            className={`w-full rounded-xl px-4 py-3 text-sm border outline-none transition-all ${
+              isDark
+                ? 'bg-[#0A102E]/90 border-white/15 focus:border-[#EE2A54] text-white placeholder-[#A3B3D9]/60'
+                : 'bg-[#F4F7FC] border-[#0E153A]/15 focus:border-[#EE2A54] text-[#0E153A] placeholder-slate-400'
+            }`}
+            placeholder="Briefly explain your offer (or pick a quick reason below)..."
+          />
 
-          <button
-            type="submit"
-            disabled={controlsDisabled || (action === 'counter' && counterofferErrors.length > 0)}
-            className={cn(
-              'w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl font-bold text-xs sm:text-sm text-white transition-all shadow-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0',
-              action === 'accept'
-                ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
-                : action === 'reject'
-                ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/30'
-                : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/30'
-            )}
-          >
-            <Send className="w-4 h-4" />
-            <span>
-              {isInitializing
-                ? 'Preparing Negotiation...'
-                : isSubmitting
-                ? 'Submitting Move...'
-                : action === 'accept'
-                ? 'Accept & Finalize Agreement'
-                : action === 'reject'
-                ? 'Confirm Walk Away'
-                : 'Submit Counteroffer to AI'}
-            </span>
-          </button>
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              {[
+                'Balanced compromise',
+                'Holding firm on limits',
+                'Open to trade-offs',
+              ].map((chip, cIdx) => (
+                <button
+                  key={cIdx}
+                  type="button"
+                  disabled={controlsDisabled}
+                  onClick={() => handleQuickReason(chip)}
+                  className={`text-xs font-semibold px-3 py-1 rounded-full border transition-colors cursor-pointer ${
+                    isDark
+                      ? 'border-white/15 bg-[#0A102E] text-[#A3B3D9] hover:text-white hover:border-[#1CD4A3]'
+                      : 'border-[#0E153A]/15 bg-[#F4F7FC] text-[#0E153A] hover:border-[#EE2A54]'
+                  }`}
+                >
+                  + {chip}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="submit"
+              disabled={controlsDisabled || (action === 'counter' && counterofferErrors.length > 0)}
+              className={cn(
+                'w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl font-bold text-sm text-white transition-all shadow-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed',
+                action === 'accept'
+                  ? 'bg-[#1CD4A3] text-[#0A102E] hover:bg-[#16b88d]'
+                  : action === 'reject'
+                  ? 'bg-rose-600 hover:bg-rose-500'
+                  : 'bg-[#EE2A54] hover:bg-[#d62249] shadow-[0_6px_22px_rgba(238,42,84,0.45)]'
+              )}
+            >
+              <Send className="w-4 h-4" />
+              <span>
+                {isInitializing
+                  ? 'Preparing...'
+                  : isSubmitting
+                  ? 'Sending...'
+                  : action === 'accept'
+                  ? 'Accept Deal'
+                  : action === 'reject'
+                  ? 'Confirm Walk Away'
+                  : 'Send Offer'}
+              </span>
+            </button>
+          </div>
         </div>
       </form>
     </div>

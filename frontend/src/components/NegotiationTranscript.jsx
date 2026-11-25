@@ -47,15 +47,15 @@ export default function NegotiationTranscript({ turns = [], agents = [] }) {
             : 'border-slate-200 bg-slate-50/80'
         }`}
       >
-        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 flex items-center justify-center mx-auto mb-3">
+        <div className="w-12 h-12 rounded-2xl bg-[#EE2A54]/15 text-[#EE2A54] border border-[#EE2A54]/30 flex items-center justify-center mx-auto mb-3">
           <MessageSquare className="w-6 h-6" />
         </div>
-        <h4 className={`text-sm font-bold mb-1 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-          Negotiation Transcript Empty
+        <h4 className={`text-base font-extrabold mb-1 ${isDark ? 'text-white' : 'text-[#0E153A]'}`}>
+          Negotiation Transcript Ready
         </h4>
-        <p className={`text-xs max-w-sm mx-auto ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-          No dialogue has been exchanged yet. Use <span className="font-semibold text-indigo-500">Simulate Next Turn</span> or{' '}
-          <span className="font-semibold text-emerald-500">Run Full Loop</span> to begin the agent discourse.
+        <p className={`text-sm max-w-md mx-auto ${isDark ? 'text-[#A3B3D9]' : 'text-slate-600'}`}>
+          No turns played yet. Click <span className="font-bold text-white bg-[#1D2B78] px-2 py-0.5 rounded-md">Next Turn</span> or{' '}
+          <span className="font-bold text-white bg-[#EE2A54] px-2 py-0.5 rounded-md">Run Full Loop</span> to start.
         </p>
       </div>
     );
