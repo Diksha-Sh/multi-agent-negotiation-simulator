@@ -139,7 +139,12 @@ export default function HumanInputPanel({
   };
 
   const handleVoiceResult = ({ field, offer, reasoning: spokenReasoning }) => {
-    setOfferValues((previous) => ({ ...previous, [field]: offer }));
+    const isProjectBudgetAllocation =
+      config?.id === 'project_budget_allocation' ||
+      config?.scenario_id === 'project_budget_allocation';
+    const voiceValue = isProjectBudgetAllocation ? offer / 100000 : offer;
+
+    setOfferValues((previous) => ({ ...previous, [field]: voiceValue }));
     if (spokenReasoning) {
       setReasoning((previous) =>
         previous ? `${previous} ${spokenReasoning}` : spokenReasoning,

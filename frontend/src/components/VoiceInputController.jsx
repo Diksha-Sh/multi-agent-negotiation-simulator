@@ -92,9 +92,6 @@ function parseGroupedNumericOffer(transcript) {
 export function parseOfferNumber(transcript) {
   if (!transcript || typeof transcript !== 'string') return null;
 
-  const groupedNumeric = parseGroupedNumericOffer(transcript);
-  if (groupedNumeric !== null) return groupedNumeric;
-
   const wordDecimalMatch = transcript.match(
     /\b((?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[\s-]+(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety))*)\s+point\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\s+(thousand|lakhs?|crores?)\b/i,
   );
@@ -114,6 +111,33 @@ export function parseOfferNumber(transcript) {
     /(?:my\s+)?(?:offer|salary|budget|price|allocation|is|at|for)\s+(.+?)(?:\b(?:because|as|since|due to|for delivery|for the|with)\b|$)/i,
   );
   const candidate = offerPhrase ? offerPhrase[1] : transcript;
+
+  // Handle mixed word-and-digit Indian amounts:
+  // "one lakh 25 000" -> 125000
+  // "two lakh 50,000" -> 250000
+  const mixedLakhMatch = candidate.match(
+    /\b((?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[\s-]+(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety))*|\d+(?:\.\d+)?)\s+(?:lakhs?|lacs?)\s+(\d+(?:[,\s]+\d+)*)\b/i,
+  );
+
+  if (mixedLakhMatch) {
+    const lakhPrefix = /^\d/.test(mixedLakhMatch[1])
+      ? Number(mixedLakhMatch[1])
+      : parseNumberWords(mixedLakhMatch[1]);
+
+    const remainingAmount = Number(
+      mixedLakhMatch[2].replace(/[,\s]/g, ''),
+    );
+
+    const combinedAmount = lakhPrefix * 100000 + remainingAmount;
+
+    if (Number.isFinite(combinedAmount) && combinedAmount > 0) {
+      return combinedAmount;
+    }
+  }
+
+  const groupedNumeric = parseGroupedNumericOffer(transcript);
+  if (groupedNumeric !== null) return groupedNumeric;
+
   const cleaned = candidate
     .replace(/\b(?:rupees?|rs\.?|inr|final|my|offer|is|at|for|the)\b/gi, ' ')
     .trim();
