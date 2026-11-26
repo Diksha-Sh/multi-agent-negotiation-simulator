@@ -72,7 +72,7 @@ export default function SimulationHistoryModal({ isOpen, onClose, currentUser })
   const handleDelete = async (id, e) => {
     e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this simulation from history?')) {
-      await deleteSimulationRecord(id);
+      await deleteSimulationRecord(id, currentUser?.id || null);
       setSimulations((prev) => prev.filter((s) => s.id !== id));
       if (expandedId === id) setExpandedId(null);
     }
@@ -157,12 +157,24 @@ export default function SimulationHistoryModal({ isOpen, onClose, currentUser })
                   className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                     isConnected && storageSource === 'supabase'
                       ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                      : storageSource === 'sqlite'
+                      ? 'bg-blue-500/10 text-blue-500 border-blue-500/30'
                       : 'bg-amber-500/10 text-amber-500 border-amber-500/30'
                   }`}
-                  title={isConnected ? 'Connected to Supabase PostgreSQL' : 'Local browser storage fallback'}
+                  title={
+                    isConnected && storageSource === 'supabase'
+                      ? 'Connected to Supabase PostgreSQL'
+                      : storageSource === 'sqlite'
+                      ? 'Connected to SQLite Database'
+                      : 'Local browser storage fallback'
+                  }
                 >
                   <Database className="w-3 h-3" />
-                  {isConnected && storageSource === 'supabase' ? 'Supabase Cloud' : 'Local Storage Cache'}
+                  {isConnected && storageSource === 'supabase'
+                    ? 'Supabase Cloud'
+                    : storageSource === 'sqlite'
+                    ? 'SQLite Database'
+                    : 'Local Storage Cache'}
                 </span>
               </div>
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -404,7 +416,11 @@ export default function SimulationHistoryModal({ isOpen, onClose, currentUser })
           }`}
         >
           <span className={`${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            {isConnected ? '✓ Supabase Connected' : 'ℹ Running with local fallback storage'}
+            {isConnected && storageSource === 'supabase'
+              ? '✓ Supabase Connected'
+              : storageSource === 'sqlite'
+              ? '✓ SQLite Database Connected'
+              : 'ℹ Running with local fallback storage'}
           </span>
           <button
             type="button"

@@ -91,3 +91,23 @@ def save_sim_route(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
 def list_sim_route(user_id: str | None = Query(default=None)) -> dict[str, Any]:
     rows = auth_db.list_simulations(user_id=user_id)
     return {"data": rows, "source": "sqlite"}
+
+
+@router.delete("/simulations/{simulation_id}", summary="Delete a negotiation run from SQLite")
+def delete_sim_route(
+    simulation_id: str,
+    user_id: str = Query(..., description="ID of the user who owns the simulation record"),
+) -> dict[str, Any]:
+    clean_uid = user_id.strip()
+    if not clean_uid:
+        raise HTTPException(
+            status_code=422,
+            detail="User ID query parameter is required.",
+        )
+    deleted = auth_db.delete_simulation(simulation_id, user_id=clean_uid)
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail="Simulation not found or not owned by user.",
+        )
+    return {"deleted": True, "id": simulation_id, "user_id": clean_uid, "source": "sqlite"}
