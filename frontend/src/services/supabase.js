@@ -342,7 +342,7 @@ export async function fetchUserSimulations(userId = null) {
   }
 }
 
-export async function deleteSimulationRecord(simulationId) {
+export async function deleteSimulationRecord(simulationId, userId = null) {
   try {
     const local = JSON.parse(localStorage.getItem(LOCAL_HISTORY_KEY) || '[]');
     const filtered = local.filter((item) => item.id !== simulationId);
@@ -353,9 +353,20 @@ export async function deleteSimulationRecord(simulationId) {
 
   if (isSupabaseConfigured() && supabase) {
     try {
-      await supabase.from('simulations').delete().eq('id', simulationId);
+      let query = supabase.from('simulations').delete().eq('id', simulationId);
+      if (userId) query = query.eq('user_id', userId);
+      await query;
     } catch (err) {
       console.warn('Supabase delete error:', err);
+    }
+  } else {
+    try {
+      const userParam = userId ? `?user_id=${encodeURIComponent(userId)}` : '';
+      await authApi(`/api/auth/simulations/${encodeURIComponent(simulationId)}${userParam}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.warn('SQLite simulation delete warning:', err);
     }
   }
 

@@ -364,6 +364,7 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
         total_turns: turns.length,
         rounds: Math.ceil(turns.length / (agents.length || 2)),
         winner: orchestratorWinner,
+        deadlock_event: deadlockEvent || null,
         history: turns,
       },
     };
@@ -1028,6 +1029,34 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
             <strong>{agents.find((agent) => agent.id === orchestratorWinner)?.name || 'Not applicable'}</strong>
           </div>
         </div>
+
+        {deadlockEvent && (
+          <div className="print-deadlock-section">
+            <h2 className="print-section-title">Deadlock Event & Resolution</h2>
+            <div className="print-deadlock-box">
+              <div className="print-meta-grid" style={{ margin: '6px 0' }}>
+                <div className="print-meta-item">
+                  <span>Deadlock Type</span>
+                  <strong>{deadlockEvent.type ? deadlockEvent.type.replace(/_/g, ' ').toUpperCase() : 'STALL'}</strong>
+                </div>
+                <div className="print-meta-item">
+                  <span>Triggered Round</span>
+                  <strong>Round {deadlockEvent.round_triggered || 'N/A'}</strong>
+                </div>
+                <div className="print-meta-item">
+                  <span>Resolution Outcome</span>
+                  <strong>{deadlockEvent.resolution_outcome ? deadlockEvent.resolution_outcome.replace(/_/g, ' ').toUpperCase() : 'PENDING'}</strong>
+                </div>
+              </div>
+              {deadlockEvent.resolution_attempt && (
+                <div style={{ marginTop: '6px' }}>
+                  <span className="print-section-title" style={{ fontSize: '8pt' }}>Resolution Attempt</span>
+                  <div className="print-box" style={{ marginTop: '2px' }}>{deadlockEvent.resolution_attempt}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <h2 className="print-section-title">Agents and constraints</h2>
         <div className="print-agents-grid">

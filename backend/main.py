@@ -25,7 +25,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=FRONTEND_ORIGIN_REGEX,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type"],
 )
 
@@ -49,5 +49,4 @@ app.include_router(analytics.router)
 if __name__ == "__main__":
     import uvicorn
 
-    print(f"Backend running at http://{HOST}:{PORT}  (API docs: http://{HOST}:{PORT}/docs)")
     uvicorn.run("backend.main:app", host=HOST, port=PORT, reload=RELOAD)

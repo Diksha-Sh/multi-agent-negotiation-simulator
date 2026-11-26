@@ -282,3 +282,19 @@ def list_simulations(user_id: str | None = None, limit: int = 50) -> list[dict[s
             }
         )
     return results
+
+
+def delete_simulation(simulation_id: str, user_id: str) -> bool:
+    """Delete a saved simulation record from SQLite by ID and mandatory user ownership."""
+    init_db()
+    clean_uid = user_id.strip() if isinstance(user_id, str) else ""
+    if not clean_uid:
+        return False
+    with _connect() as conn:
+        cursor = conn.execute(
+            "DELETE FROM simulations WHERE id = ? AND user_id = ?",
+            (simulation_id, clean_uid),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+
