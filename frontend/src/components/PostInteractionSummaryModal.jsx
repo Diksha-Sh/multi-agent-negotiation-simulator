@@ -250,25 +250,22 @@ export default function PostInteractionSummaryModal({
                 </div>
               </div>
 
-              {/* Quality Breakdown Metrics */}
+              {/* Quality Breakdown Metrics (scoring engine: points earned out of each metric's weight) */}
               {quality?.breakdown && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-3 rounded-xl border border-slate-800 bg-slate-950/40 text-center">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Outcome</span>
-                    <span className="text-sm font-bold text-slate-100 font-mono">{quality.breakdown.agreement_outcome} / 40</span>
-                  </div>
-                  <div className="p-3 rounded-xl border border-slate-800 bg-slate-950/40 text-center">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Efficiency</span>
-                    <span className="text-sm font-bold text-slate-100 font-mono">{quality.breakdown.pacing_efficiency} / 20</span>
-                  </div>
-                  <div className="p-3 rounded-xl border border-slate-800 bg-slate-950/40 text-center">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Reciprocity</span>
-                    <span className="text-sm font-bold text-slate-100 font-mono">{quality.breakdown.concession_reciprocity} / 20</span>
-                  </div>
-                  <div className="p-3 rounded-xl border border-slate-800 bg-slate-950/40 text-center">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">ZOPA Safety</span>
-                    <span className="text-sm font-bold text-slate-100 font-mono">{quality.breakdown.boundary_safety} / 20</span>
-                  </div>
+                  {[
+                    ['surplus_efficiency', 'Surplus', 30],
+                    ['concession_reciprocity', 'Reciprocity', 25],
+                    ['pacing_efficiency', 'Pacing', 25],
+                    ['boundary_safety', 'ZOPA Safety', 20],
+                  ].map(([key, label, fallbackWeight]) => (
+                    <div key={key} className="p-3 rounded-xl border border-slate-800 bg-slate-950/40 text-center">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">{label}</span>
+                      <span className="text-sm font-bold text-slate-100 font-mono">
+                        {quality.breakdown[key] ?? '—'} / {quality.weights?.[key] ?? fallbackWeight}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
 

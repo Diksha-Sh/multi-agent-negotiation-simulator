@@ -182,3 +182,29 @@ def test_api_analytics_accepts_frontend_records():
     assert body["total_sessions"] == 2
     assert body["agreement_rate"] == 50.0
     assert body["win_rates"][0]["deals"] == 1
+
+
+def test_resolution_quality_score_reaches_dashboard_analytics():
+    """The dashboard gets the same Resolution Quality Score the summary agent computes."""
+    from backend.scoring_engine import score_negotiation
+    sessions = generate_demo_sessions()[:6]
+    result = analyze_performance(sessions)
+    assert set(result["session_scores"]) == {s["id"] for s in sessions}
+    first = sessions[0]
+    expected = score_negotiation(first["config"], first["turns"], first["status"], first["config"].get("deadlock_event"))
+    assert result["session_scores"][first["id"]]["overall_score"] == round(expected["overall_score"], 1)
+    assert result["session_scores"][first["id"]]["tier"] == expected["tier"]
+    scores = [v["overall_score"] for v in result["session_scores"].values()]
+    assert result["avg_resolution_score"] == round(sum(scores) / len(scores), 1)
+    assert sum(result["resolution_tiers"].values()) == len(sessions)
+    assert all(row["avg_resolution_score"] is not None for row in result["scenario_breakdown"])
+    assert any("resolution quality score" in line for line in result["key_insights"])
+
+
+def test_resolution_quality_is_empty_safe():
+    result = analyze_performance([])
+    assert result["avg_resolution_score"] is None
+    assert result["session_scores"] == {}
+    # a record without a config cannot be scored, but still counts as a session
+    bare = analyze_performance([{"id": "x", "status": "accepted", "history": []}])
+    assert bare["total_sessions"] == 1 and bare["session_scores"] == {}

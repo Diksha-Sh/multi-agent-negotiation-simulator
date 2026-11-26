@@ -14,11 +14,40 @@ from typing import Any, Optional
 
 
 DEADLOCK_TYPES = ("same_position", "stall", "repeated_rejection", "max_rounds")
+QUALITY_TIERS = (
+    "Exceptional Win-Win Settlement",
+    "Balanced Commercial Agreement",
+    "One-Sided / Suboptimal Agreement",
+    "Impasse / High Friction Resolution",
+)
 FINAL_STATUSES = ("accepted", "deadlock", "rejected")
 
 
 def _is_num(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def resolution_quality(session: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """Resolution Quality Score (0-100) of one normalised session, from the scoring engine.
+
+    The same function the Post-Interaction Summary uses, so the dashboard and the dossier agree.
+    Returns None when the engine cannot score the record (e.g. no config).
+    """
+    if not session.get("config"):
+        return None
+    try:
+        from backend.scoring_engine import score_negotiation
+        result = score_negotiation(session["config"], session["history"], session["status"], session["deadlock_event"])
+    except Exception:  # a malformed record must not break the whole dashboard
+        return None
+    score = result.get("overall_score")
+    if not _is_num(score):
+        return None
+    return {
+        "overall_score": round(float(score), 1),
+        "tier": result.get("tier"),
+        "metric_scores": result.get("metric_scores") or {},
+    }
 
 
 def normalize_session(session: dict[str, Any]) -> dict[str, Any]:
@@ -145,6 +174,22 @@ def analyze_performance(sessions: list[dict[str, Any]]) -> dict[str, Any]:
             groups[s["scenario_id"]] = []
         groups[s["scenario_id"]].append(s)
 
+    # Resolution Quality Score per session (scoring engine, Milestone 4)
+    for s in normalized:
+        s["quality"] = resolution_quality(s)
+    scored = [s for s in normalized if s["quality"]]
+
+    def avg_score(group: list[dict[str, Any]]) -> Optional[float]:
+        vals = [s["quality"]["overall_score"] for s in group if s["quality"]]
+        return round(sum(vals) / len(vals), 1) if vals else None
+
+    avg_resolution_score = avg_score(normalized)
+    tier_counts = {t: sum(1 for s in scored if s["quality"]["tier"] == t) for t in QUALITY_TIERS}
+    session_scores = {
+        str(s["id"]): {"overall_score": s["quality"]["overall_score"], "tier": s["quality"]["tier"]}
+        for s in scored if s["id"] is not None
+    }
+
     scenario_breakdown = []
     heatmap_rows = []
     win_rates = []
@@ -162,6 +207,7 @@ def analyze_performance(sessions: list[dict[str, Any]]) -> dict[str, Any]:
             "agreement_rate": pct(acc, tot),
             "deadlock_rate": pct(dl, tot),
             "avg_rounds": round(sum(rnds) / len(rnds), 1) if rnds else 0.0,
+            "avg_resolution_score": avg_score(group),
         })
 
         cells = {"accepted": acc, "rejected": sum(1 for s in group if s["status"] == "rejected"), "breakdown": dl}
@@ -242,6 +288,9 @@ def analyze_performance(sessions: list[dict[str, Any]]) -> dict[str, Any]:
         "deadlock_events": deadlock_events,
         "deadlock_event_rate": deadlock_event_rate,
         "avg_rounds": avg_rounds,
+        "avg_resolution_score": avg_resolution_score,
+        "resolution_tiers": tier_counts,
+        "session_scores": session_scores,
         "status_distribution": {
             "accepted": accepted_sessions,
             "deadlock": deadlocked_sessions,
@@ -258,7 +307,7 @@ def analyze_performance(sessions: list[dict[str, Any]]) -> dict[str, Any]:
         "resolved_by_ladder": resolved_by_ladder,
         "key_insights": _insights(total_sessions, agreement_rate, deadlock_triggers, avg_rounds,
                                   scenario_breakdown, personality_matrix, resolved_by_ladder, deadlocked_sessions,
-                                  deadlock_events),
+                                  deadlock_events, avg_resolution_score),
     }
 
 
@@ -269,7 +318,8 @@ def _num(value: float) -> str:
 
 def _insights(total: int, agreement_rate: float, triggers: dict[str, int], avg_rounds: float,
               scenarios: list[dict[str, Any]], matrix: list[dict[str, Any]],
-              resolved: int = 0, breakdowns: int = 0, stuck: int = 0) -> list[str]:
+              resolved: int = 0, breakdowns: int = 0, stuck: int = 0,
+              avg_score: Optional[float] = None) -> list[str]:
     """Plain statements that only claim what the data shows."""
     if not total:
         return ["No completed negotiations yet. Run a simulation or practice session to populate analytics."]
@@ -285,6 +335,13 @@ def _insights(total: int, agreement_rate: float, triggers: dict[str, int], avg_r
     if stuck:
         insights.append(f"{stuck} of {total} negotiations ({_num(stuck / total * 100)}%) hit a deadlock; "
                         f"the resolution ladder turned {resolved} of them into agreements.")
+    if avg_score is not None:
+        line = f"The average resolution quality score is {_num(avg_score)}/100"
+        rated = [s for s in scenarios if s.get("avg_resolution_score") is not None]
+        if len(rated) > 1:
+            best = max(rated, key=lambda s: s["avg_resolution_score"])
+            line += f"; {best['title']} produces the best deals ({_num(best['avg_resolution_score'])}/100)"
+        insights.append(line + ".")
     if len(scenarios) > 1:
         hardest = max(scenarios, key=lambda s: (s["deadlock_rate"], s["avg_rounds"]))
         insights.append(f"{hardest['title']} takes the longest to settle: {_num(hardest['avg_rounds'])} rounds on average"

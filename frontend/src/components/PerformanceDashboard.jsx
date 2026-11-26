@@ -4,6 +4,7 @@ import {
   BarChart3,
   Database,
   Flame,
+  Gauge,
   Loader2,
   PlayCircle,
   RefreshCw,
@@ -770,6 +771,71 @@ function FilterSelect({ label, value, onChange, options, isDark }) {
   );
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * Resolution quality (scoring engine)
+ * ------------------------------------------------------------------------------------------- */
+
+const QUALITY_METRICS = [
+  { key: 'surplus_efficiency', label: 'Surplus efficiency', hint: 'how close the deal is to the middle of the deal zone' },
+  { key: 'concession_reciprocity', label: 'Concession reciprocity', hint: 'whether both sides moved by similar amounts' },
+  { key: 'pacing_efficiency', label: 'Pacing', hint: 'settling in fewer rounds' },
+  { key: 'boundary_safety', label: 'Boundary safety', hint: 'distance from each side\'s walk-away limit' },
+];
+
+function scoreColor(v) {
+  if (!isNum(v)) return '#94A3B8';
+  if (v >= 85) return '#10B981';
+  if (v >= 70) return '#0EA5E9';
+  if (v >= 50) return '#F59E0B';
+  return '#F43F5E';
+}
+
+/** Overall 0-100 score of one run as a ring, with the four weighted metrics as bars. */
+function ResolutionQuality({ quality, isDark }) {
+  const muted = isDark ? 'text-slate-400' : 'text-slate-500';
+  const score = Number(quality?.overall_score);
+  if (!quality || !isNum(score)) return <EmptyNote isDark={isDark}>No score for this run.</EmptyNote>;
+  const r = 52;
+  const c = 2 * Math.PI * r;
+  const color = scoreColor(score);
+  const weights = quality.weights || {};
+  return (
+    <div>
+      <div className="flex items-center gap-5">
+        <svg viewBox="0 0 130 130" className="w-28 h-28 shrink-0 -rotate-90" role="img" aria-label={`Resolution quality ${score} out of 100`}>
+          <circle cx="65" cy="65" r={r} fill="none" stroke={isDark ? '#1e293b' : '#eef2f7'} strokeWidth="14" />
+          <circle cx="65" cy="65" r={r} fill="none" stroke={color} strokeWidth="14" strokeLinecap="round"
+            strokeDasharray={`${(Math.max(0, Math.min(100, score)) / 100) * c} ${c}`} />
+          <g transform="rotate(90 65 65)">
+            <text x="65" y="68" textAnchor="middle" fontSize="28" fontWeight="800" fill={isDark ? '#f1f5f9' : '#0f172a'}>{Math.round(score)}</text>
+            <text x="65" y="86" textAnchor="middle" fontSize="11" fill={isDark ? '#94a3b8' : '#64748b'}>out of 100</text>
+          </g>
+        </svg>
+        <div className="min-w-0">
+          <div className="text-base font-bold leading-snug" style={{ color }}>{quality.tier}</div>
+          <p className={cn('text-xs mt-1 leading-relaxed', muted)}>Weighted from the four metrics below by the scoring engine.</p>
+        </div>
+      </div>
+      <ul className="mt-4 space-y-3">
+        {QUALITY_METRICS.map((m) => {
+          const v = Number(quality.metric_scores?.[m.key]);
+          return (
+            <li key={m.key} title={m.hint}>
+              <div className="flex items-center justify-between text-sm">
+                <span>{m.label}{weights[m.key] ? <span className={cn('text-xs ml-1.5', muted)}>{weights[m.key]}%</span> : null}</span>
+                <span className="font-semibold tabular-nums">{isNum(v) ? Math.round(v) : '–'}</span>
+              </div>
+              <div className={cn('h-2 rounded-full mt-1.5 overflow-hidden', isDark ? 'bg-slate-800' : 'bg-slate-100')}>
+                <div className="h-full rounded-full" style={{ width: `${isNum(v) ? Math.max(0, Math.min(100, v)) : 0}%`, background: scoreColor(v) }} />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 const isPractice = (s) => s?.mode === 'practice' || s?.config?.mode === 'practice';
 const pairingOf = (s) => (s?.config?.agents || []).map((a) => a.personality || 'Collaborative');
 
@@ -854,7 +920,7 @@ export default function PerformanceDashboard({ currentUser, onStartNegotiation }
   const agents = (selected?.config?.agents || []).map((a) => ({ id: a.id, name: a.name || a.id }));
 
   const sentimentKey = selected ? `${loadKey}:${selected.id}:${(selected.turns || []).length}` : null;
-  const [sentimentStore, setSentimentStore] = useState({ key: null, journey: [], origin: '' });
+  const [sentimentStore, setSentimentStore] = useState({ key: null, journey: [], quality: null, origin: '' });
   useEffect(() => {
     if (!selected) return undefined;
     let active = true;
@@ -865,17 +931,17 @@ export default function PerformanceDashboard({ currentUser, onStartNegotiation }
       winner: selected.winner,
       deadlock_event: sessionDeadlock(selected),
     })
-      .then((res) => { if (active) setSentimentStore({ key: sentimentKey, journey: res.sentiment_journey || [], origin: 'agent' }); })
-      .catch(() => { if (active) setSentimentStore({ key: sentimentKey, journey: localSentiment(selected), origin: 'local' }); });
+      .then((res) => { if (active) setSentimentStore({ key: sentimentKey, journey: res.sentiment_journey || [], quality: res.resolution_quality || null, origin: 'agent' }); })
+      .catch(() => { if (active) setSentimentStore({ key: sentimentKey, journey: localSentiment(selected), quality: null, origin: 'local' }); });
     return () => { active = false; };
   }, [sentimentKey, selected]);
   const journey = sentimentStore.key === sentimentKey ? sentimentStore.journey : null;
+  const quality = sentimentStore.key === sentimentKey ? sentimentStore.quality : undefined;
 
   // Figures for the tiles and donuts.
   const stuck = filtered.filter((s) => sessionDeadlock(s) || s.status === 'deadlock').length;
   const rescued = analytics?.resolved_by_ladder ?? filtered.filter((s) => sessionDeadlock(s) && s.status === 'accepted').length;
   const practiceCount = filtered.filter(isPractice).length;
-  const avgTurns = filtered.length ? Math.round((filtered.reduce((n, s) => n + (s.turns || []).length, 0) / filtered.length) * 10) / 10 : 0;
   const outcomeData = [
     { label: 'Agreement', value: filtered.filter((s) => s.status === 'accepted').length, color: DONUT_COLORS.accepted },
     { label: 'Ended in deadlock', value: filtered.filter((s) => s.status === 'deadlock').length, color: DONUT_COLORS.deadlock },
@@ -1026,7 +1092,7 @@ export default function PerformanceDashboard({ currentUser, onStartNegotiation }
                         <GradientTile index={0} label="No-deal rate" value={analytics ? `${analytics.no_deal_rate ?? analytics.deadlock_rate}%` : '…'} hint="ended without an agreement" />
                         <GradientTile index={1} label="Average rounds" value={analytics ? analytics.avg_rounds : '…'} hint="to reach an outcome" />
                         <GradientTile index={2} label="Practice sessions" value={practiceCount} hint="human vs AI" />
-                        <GradientTile index={3} label="Average turns" value={avgTurns} hint="offers per negotiation" />
+                        <GradientTile index={3} label="Resolution score" value={analytics ? (isNum(analytics.avg_resolution_score) ? analytics.avg_resolution_score : '–') : '…'} hint="average quality, out of 100" />
                       </div>
 
                       <Card isDark={isDark}>
@@ -1061,6 +1127,13 @@ export default function PerformanceDashboard({ currentUser, onStartNegotiation }
 
                     <div className="min-w-0 grid gap-5 md:grid-cols-2 2xl:grid-cols-1">
                       <Card isDark={isDark}>
+                        <CardHeader isDark={isDark} icon={Gauge} title="Resolution quality"
+                          subtitle={selected ? `Scoring engine result for the run in the trajectory chart` : 'Select a run'} />
+                        {quality === undefined ? loadingBlock : sentimentStore.origin === 'local'
+                          ? <EmptyNote isDark={isDark}>Needs the summary service.</EmptyNote>
+                          : <ResolutionQuality quality={quality} isDark={isDark} />}
+                      </Card>
+                      <Card isDark={isDark}>
                         <CardHeader isDark={isDark} icon={Trophy} title="Negotiation outcomes" subtitle="How the filtered runs ended" />
                         <Donut isDark={isDark} data={outcomeData} centerValue={filtered.length} centerLabel="runs" />
                       </Card>
@@ -1089,8 +1162,8 @@ export default function PerformanceDashboard({ currentUser, onStartNegotiation }
                       <table className="w-full min-w-[760px] text-sm">
                         <thead>
                           <tr className={cn('text-left text-xs', muted)}>
-                            {['Scenario', 'Personalities', 'Mode', 'Turns', 'Outcome', 'Deal', 'Got stuck'].map((h) => (
-                              <th key={h} className={cn('font-semibold px-3 py-2.5 border-b', isDark ? 'border-slate-800' : 'border-slate-200', ['Turns', 'Deal'].includes(h) && 'text-right')}>{h}</th>
+                            {['Scenario', 'Personalities', 'Mode', 'Turns', 'Outcome', 'Deal', 'Score', 'Got stuck'].map((h) => (
+                              <th key={h} className={cn('font-semibold px-3 py-2.5 border-b', isDark ? 'border-slate-800' : 'border-slate-200', ['Turns', 'Deal', 'Score'].includes(h) && 'text-right')}>{h}</th>
                             ))}
                           </tr>
                         </thead>
@@ -1126,6 +1199,10 @@ export default function PerformanceDashboard({ currentUser, onStartNegotiation }
                                   </span>
                                 </td>
                                 <td className="px-3 py-2.5 text-right tabular-nums font-semibold">{deal !== null ? formatValue(deal) : '–'}</td>
+                                <td className="px-3 py-2.5 text-right tabular-nums font-semibold" title={analytics?.session_scores?.[s.id]?.tier}
+                                  style={{ color: scoreColor(analytics?.session_scores?.[s.id]?.overall_score) }}>
+                                  {analytics?.session_scores?.[s.id] ? Math.round(analytics.session_scores[s.id].overall_score) : '–'}
+                                </td>
                                 <td className={cn('px-3 py-2.5', muted)}>{ev ? titleCase(ev.type) : 'No'}</td>
                               </tr>
                             );
