@@ -29,6 +29,11 @@ import HumanInputPanel from './HumanInputPanel';
 import PostInteractionSummaryModal from './PostInteractionSummaryModal';
 import { useTheme } from '../context/ThemeContext';
 import { getEngineStatus, runOrchestrator, stepOrchestrator, submitHumanTurn } from '../services/api';
+import {
+  createResetSessionState,
+  initializePracticeSession,
+  runPracticeUntilHuman,
+} from '../services/practiceSession';
 
 // Offline fallback only: kept outside the component so renders stay pure.
 const randomChance = () => Math.random();
@@ -133,18 +138,19 @@ function AgentCard({ agent, isHuman = false }) {
   );
 }
 
-export default function NegotiationArena({ config, onReset, currentUser, onOpenDashboard, onTerminalOutcome, onSwitchToPractice }) {
+export default function NegotiationArena({ config, onReset, onResetSession, currentUser, onOpenDashboard, onTerminalOutcome, onSwitchToPractice }) {
   const { isDark } = useTheme();
-  const [turns, setTurns] = useState([]);
   const isPracticeMode = (config?.mode || '').toLowerCase() === 'practice';
   const configuredHumanAgentId = config?.human_agent_id ?? config?.human_seat;
   const humanAgentId = isPracticeMode
     ? configuredHumanAgentId ?? config?.agents?.[0]?.id
     : null;
+  const initialSessionState = createResetSessionState(config, humanAgentId);
 
-  const [orchestratorStatus, setOrchestratorStatus] = useState('ongoing');
-  const [orchestratorWinner, setOrchestratorWinner] = useState(null);
-  const [deadlockEvent, setDeadlockEvent] = useState(null);
+  const [turns, setTurns] = useState(initialSessionState.turns);
+  const [orchestratorStatus, setOrchestratorStatus] = useState(initialSessionState.status);
+  const [orchestratorWinner, setOrchestratorWinner] = useState(initialSessionState.winner);
+  const [deadlockEvent, setDeadlockEvent] = useState(initialSessionState.deadlockEvent);
   const [isRunningAll, setIsRunningAll] = useState(false);
   const [isStepping, setIsStepping] = useState(false);
   const [isSubmittingHumanTurn, setIsSubmittingHumanTurn] = useState(false);
@@ -443,7 +449,11 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
     if (practiceInitRequestRef.current?.generation !== generation) {
       practiceInitRequestRef.current = {
         generation,
-        promise: runOrchestrator(context.config),
+        promise: initializePracticeSession(
+          context.config,
+          context.humanAgentId,
+          runOrchestrator,
+        ),
       };
     }
 
@@ -510,6 +520,7 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
 
   // Step 1 Turn at a time through the backend Orchestrator + LLM Reasoning Engine
   const handleSimulateNextTurn = async () => {
+    if (isPracticeMode && orchestratorStatus === 'waiting_for_human') return;
     if ((orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || isStepping) return;
     const requestGeneration = sessionGenerationRef.current;
     setIsStepping(true);
@@ -584,11 +595,14 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
 
   // Run full Orchestrator loop via FastAPI backend or fast local runner
   const handleRunFullOrchestrator = async () => {
+    if (isPracticeMode && orchestratorStatus === 'waiting_for_human') return;
     const requestGeneration = sessionGenerationRef.current;
     setIsRunningAll(true);
     setArenaError('');
     try {
-      const response = await runOrchestrator(config);
+      const response = isPracticeMode
+        ? await runPracticeUntilHuman(config, turns, stepOrchestrator)
+        : await runOrchestrator(config);
       if (sessionGenerationRef.current !== requestGeneration) return;
       if (response && response.history) {
         const mapped = response.history.map(withAgentInfo);
@@ -664,26 +678,27 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
   };
 
   const handleResetArena = () => {
+    const resetState = createResetSessionState(config, humanAgentId);
     sessionGenerationRef.current += 1;
     terminalCallbackKeyRef.current = '';
-    setTurns([]);
+    setTurns(resetState.turns);
     setArenaError('');
     if (typeof onTerminalOutcome === 'function') onTerminalOutcome(null);
-    if (isPracticeMode && humanAgentId === agents[0]?.id) {
-      setOrchestratorStatus('waiting_for_human');
-    } else {
-      setOrchestratorStatus('ongoing');
-    }
-    setOrchestratorWinner(null);
-    setDeadlockEvent(null);
+    setOrchestratorStatus(resetState.status);
+    setOrchestratorWinner(resetState.winner);
+    setDeadlockEvent(resetState.deadlockEvent);
     setHasSaved(false);
     setIsSaving(false);
     setIsRunningAll(false);
     setIsStepping(false);
     setIsSubmittingHumanTurn(false);
     setIsInitializing(isPracticeMode);
+    setShowSummaryModal(false);
     if (isPracticeMode) {
       setPracticeInitGeneration((generation) => generation + 1);
+    }
+    if (typeof onResetSession === 'function') {
+      onResetSession();
     }
   };
 
@@ -830,6 +845,7 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
         turns={turns}
         agents={agents}
         maxRounds={maxRounds}
+        isPracticeMode={isPracticeMode}
       />
 
       {/* ── Step 3: Dedicated Deadlock Event Banner ── */}
@@ -901,7 +917,7 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
 
             <button
               type="button"
-              disabled={(orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || isStepping || isRunningAll || isInitializing}
+              disabled={(orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || (isPracticeMode && orchestratorStatus === 'waiting_for_human') || isStepping || isRunningAll || isInitializing}
               onClick={handleSimulateNextTurn}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs bg-[#1D2B78] hover:bg-[#273999] disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-md transition-all cursor-pointer shrink-0"
             >
@@ -917,7 +933,7 @@ export default function NegotiationArena({ config, onReset, currentUser, onOpenD
 
             <button
               type="button"
-              disabled={(orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || isRunningAll || isStepping || isInitializing}
+              disabled={(orchestratorStatus !== 'ongoing' && orchestratorStatus !== 'waiting_for_human') || (isPracticeMode && orchestratorStatus === 'waiting_for_human') || isRunningAll || isStepping || isInitializing}
               onClick={handleRunFullOrchestrator}
               className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-bold text-xs bg-[#EE2A54] hover:bg-[#d62249] disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-[0_4px_16px_rgba(238,42,84,0.45)] transition-all cursor-pointer shrink-0"
             >
