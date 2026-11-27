@@ -338,6 +338,7 @@ function MainApp() {
     }
   });
   const [terminalOutcome, setTerminalOutcome] = useState(null);
+  const [arenaSessionId, setArenaSessionId] = useState(0);
 
   // Supabase Auth State Synchronization
   useEffect(() => {
@@ -499,8 +500,14 @@ function MainApp() {
     }
   }, []);
 
+  const handleResetArenaSession = useCallback(() => {
+    setArenaSessionId((sessionId) => sessionId + 1);
+    handleTerminalOutcome(null);
+  }, [handleTerminalOutcome]);
+
   const handleSwitchToPractice = useCallback(() => {
     setTerminalOutcome(null);
+    setArenaSessionId((sessionId) => sessionId + 1);
     setNegotiationConfig((prev) => {
       const base = prev || selectedScenario || scenarios[0];
       const firstAgentId = base?.agents?.[0]?.id || 'buyer';
@@ -625,8 +632,10 @@ function MainApp() {
 
         {activeStep === 3 && (
           <NegotiationArena
+            key={`${activeConfig?.mode || 'simulation'}-${arenaSessionId}`}
             config={activeConfig}
             onReset={handleReset}
+            onResetSession={handleResetArenaSession}
             currentUser={currentUser}
             onOpenDashboard={() => handleSetStep('dashboard')}
             onTerminalOutcome={handleTerminalOutcome}

@@ -116,6 +116,7 @@ export default function NegotiationMetricsPanel({
   turns = [],
   agents = [],
   maxRounds = 10,
+  isPracticeMode = false,
 }) {
   const { isDark } = useTheme();
 
@@ -123,12 +124,12 @@ export default function NegotiationMetricsPanel({
   const latestTurn = turns.length > 0 ? turns[turns.length - 1] : null;
 
   const currentRound = useMemo(() => {
-    if (!latestTurn) return 0;
+    if (!latestTurn) return isPracticeMode ? 1 : 0;
     if (typeof latestTurn.round === 'number' && latestTurn.round > 0) {
       return Math.min(maxRounds, latestTurn.round);
     }
     return Math.min(maxRounds, Math.floor((turns.length - 1) / agentCount) + 1);
-  }, [latestTurn, turns.length, agentCount, maxRounds]);
+  }, [latestTurn, turns.length, agentCount, maxRounds, isPracticeMode]);
 
   const progressPercent = Math.min(100, Math.round((currentRound / Math.max(1, maxRounds)) * 100));
 
