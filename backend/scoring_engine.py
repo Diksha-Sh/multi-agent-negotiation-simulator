@@ -140,6 +140,7 @@ def _concession_reciprocity(
             turn.get("offer", {})
             for turn in history
             if turn.get("agent_id") == agent_id
+            and str(turn.get("action", "")).lower() == "counter"
             and isinstance(turn.get("offer"), dict)
         ]
 
@@ -328,6 +329,9 @@ def score_negotiation(
     if status != "accepted":
         overall_score = min(overall_score, 39.0)
 
+    breakdown["cap_adjustment"] = round(
+        overall_score - sum(breakdown.values()), 2
+    )
     overall_score = max(0.0, min(100.0, overall_score))
 
     if overall_score >= 85:

@@ -58,7 +58,7 @@ def make_history(buyer_first=40000, buyer_last=37500,
         {
             "agent_id": "vendor",
             "round": rounds,
-            "action": "accept",
+            "action": "counter",
             "offer": {"price": vendor_last},
         },
     ]
@@ -157,6 +157,32 @@ def test_one_agent_does_not_concede(vendor_config):
 
 
 # 11. An agreement in the first round should get full pacing points.
+def test_accept_and_reject_actions_are_excluded_from_reciprocity():
+    config = {
+        "agents": [
+            {"id": "buyer", "limits": [{"item": "price", "type": "max", "value": 80}]},
+            {"id": "vendor", "limits": [{"item": "price", "type": "min", "value": 20}]},
+        ],
+    }
+    bounds = _get_item_bounds(config)
+    history = [
+        {"agent_id": "buyer", "action": "counter", "offer": {"price": 80}},
+        {"agent_id": "vendor", "action": "counter", "offer": {"price": 20}},
+        {"agent_id": "buyer", "action": "counter", "offer": {"price": 70}},
+        {"agent_id": "vendor", "action": "counter", "offer": {"price": 50}},
+        {"agent_id": "buyer", "action": "accept", "offer": {"price": 50}},
+    ]
+
+    score = _concession_reciprocity(config, history, bounds)
+    history.append(
+        {"agent_id": "vendor", "action": "reject", "offer": {"price": 80}}
+    )
+    score_with_reject = _concession_reciprocity(config, history, bounds)
+
+    assert score == pytest.approx(100 / 3)
+    assert score_with_reject == pytest.approx(100 / 3)
+
+
 def test_pacing_first_round(vendor_config):
     history = make_history(rounds=1)
 
@@ -270,6 +296,23 @@ def test_deadlock_score_below_40(vendor_config):
     assert result["overall_score"] < 40
 
 
+def test_deadlock_cap_adjustment_reconciles_breakdown(vendor_config):
+    result = score_negotiation(
+        vendor_config,
+        make_history(rounds=5),
+        "deadlock",
+        deadlock_event={"type": "max_rounds"},
+    )
+
+    assert result["overall_score"] == 39
+    assert sum(
+        value for key, value in result["breakdown"].items()
+        if key != "cap_adjustment"
+    ) == 75
+    assert result["breakdown"]["cap_adjustment"] == -36
+    assert sum(result["breakdown"].values()) == result["overall_score"]
+
+
 # 20. The result should contain all required scoring information.
 def test_result_structure(vendor_config):
     result = score_negotiation(
@@ -285,6 +328,7 @@ def test_result_structure(vendor_config):
     assert "weights" in result
     assert "rounds_taken" in result
     assert "final_offer" in result
+    assert "cap_adjustment" in result["breakdown"]
 
 
 # 21. The final score should stay between 0 and 100.
